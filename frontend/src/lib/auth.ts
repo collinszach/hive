@@ -1,31 +1,34 @@
 import { NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
-
-const ALLOWED_EMAIL = process.env.NEXTAUTH_ALLOWED_EMAIL ?? "";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const validUser = process.env.AUTH_USERNAME;
+        const validPass = process.env.AUTH_PASSWORD;
+
+        if (!validUser || !validPass) {
+          console.error("[auth] AUTH_USERNAME or AUTH_PASSWORD not set");
+          return null;
+        }
+
+        if (
+          credentials?.username === validUser &&
+          credentials?.password === validPass
+        ) {
+          return { id: "1", name: validUser, email: validUser };
+        }
+
+        return null;
+      },
     }),
   ],
-  callbacks: {
-    async signIn({ profile }) {
-      if (!ALLOWED_EMAIL) {
-        console.error("[auth] NEXTAUTH_ALLOWED_EMAIL is not set — denying all logins");
-        return false;
-      }
-      const allowed = profile?.email === ALLOWED_EMAIL;
-      if (!allowed) {
-        console.warn("[auth] Rejected login attempt from %s", profile?.email);
-      }
-      return allowed;
-    },
-    async session({ session }) {
-      return session;
-    },
-  },
   pages: {
     signIn: "/login",
     error: "/login",

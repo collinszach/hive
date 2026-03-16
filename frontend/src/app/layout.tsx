@@ -47,7 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   ))}
                 </nav>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-600">{session.user?.email}</span>
+                  <span className="text-xs text-gray-600">{session.user?.name}</span>
                   <SignOutButton />
                 </div>
               </div>
