@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { usePlaidLink, PlaidLinkOptions, PlaidLinkOnSuccess } from "react-plaid-link";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export default function ConnectPage() {
+  const router = useRouter();
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string>("");
@@ -13,7 +15,7 @@ export default function ConnectPage() {
   // Fetch link token on mount
   useEffect(() => {
     console.log("[Plaid] Fetching link token from", `${API_BASE}/api/plaid/link-token`);
-    fetch(`${API_BASE}/api/plaid/link-token`, { method: "POST" })
+    fetch(`/api/proxy/plaid/link-token`, { method: "POST" })
       .then(async (r) => {
         console.log("[Plaid] link-token response status:", r.status);
         const data = await r.json();
@@ -41,7 +43,7 @@ export default function ConnectPage() {
     async (publicToken, metadata) => {
       setStatus("loading");
       try {
-        const res = await fetch(`${API_BASE}/api/plaid/exchange-token`, {
+        const res = await fetch(`/api/proxy/plaid/exchange-token`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -61,8 +63,9 @@ export default function ConnectPage() {
         setMessage(
           `Connected! ${data.accounts_created} account(s) linked for ${
             metadata.institution?.name ?? "your bank"
-          }. Your first sync will run tonight at 6 AM.`
+          }. Syncing transactions now — redirecting to dashboard in a few seconds.`
         );
+        setTimeout(() => router.push("/"), 4000);
       } catch (err: unknown) {
         setStatus("error");
         setMessage(err instanceof Error ? err.message : "Unknown error");

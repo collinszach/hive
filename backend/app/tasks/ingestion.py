@@ -1,6 +1,6 @@
 """Daily transaction sync task — pulls from all linked Plaid accounts."""
 import logging
-from datetime import date
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -19,6 +19,73 @@ logger = logging.getLogger(__name__)
 
 
 @app.task(
+    name="app.tasks.ingestion.sync_single_link",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=300,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def sync_single_link(self, item_id: str) -> dict:
+    """Pull incremental transaction updates for one specific Plaid item.
+
+    Called immediately after account connection and by sync_all_accounts.
+    Safe to call concurrently — cursor-based sync and plaid_transaction_id
+    unique constraint make it fully idempotent.
+    """
+    db = get_sync_db()
+    try:
+        link = db.execute(
+            select(PlaidLink).where(PlaidLink.item_id == item_id, PlaidLink.is_active == True)  # noqa: E712
+        ).scalar_one_or_none()
+
+        if not link:
+            logger.warning("sync_single_link: no active link found for item_id=%s", item_id)
+            return {"item_id": item_id, "skipped": True}
+
+        added, modified, removed, next_cursor = plaid_connector.sync_transactions(
+            access_token=link.access_token,
+            cursor=link.sync_cursor,
+        )
+
+        accounts = db.execute(
+            select(Account).where(Account.plaid_item_id == link.item_id)
+        ).scalars().all()
+        account_map = {a.plaid_account_id: a.id for a in accounts}
+
+        added_count = _upsert_transactions(db, account_map, added)
+        mod_count = _upsert_transactions(db, account_map, modified)
+        removed_count = _remove_transactions(db, removed)
+
+        link.sync_cursor = next_cursor
+        link.last_sync_at = datetime.now(timezone.utc)
+        link.last_sync_error = None
+        db.add(link)
+        db.commit()
+
+        logger.info(
+            "sync_single_link %s: +%d ~%d -%d", item_id, added_count, mod_count, removed_count
+        )
+        return {"item_id": item_id, "added": added_count, "modified": mod_count, "removed": removed_count}
+
+    except Exception as exc:
+        logger.error("Sync failed for link %s: %s", item_id, exc)
+        try:
+            link = db.execute(
+                select(PlaidLink).where(PlaidLink.item_id == item_id)
+            ).scalar_one_or_none()
+            if link:
+                link.last_sync_error = str(exc)
+                db.add(link)
+                db.commit()
+        except Exception:
+            pass
+        raise
+    finally:
+        db.close()
+
+
+@app.task(
     name="app.tasks.ingestion.sync_all_accounts",
     bind=True,
     max_retries=3,
@@ -27,7 +94,7 @@ logger = logging.getLogger(__name__)
     retry_backoff=True,
 )
 def sync_all_accounts(self) -> dict:
-    """Pull incremental transaction updates for all active Plaid links."""
+    """Fan out to sync_single_link for every active Plaid link."""
     db = get_sync_db()
     try:
         links = db.execute(
@@ -38,51 +105,11 @@ def sync_all_accounts(self) -> dict:
             logger.info("No active Plaid links found.")
             return {"synced": 0}
 
-        total_added = 0
-        total_modified = 0
-        total_removed = 0
-
         for link in links:
-            try:
-                added, modified, removed, next_cursor = plaid_connector.sync_transactions(
-                    access_token=link.access_token,
-                    cursor=link.sync_cursor,
-                )
+            sync_single_link.delay(link.item_id)
+            logger.info("Queued sync for item %s", link.item_id)
 
-                # Get account_id mapping: plaid_account_id → our UUID
-                accounts = db.execute(
-                    select(Account).where(Account.plaid_item_id == link.item_id)
-                ).scalars().all()
-                account_map = {a.plaid_account_id: a.id for a in accounts}
-
-                added_count = _upsert_transactions(db, account_map, added)
-                mod_count = _upsert_transactions(db, account_map, modified)
-                removed_count = _remove_transactions(db, removed)
-
-                # Persist cursor — critical: must happen after successful upsert
-                link.sync_cursor = next_cursor
-                from datetime import datetime, timezone
-                link.last_sync_at = datetime.now(timezone.utc)
-                link.last_sync_error = None
-                db.add(link)
-                db.commit()
-
-                total_added += added_count
-                total_modified += mod_count
-                total_removed += removed_count
-                logger.info(
-                    "Link %s: +%d ~%d -%d", link.item_id, added_count, mod_count, removed_count
-                )
-
-            except Exception as exc:
-                logger.error("Sync failed for link %s: %s", link.item_id, exc)
-                link.last_sync_error = str(exc)
-                db.add(link)
-                db.commit()
-                raise
-
-        return {"added": total_added, "modified": total_modified, "removed": total_removed}
-
+        return {"queued": len(links)}
     finally:
         db.close()
 
@@ -127,7 +154,6 @@ def _plaid_tx_to_dict(account_map: dict, tx) -> Optional[dict]:
         auth_date = date_type.fromisoformat(auth_date)
 
     plaid_cat = tx.get("category") or []
-
     location = tx.get("location") or {}
 
     logo_url = None
@@ -144,7 +170,6 @@ def _plaid_tx_to_dict(account_map: dict, tx) -> Optional[dict]:
         "currency": tx.get("iso_currency_code") or "USD",
         "merchant": tx.get("merchant_name"),
         "raw_description": raw_desc,
-        # Categorize immediately — transfers skip categorization
         **_run_categorizer(raw_desc, tx_is_transfer),
         "plaid_category": plaid_cat if plaid_cat else None,
         "is_transfer": tx_is_transfer,

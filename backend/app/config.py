@@ -43,10 +43,14 @@ class Settings(BaseSettings):
     # App
     secret_key: str = ""
     log_level: str = "INFO"
+    # Shared secret between Next.js proxy and FastAPI — never sent to the browser
+    # Generate with: openssl rand -hex 32
+    internal_api_token: str = ""
 
     # Frontend
     next_public_api_url: str = "http://backend:8000"
     next_public_external_api_url: str = ""
+    frontend_url: str = "http://127.0.0.1:3000"
 
     # Notifications (optional)
     slack_webhook_url: str = ""

@@ -125,4 +125,10 @@ async def exchange_token(
 
     await db.commit()
     logger.info("Exchanged token for item %s, created %d accounts", item_id, accounts_created)
+
+    # Trigger an immediate sync — no need to wait for the nightly cron
+    from app.tasks.ingestion import sync_single_link
+    sync_single_link.delay(item_id)
+    logger.info("Queued immediate sync for item %s", item_id)
+
     return ExchangeTokenResponse(item_id=item_id, accounts_created=accounts_created)
