@@ -25,6 +25,9 @@ prophet==1.1.6
 pandas==2.2.3
 numpy==1.26.4
 
+# Auth
+bcrypt==4.2.0
+
 # Utils
 python-dotenv==1.0.1
 python-multipart==0.0.12

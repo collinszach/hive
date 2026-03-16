@@ -10,6 +10,7 @@ from app.models.plaid_link import PlaidLink  # noqa: F401
 from app.models.points_balance import PointsBalance  # noqa: F401
 from app.models.points_ledger import PointsLedger  # noqa: F401
 from app.models.transaction import Transaction  # noqa: F401
+from app.models.user import User  # noqa: F401
 
 __all__ = [
     "Base",
@@ -22,4 +23,5 @@ __all__ = [
     "PointsBalance",
     "PointsLedger",
     "Transaction",
+    "User",
 ]

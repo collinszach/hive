@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.accounts import router as accounts_router
+from app.api.auth import router as auth_router
 from app.api.anomalies import router as anomalies_router
 from app.api.budgets import router as budgets_router
 from app.api.chat import router as chat_router
@@ -55,6 +56,10 @@ app.include_router(transactions_router, dependencies=_auth)
 
 # Webhook is exempt — Plaid calls this directly with its own signature verification
 app.include_router(plaid_webhook_router)
+
+# Internal auth endpoint — called only by the Next.js proxy (carries internal token
+# via nginx /api/proxy/ routing), not directly accessible from the browser
+app.include_router(auth_router, dependencies=_auth)
 
 
 @app.get("/api/health")
