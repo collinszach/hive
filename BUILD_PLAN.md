@@ -180,12 +180,14 @@ Plaid webhook, log rotation, NUC deployment, Tailscale setup, go-live.
   - Transfer detector (25 tests — Venmo, Zelle, Cash App, bank transfers) ✅
   - Deduplication (7 tests — plaid_transaction_id uniqueness, upsert logic, exclusion flags) ✅
   - **176 total tests, all passing**
-- [ ] Write vitest tests for:
-  - Card optimizer component renders correct winner
-  - Budget gauge shows correct % used
+- [x] Write vitest tests for: ✅
+  - Card optimizer renders correct winner (9 tests — restaurant, SW flights, misc base rate, earn rate math)
+  - Budget gauge color/% logic (11 tests — green/yellow/red thresholds, bar cap at 100%, remaining label)
+  - Utils helpers (15 tests — fmt, fmtExact, fmtDate, SUBCATEGORIES, CARD_NAMES)
+  - **35 total vitest tests, all passing**
 - [x] Add error handling to all Celery tasks (retry logic, failure logging) ✅
 - [x] Add Plaid webhook endpoint for real-time transaction updates ✅
-- [ ] Set up log rotation for Docker containers
+- [x] Set up log rotation for Docker containers ✅ (json-file driver, max-size per service)
 - [ ] Deploy to NUC:
   - Copy project via `rsync` or `git push` to NUC
   - Set up `.env` with real secrets on NUC
