@@ -1,0 +1,128 @@
+"""Plaid Link API endpoints — link token creation and public token exchange."""
+import logging
+import uuid
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db import get_db
+from app.models.account import Account
+from app.models.plaid_link import PlaidLink
+from app.plaid.connector import plaid_connector
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/plaid", tags=["plaid"])
+
+
+class LinkTokenResponse(BaseModel):
+    link_token: str
+
+
+class ExchangeTokenRequest(BaseModel):
+    public_token: str
+    institution_id: Optional[str] = None
+    institution_name: Optional[str] = None
+
+
+class ExchangeTokenResponse(BaseModel):
+    item_id: str
+    accounts_created: int
+
+
+@router.post("/link-token", response_model=LinkTokenResponse)
+async def create_link_token(db: AsyncSession = Depends(get_db)) -> LinkTokenResponse:
+    """Create a Plaid Link token to initialize the Link flow in the frontend."""
+    try:
+        # Use a fixed user_id for single-user self-hosted setup
+        link_token = plaid_connector.get_link_token(user_id="local-user")
+        return LinkTokenResponse(link_token=link_token)
+    except Exception as exc:
+        logger.error("Failed to create link token: %s", exc)
+        raise HTTPException(status_code=502, detail=f"Plaid error: {exc}") from exc
+
+
+@router.post("/exchange-token", response_model=ExchangeTokenResponse)
+async def exchange_token(
+    body: ExchangeTokenRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ExchangeTokenResponse:
+    """
+    Exchange a public token from Plaid Link for an access token.
+    Creates PlaidLink record and Account records for all linked accounts.
+    """
+    try:
+        access_token, item_id = plaid_connector.exchange_public_token(body.public_token)
+    except Exception as exc:
+        logger.error("Failed to exchange public token: %s", exc)
+        raise HTTPException(status_code=502, detail=f"Plaid error: {exc}") from exc
+
+    # Check if this item_id already exists (re-link / update scenario)
+    existing = await db.execute(
+        select(PlaidLink).where(PlaidLink.item_id == item_id)
+    )
+    existing_link = existing.scalar_one_or_none()
+
+    if existing_link:
+        existing_link.access_token = access_token
+        existing_link.institution_id = body.institution_id
+        existing_link.institution_name = body.institution_name
+        existing_link.is_active = True
+        db.add(existing_link)
+    else:
+        link = PlaidLink(
+            item_id=item_id,
+            access_token=access_token,
+            institution_id=body.institution_id,
+            institution_name=body.institution_name or "Unknown",
+        )
+        db.add(link)
+
+    # Fetch accounts for this item and upsert them
+    try:
+        plaid_accounts = plaid_connector.get_accounts(access_token)
+    except Exception as exc:
+        logger.error("Failed to fetch accounts for item %s: %s", item_id, exc)
+        raise HTTPException(status_code=502, detail=f"Plaid error fetching accounts: {exc}") from exc
+
+    accounts_created = 0
+    for acct in plaid_accounts:
+        plaid_account_id = acct["account_id"]
+
+        result = await db.execute(
+            select(Account).where(Account.plaid_account_id == plaid_account_id)
+        )
+        existing_acct = result.scalar_one_or_none()
+
+        balances = acct.get("balances") or {}
+        acct_type = str(acct.get("type", "depository"))
+        acct_subtype = str(acct.get("subtype", "")) if acct.get("subtype") else None
+
+        if existing_acct:
+            existing_acct.current_balance = balances.get("current")
+            existing_acct.available_balance = balances.get("available")
+            existing_acct.credit_limit = balances.get("limit")
+            db.add(existing_acct)
+        else:
+            new_acct = Account(
+                plaid_account_id=plaid_account_id,
+                plaid_item_id=item_id,
+                name=acct.get("name", "Unknown Account"),
+                official_name=acct.get("official_name"),
+                institution=body.institution_name or "Unknown",
+                type=acct_type,
+                subtype=acct_subtype,
+                current_balance=balances.get("current"),
+                available_balance=balances.get("available"),
+                credit_limit=balances.get("limit"),
+                mask=acct.get("mask"),
+            )
+            db.add(new_acct)
+            accounts_created += 1
+
+    await db.commit()
+    logger.info("Exchanged token for item %s, created %d accounts", item_id, accounts_created)
+    return ExchangeTokenResponse(item_id=item_id, accounts_created=accounts_created)
