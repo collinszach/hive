@@ -11,6 +11,7 @@ from app.api.dashboard import router as dashboard_router
 from app.api.forecast import router as forecast_router
 from app.api.net_worth import router as net_worth_router
 from app.api.plaid_link import router as plaid_router
+from app.api.plaid_webhook import router as plaid_webhook_router
 from app.api.points import router as points_router
 from app.api.transactions import router as transactions_router
 from app.config import settings
@@ -44,6 +45,7 @@ app.include_router(dashboard_router)
 app.include_router(forecast_router)
 app.include_router(net_worth_router)
 app.include_router(plaid_router)
+app.include_router(plaid_webhook_router)
 app.include_router(points_router)
 app.include_router(transactions_router)
 
