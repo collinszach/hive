@@ -41,16 +41,25 @@ class PlaidConnector:
         self._client = _make_client()
 
     def get_link_token(self, user_id: str) -> str:
-        """Create a Plaid Link token for the given user."""
-        request = LinkTokenCreateRequest(
+        """Create a Plaid Link token for the given user.
+
+        redirect_uri is required for OAuth institutions (Capital One, Chase, etc.).
+        Must be registered in your Plaid dashboard under Team Settings → API →
+        Allowed redirect URIs. Set PLAID_REDIRECT_URI in .env.
+        """
+        kwargs: dict = dict(
             products=[Products("transactions")],
             client_name="Hive Finance",
             country_codes=[CountryCode("US")],
             language="en",
             user=LinkTokenCreateRequestUser(client_user_id=user_id),
         )
+        if settings.plaid_redirect_uri:
+            kwargs["redirect_uri"] = settings.plaid_redirect_uri
+
+        request = LinkTokenCreateRequest(**kwargs)
         response = self._client.link_token_create(request)
-        logger.info("Created link token for user %s", user_id)
+        logger.info("Created link token for user %s (redirect_uri=%s)", user_id, settings.plaid_redirect_uri or "none")
         return response["link_token"]
 
     def exchange_public_token(self, public_token: str) -> tuple[str, str]:

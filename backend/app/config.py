@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     plaid_secret: str = ""
     plaid_env: str = "development"
     plaid_webhook_url: str = ""
+    # Required for OAuth banks (Capital One, Chase, Wells Fargo, etc.)
+    # Must match a URI registered in Plaid dashboard → Team Settings → API
+    plaid_redirect_uri: str = ""
 
     # Anthropic
     anthropic_api_key: str = ""
