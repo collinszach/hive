@@ -32,10 +32,10 @@ dist/
 .vscode/
 *.swp
 
-# ML artifacts
+# ML artifacts (trained model files — NOT the SQLAlchemy models/ directory)
 *.pkl
 *.joblib
-models/
+ml_models/
 
 # Alembic (keep versions, ignore compiled)
 *.pyc
