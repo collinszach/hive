@@ -12,10 +12,26 @@ export default function ConnectPage() {
 
   // Fetch link token on mount
   useEffect(() => {
+    console.log("[Plaid] Fetching link token from", `${API_BASE}/api/plaid/link-token`);
     fetch(`${API_BASE}/api/plaid/link-token`, { method: "POST" })
-      .then((r) => r.json())
-      .then((data) => setLinkToken(data.link_token))
+      .then(async (r) => {
+        console.log("[Plaid] link-token response status:", r.status);
+        const data = await r.json();
+        console.log("[Plaid] link-token response body:", data);
+        if (!r.ok) {
+          throw new Error(data.detail ?? `Server error ${r.status}`);
+        }
+        if (!data.link_token) {
+          throw new Error("Server returned no link_token");
+        }
+        return data;
+      })
+      .then((data) => {
+        console.log("[Plaid] link token received, length:", data.link_token.length);
+        setLinkToken(data.link_token);
+      })
       .catch((err) => {
+        console.error("[Plaid] link token error:", err);
         setStatus("error");
         setMessage(`Failed to get link token: ${err.message}`);
       });
@@ -61,6 +77,11 @@ export default function ConnectPage() {
   };
 
   const { open, ready } = usePlaidLink(config);
+
+  // Log ready state changes for debugging
+  useEffect(() => {
+    console.log("[Plaid] ready:", ready, "linkToken set:", !!linkToken);
+  }, [ready, linkToken]);
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-950 text-white">
