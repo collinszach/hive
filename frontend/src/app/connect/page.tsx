@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePlaidLink, PlaidLinkOptions, PlaidLinkOnSuccess } from "react-plaid-link";
+import { Link2, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -12,7 +14,6 @@ export default function ConnectPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string>("");
 
-  // Fetch link token on mount
   useEffect(() => {
     console.log("[Plaid] Fetching link token from", `${API_BASE}/api/plaid/link-token`);
     fetch(`/api/plaid/link-token`, { method: "POST" })
@@ -81,26 +82,39 @@ export default function ConnectPage() {
 
   const { open, ready } = usePlaidLink(config);
 
-  // Log ready state changes for debugging
   useEffect(() => {
     console.log("[Plaid] ready:", ready, "linkToken set:", !!linkToken);
   }, [ready, linkToken]);
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-950 text-white">
-      <div className="max-w-md w-full mx-4 p-8 bg-gray-900 rounded-2xl shadow-xl">
-        <h1 className="text-2xl font-bold mb-2">Connect a Bank Account</h1>
-        <p className="text-gray-400 mb-6 text-sm">
-          Hive uses Plaid to securely link your accounts. Your credentials are
-          never stored — only a read-only access token.
-        </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          Dashboard
+        </Link>
+      </div>
 
-        {status === "idle" || status === "loading" ? (
+      <div className="max-w-md">
+        <div className="flex items-center gap-2.5 mb-1">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+            <Link2 className="w-4 h-4 text-indigo-400" />
+          </div>
+          <h1 className="text-xl font-semibold text-white">Connect a Bank Account</h1>
+        </div>
+        <p className="text-sm text-slate-500 ml-10.5">
+          Hive uses Plaid to securely link your accounts. Your credentials are never stored — only a read-only access token.
+        </p>
+      </div>
+
+      <div className="max-w-md rounded-xl bg-slate-900 border border-slate-800 p-6 space-y-4">
+        {(status === "idle" || status === "loading") && (
           <button
             onClick={() => open()}
             disabled={!ready || status === "loading"}
-            className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700
-                       disabled:text-gray-500 rounded-xl font-semibold transition-colors"
+            className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800
+                       disabled:text-slate-500 rounded-xl font-semibold text-sm transition-colors"
           >
             {!linkToken
               ? "Loading…"
@@ -108,29 +122,27 @@ export default function ConnectPage() {
               ? "Connecting…"
               : "Connect Bank Account"}
           </button>
-        ) : null}
+        )}
 
         {status === "success" && (
-          <div className="rounded-xl bg-green-900/40 border border-green-700 p-4 text-green-300 text-sm">
-            {message}
+          <div className="flex items-start gap-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-4">
+            <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-emerald-300 leading-relaxed">{message}</p>
+              <Link href="/" className="mt-2 block text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+                Go to Dashboard →
+              </Link>
+            </div>
           </div>
         )}
 
         {status === "error" && (
-          <div className="rounded-xl bg-red-900/40 border border-red-700 p-4 text-red-300 text-sm">
-            {message}
+          <div className="flex items-start gap-3 rounded-xl bg-rose-500/10 border border-rose-500/30 p-4">
+            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-rose-300">{message}</p>
           </div>
         )}
-
-        {status === "success" && (
-          <a
-            href="/"
-            className="mt-4 block text-center text-sm text-indigo-400 hover:text-indigo-300"
-          >
-            Go to Dashboard →
-          </a>
-        )}
       </div>
-    </main>
+    </div>
   );
 }

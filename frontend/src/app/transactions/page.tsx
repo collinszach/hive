@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { api, Transaction } from "@/lib/api";
 import { fmt, fmtDate, currentMonth, CATEGORY_COLORS, ALL_CATEGORIES, SUBCATEGORIES } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 
 function CategoryBadge({ category }: { category: string | null }) {
-  const cls = CATEGORY_COLORS[category ?? ""] ?? "bg-gray-100 text-gray-500";
+  const cls = CATEGORY_COLORS[category ?? ""] ?? "bg-slate-800 text-slate-400";
   return (
     <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium", cls)}>
       {category ?? "—"}
@@ -42,21 +43,21 @@ function CategoryEditor({
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-left hover:opacity-80">
+      <button onClick={() => setOpen(true)} className="text-left hover:opacity-80 group">
         <CategoryBadge category={tx.category} />
         {tx.subcategory && (
-          <span className="ml-1 text-xs text-gray-500">{tx.subcategory}</span>
+          <span className="ml-1.5 text-xs text-slate-500 group-hover:text-slate-400">{tx.subcategory}</span>
         )}
       </button>
     );
   }
 
   return (
-    <div className="flex gap-1 items-center flex-wrap">
+    <div className="flex gap-1.5 items-center flex-wrap">
       <select
         value={cat}
         onChange={(e) => { setCat(e.target.value); setSub(""); }}
-        className="text-xs bg-gray-800 border border-gray-700 rounded px-1 py-0.5 text-white"
+        className="text-xs bg-slate-800 border border-slate-700 rounded-md px-2 py-1 text-white focus:outline-none focus:border-indigo-500"
       >
         <option value="">Category</option>
         {ALL_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -64,7 +65,7 @@ function CategoryEditor({
       <select
         value={sub}
         onChange={(e) => setSub(e.target.value)}
-        className="text-xs bg-gray-800 border border-gray-700 rounded px-1 py-0.5 text-white"
+        className="text-xs bg-slate-800 border border-slate-700 rounded-md px-2 py-1 text-white focus:outline-none focus:border-indigo-500"
       >
         <option value="">Subcategory</option>
         {subs.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -72,11 +73,11 @@ function CategoryEditor({
       <button
         onClick={save}
         disabled={!cat || !sub || saving}
-        className="text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-2 py-0.5 rounded text-white"
+        className="text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-2.5 py-1 rounded-md text-white transition-colors"
       >
         {saving ? "…" : "Save"}
       </button>
-      <button onClick={() => setOpen(false)} className="text-xs text-gray-500 hover:text-gray-300">✕</button>
+      <button onClick={() => setOpen(false)} className="text-xs text-slate-500 hover:text-slate-300 px-1">✕</button>
     </div>
   );
 }
@@ -118,7 +119,6 @@ export default function TransactionsPage() {
     );
   }
 
-  // Generate month options (current + 11 prior)
   const months: string[] = [];
   const d = new Date();
   for (let i = 0; i < 12; i++) {
@@ -127,90 +127,128 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Transactions</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-white">Transactions</h1>
+          {data && (
+            <p className="text-sm text-slate-500 mt-0.5">{data.total.toLocaleString()} transactions</p>
+          )}
+        </div>
+      </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <select
-          value={month}
-          onChange={(e) => { setMonth(e.target.value); setPage(1); }}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white"
-        >
-          {months.map((m) => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
+      <div className="rounded-xl bg-slate-900 border border-slate-800 p-4">
+        <div className="flex flex-wrap gap-3 items-center">
+          <SlidersHorizontal className="w-4 h-4 text-slate-500 shrink-0" />
 
-        <select
-          value={category}
-          onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white"
-        >
-          <option value="">All categories</option>
-          {ALL_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+          <select
+            value={month}
+            onChange={(e) => { setMonth(e.target.value); setPage(1); }}
+            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+          >
+            {months.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
 
-        <input
-          type="search"
-          placeholder="Search merchant..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 min-w-[200px]"
-        />
+          <select
+            value={category}
+            onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+          >
+            <option value="">All categories</option>
+            {ALL_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
 
-        <label className="flex items-center gap-1.5 text-sm text-gray-400">
-          <input type="checkbox" checked={includePending} onChange={(e) => setIncludePending(e.target.checked)} className="rounded" />
-          Pending
-        </label>
-        <label className="flex items-center gap-1.5 text-sm text-gray-400">
-          <input type="checkbox" checked={includeExcluded} onChange={(e) => setIncludeExcluded(e.target.checked)} className="rounded" />
-          Excluded
-        </label>
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+            <input
+              type="search"
+              placeholder="Search merchant..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-sm text-white placeholder-slate-500 min-w-[200px] focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <label className="flex items-center gap-1.5 text-sm text-slate-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={includePending}
+              onChange={(e) => setIncludePending(e.target.checked)}
+              className="rounded accent-indigo-600"
+            />
+            Pending
+          </label>
+          <label className="flex items-center gap-1.5 text-sm text-slate-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={includeExcluded}
+              onChange={(e) => setIncludeExcluded(e.target.checked)}
+              className="rounded accent-indigo-600"
+            />
+            Excluded
+          </label>
+        </div>
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-gray-800 overflow-hidden">
+      <div className="rounded-xl border border-slate-800 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-900 text-xs text-gray-400 uppercase tracking-wider">
+          <thead className="bg-slate-900 text-xs text-slate-500 uppercase tracking-wider border-b border-slate-800">
             <tr>
-              <th className="px-4 py-2 text-left">Date</th>
-              <th className="px-4 py-2 text-left">Merchant</th>
-              <th className="px-4 py-2 text-left">Category</th>
-              <th className="px-4 py-2 text-right">Amount</th>
+              <th className="px-4 py-3 text-left font-medium">Date</th>
+              <th className="px-4 py-3 text-left font-medium">Merchant</th>
+              <th className="px-4 py-3 text-left font-medium">Category</th>
+              <th className="px-4 py-3 text-right font-medium">Amount</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-800/60">
+          <tbody className="bg-slate-950 divide-y divide-slate-800/50">
             {loading && (
-              <tr><td colSpan={4} className="text-center py-8 text-gray-500">Loading…</td></tr>
+              <tr>
+                <td colSpan={4} className="text-center py-12 text-slate-500">
+                  <div className="inline-block animate-pulse">Loading transactions…</div>
+                </td>
+              </tr>
             )}
             {!loading && data?.items.length === 0 && (
-              <tr><td colSpan={4} className="text-center py-8 text-gray-500">No transactions found</td></tr>
+              <tr>
+                <td colSpan={4} className="text-center py-12 text-slate-500">
+                  No transactions found
+                </td>
+              </tr>
             )}
             {!loading && data?.items.map((tx) => (
               <tr
                 key={tx.id}
                 className={cn(
-                  "hover:bg-gray-900/50",
+                  "hover:bg-slate-900/60 transition-colors",
                   tx.is_excluded && "opacity-40",
-                  tx.pending && "italic text-gray-500"
+                  tx.pending && "italic"
                 )}
               >
-                <td className="px-4 py-2 text-gray-400 whitespace-nowrap">{fmtDate(tx.date)}</td>
-                <td className="px-4 py-2 max-w-[240px]">
+                <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap text-xs font-mono">
+                  {fmtDate(tx.date)}
+                </td>
+                <td className="px-4 py-2.5 max-w-[240px]">
                   <div className="flex items-center gap-2">
                     {tx.logo_url && (
-                      <img src={tx.logo_url} alt="" className="h-5 w-5 rounded-full object-cover" />
+                      <img src={tx.logo_url} alt="" className="h-5 w-5 rounded-full object-cover shrink-0" />
                     )}
-                    <span className="truncate">{tx.merchant ?? tx.raw_description}</span>
+                    <span className="truncate text-slate-200">{tx.merchant ?? tx.raw_description}</span>
+                    {tx.pending && (
+                      <span className="shrink-0 text-xs text-amber-500/70 font-normal not-italic">pending</span>
+                    )}
                   </div>
                 </td>
-                <td className="px-4 py-2">
+                <td className="px-4 py-2.5">
                   <CategoryEditor tx={tx} onSave={handleSaved} />
                 </td>
                 <td className={cn(
-                  "px-4 py-2 text-right font-mono whitespace-nowrap",
-                  tx.amount < 0 ? "text-emerald-400" : "text-white"
+                  "px-4 py-2.5 text-right font-mono whitespace-nowrap font-medium",
+                  tx.amount < 0 ? "text-emerald-400" : "text-slate-200"
                 )}>
                   {tx.amount < 0 ? `+${fmt(Math.abs(tx.amount))}` : fmt(tx.amount)}
                 </td>
@@ -223,24 +261,21 @@ export default function TransactionsPage() {
       {/* Pagination */}
       {data && data.pages > 1 && (
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-500">{data.total} transactions</span>
-          <div className="flex gap-2">
+          <span className="text-slate-500 text-xs">{data.total.toLocaleString()} transactions · page {page} of {data.pages}</span>
+          <div className="flex items-center gap-1">
             <button
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
-              className="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 rounded"
+              className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 rounded-lg text-slate-300 transition-colors text-xs"
             >
-              ← Prev
+              <ChevronLeft className="w-3.5 h-3.5" /> Prev
             </button>
-            <span className="px-3 py-1 text-gray-400">
-              {page} / {data.pages}
-            </span>
             <button
               disabled={page >= data.pages}
               onClick={() => setPage(page + 1)}
-              className="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 rounded"
+              className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 rounded-lg text-slate-300 transition-colors text-xs"
             >
-              Next →
+              Next <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>

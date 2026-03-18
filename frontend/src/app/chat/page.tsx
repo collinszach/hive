@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { Send, MessageSquare } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -65,26 +66,34 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-3xl mx-auto">
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Header */}
-      <div className="p-6 pb-4 border-b border-gray-800">
-        <h1 className="text-2xl font-bold text-white">Finance Assistant</h1>
-        <p className="text-sm text-gray-400 mt-1">
-          Ask anything about your spending, budgets, or card rewards
-        </p>
+      <div className="pb-4 border-b border-slate-800 mb-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+            <MessageSquare className="w-4 h-4 text-indigo-400" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-white">Finance Assistant</h1>
+            <p className="text-xs text-slate-500">
+              Powered by Claude Sonnet · Enter to send · Shift+Enter for new line
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto py-6 space-y-4">
         {messages.length === 0 && (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-500 text-center mb-6">Suggested questions</p>
+          <div className="space-y-2.5 max-w-lg mx-auto">
+            <p className="text-xs text-slate-600 text-center mb-4 uppercase tracking-wider font-medium">
+              Suggested questions
+            </p>
             {SUGGESTED.map((q) => (
               <button
                 key={q}
                 onClick={() => sendMessage(q)}
-                className="block w-full text-left px-4 py-3 rounded-xl bg-gray-900 border border-gray-800
-                           text-sm text-gray-300 hover:border-indigo-700 hover:text-white transition-colors"
+                className="block w-full text-left px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/40 hover:bg-slate-800/80 text-sm text-slate-400 hover:text-slate-200 transition-all"
               >
                 {q}
               </button>
@@ -98,10 +107,10 @@ export default function ChatPage() {
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+              className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                 msg.role === "user"
                   ? "bg-indigo-600 text-white rounded-br-sm"
-                  : "bg-gray-800 text-gray-100 rounded-bl-sm"
+                  : "bg-slate-800 border border-slate-700 text-slate-100 rounded-bl-sm"
               }`}
             >
               {msg.content}
@@ -111,22 +120,24 @@ export default function ChatPage() {
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-gray-800 rounded-2xl rounded-bl-sm px-4 py-3 text-sm text-gray-400">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl rounded-bl-sm px-4 py-3 text-sm text-slate-500">
               <span className="animate-pulse">Thinking…</span>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="text-center text-red-400 text-sm">{error}</div>
+          <div className="text-center text-rose-400 text-sm bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+            {error}
+          </div>
         )}
 
         <div ref={bottomRef} />
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-gray-800">
-        <form onSubmit={handleSubmit} className="flex gap-3 items-end">
+      <div className="pt-4 border-t border-slate-800">
+        <form onSubmit={handleSubmit} className="flex gap-2.5 items-end">
           <textarea
             ref={inputRef}
             value={input}
@@ -134,9 +145,9 @@ export default function ChatPage() {
             onKeyDown={handleKeyDown}
             placeholder="Ask about your finances…"
             rows={1}
-            className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white
-                       placeholder-gray-500 resize-none focus:outline-none focus:border-indigo-600
-                       max-h-32 overflow-y-auto"
+            className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white
+                       placeholder-slate-500 resize-none focus:outline-none focus:border-indigo-500
+                       max-h-32 overflow-y-auto transition-colors"
             style={{ height: "auto" }}
             onInput={(e) => {
               const el = e.currentTarget;
@@ -147,16 +158,14 @@ export default function ChatPage() {
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="px-4 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-800
-                       disabled:text-gray-500 text-white rounded-xl text-sm font-medium
+            className="flex items-center gap-1.5 px-4 py-3 bg-indigo-600 hover:bg-indigo-500
+                       disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-xl text-sm font-medium
                        transition-colors shrink-0"
           >
+            <Send className="w-3.5 h-3.5" />
             Send
           </button>
         </form>
-        <p className="text-xs text-gray-600 mt-2 text-center">
-          Powered by Claude Sonnet · Enter to send · Shift+Enter for new line
-        </p>
       </div>
     </div>
   );

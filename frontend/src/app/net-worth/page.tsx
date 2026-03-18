@@ -12,6 +12,7 @@ import {
   Legend,
 } from "recharts";
 import { api, type NetWorthSnapshot } from "@/lib/api";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
@@ -50,18 +51,22 @@ export default function NetWorthPage() {
   }));
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Net Worth</h1>
-        <div className="flex gap-2">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-white">Net Worth</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Balance sheet over time</p>
+        </div>
+        <div className="flex gap-1">
           {([30, 90, 180, 365] as Range[]).map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 range === r
                   ? "bg-indigo-600 text-white"
-                  : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:bg-slate-800"
               }`}
             >
               {r === 365 ? "1Y" : `${r}D`}
@@ -70,76 +75,83 @@ export default function NetWorthPage() {
         </div>
       </div>
 
-      {/* Summary cards */}
+      {/* KPI cards */}
       {latest && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Net Worth</p>
-            <p className="text-2xl font-bold text-white">{fmt(latest.net_worth)}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="rounded-xl bg-slate-900 border border-slate-800 border-l-[3px] border-l-indigo-500 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Net Worth</p>
+            <p className="text-2xl font-bold text-white tabular-nums">{fmt(latest.net_worth)}</p>
             {change !== null && (
-              <p className={`text-sm mt-1 ${change >= 0 ? "text-green-400" : "text-red-400"}`}>
-                {change >= 0 ? "+" : ""}{fmt(change)} this period
-              </p>
+              <div className={`flex items-center gap-1 mt-1.5 text-sm ${change >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                {change > 0 ? <TrendingUp className="w-3.5 h-3.5" /> : change < 0 ? <TrendingDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
+                <span className="font-medium tabular-nums">{change >= 0 ? "+" : ""}{fmt(change)}</span>
+                <span className="text-slate-500 text-xs">this period</span>
+              </div>
             )}
           </div>
-          <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Assets</p>
-            <p className="text-2xl font-bold text-green-400">{fmt(latest.total_assets)}</p>
+          <div className="rounded-xl bg-slate-900 border border-slate-800 border-l-[3px] border-l-emerald-500 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Total Assets</p>
+            <p className="text-2xl font-bold text-emerald-400 tabular-nums">{fmt(latest.total_assets)}</p>
           </div>
-          <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Liabilities</p>
-            <p className="text-2xl font-bold text-red-400">{fmt(latest.total_liabilities)}</p>
+          <div className="rounded-xl bg-slate-900 border border-slate-800 border-l-[3px] border-l-rose-500 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Total Liabilities</p>
+            <p className="text-2xl font-bold text-rose-400 tabular-nums">{fmt(latest.total_liabilities)}</p>
           </div>
         </div>
       )}
 
       {/* Chart */}
-      <div className="bg-gray-900 rounded-xl p-5 border border-gray-800 mb-8">
-        <h2 className="text-sm font-medium text-gray-400 mb-4">Net Worth Over Time</h2>
+      <div className="rounded-xl bg-slate-900 border border-slate-800 p-5">
+        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-5">Net Worth Over Time</h2>
         {loading ? (
-          <div className="h-64 flex items-center justify-center text-gray-500">Loading…</div>
+          <div className="h-64 flex items-center justify-center text-slate-500 text-sm animate-pulse">Loading…</div>
         ) : error ? (
-          <div className="h-64 flex items-center justify-center text-red-400">{error}</div>
+          <div className="h-64 flex items-center justify-center text-rose-400 text-sm">{error}</div>
         ) : chartData.length === 0 ? (
-          <div className="h-64 flex items-center justify-center text-gray-500">
+          <div className="h-64 flex items-center justify-center text-slate-500 text-sm text-center">
             No data yet — net worth is snapshotted daily once accounts are linked.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="date" tick={{ fill: "#9CA3AF", fontSize: 11 }} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 11 }} tickLine={false} axisLine={false} />
               <YAxis
-                tick={{ fill: "#9CA3AF", fontSize: 11 }}
+                tick={{ fill: "#64748b", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip
-                contentStyle={{ backgroundColor: "#111827", border: "1px solid #374151", borderRadius: 8 }}
-                labelStyle={{ color: "#E5E7EB" }}
-                formatter={(value: number) => fmt(value)}
+                contentStyle={{
+                  backgroundColor: "#0f172a",
+                  border: "1px solid #1e293b",
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+                labelStyle={{ color: "#e2e8f0" }}
+                formatter={(value: number) => [fmt(value), ""]}
               />
-              <Legend wrapperStyle={{ color: "#9CA3AF", fontSize: 12 }} />
-              <Line type="monotone" dataKey="Net Worth" stroke="#6366F1" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="Assets" stroke="#10B981" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
-              <Line type="monotone" dataKey="Liabilities" stroke="#EF4444" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
+              <Legend wrapperStyle={{ color: "#64748b", fontSize: 12 }} />
+              <Line type="monotone" dataKey="Net Worth" stroke="#6366f1" strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="Assets" stroke="#10b981" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
+              <Line type="monotone" dataKey="Liabilities" stroke="#f43f5e" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
             </LineChart>
           </ResponsiveContainer>
         )}
       </div>
 
-      {/* Breakdown table */}
+      {/* Account breakdown */}
       {latest && Object.keys(latest.breakdown).length > 0 && (
-        <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-          <h2 className="text-sm font-medium text-gray-400 mb-4">Latest Breakdown</h2>
-          <div className="space-y-2">
+        <div className="rounded-xl bg-slate-900 border border-slate-800 p-5">
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Account Breakdown</h2>
+          <div className="divide-y divide-slate-800/60">
             {Object.entries(latest.breakdown)
               .sort(([, a], [, b]) => b - a)
               .map(([name, value]) => (
-                <div key={name} className="flex justify-between text-sm">
-                  <span className="text-gray-300">{name}</span>
-                  <span className={`font-medium ${value >= 0 ? "text-white" : "text-red-400"}`}>
+                <div key={name} className="flex justify-between items-center py-2.5 text-sm">
+                  <span className="text-slate-300">{name}</span>
+                  <span className={`font-medium tabular-nums ${value >= 0 ? "text-slate-200" : "text-rose-400"}`}>
                     {fmt(value)}
                   </span>
                 </div>

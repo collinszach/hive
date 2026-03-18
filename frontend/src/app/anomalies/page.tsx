@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, type Anomaly } from "@/lib/api";
+import { AlertTriangle, CheckCircle, ShieldAlert } from "lucide-react";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
@@ -13,9 +14,13 @@ function fmtDate(iso: string) {
 
 function ScoreBadge({ score }: { score: number }) {
   const pct = Math.round(Math.abs(score) * 100);
-  const color = pct > 70 ? "text-red-400 bg-red-900/30 border-red-800" : "text-yellow-400 bg-yellow-900/30 border-yellow-800";
+  const isHigh = pct > 70;
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${color}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${
+      isHigh
+        ? "text-rose-400 bg-rose-500/10 border-rose-500/30"
+        : "text-amber-400 bg-amber-500/10 border-amber-500/30"
+    }`}>
       {pct}% anomalous
     </span>
   );
@@ -48,56 +53,62 @@ export default function AnomaliesPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Anomaly Review</h1>
-          <p className="text-sm text-gray-400 mt-1">ML-flagged transactions that look unusual</p>
+          <h1 className="text-xl font-semibold text-white">Anomaly Review</h1>
+          <p className="text-sm text-slate-500 mt-0.5">ML-flagged transactions that look unusual</p>
         </div>
         {!loading && (
-          <span className="text-sm text-gray-400">
-            {anomalies.length} unreviewed
-          </span>
+          <div className="flex items-center gap-2 rounded-lg bg-slate-900 border border-slate-800 px-3 py-2">
+            <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <span className="text-sm font-medium text-slate-300">
+              {anomalies.length} unreviewed
+            </span>
+          </div>
         )}
       </div>
 
       {loading && (
-        <div className="text-center text-gray-500 py-16">Loading anomalies…</div>
+        <div className="text-center text-slate-500 py-16 text-sm animate-pulse">Loading anomalies…</div>
       )}
 
       {error && (
-        <div className="bg-red-900/30 border border-red-800 rounded-xl p-4 text-red-300">{error}</div>
+        <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 p-4 text-rose-300 text-sm">{error}</div>
       )}
 
       {!loading && !error && anomalies.length === 0 && (
-        <div className="text-center py-16">
-          <p className="text-4xl mb-3">✓</p>
-          <p className="text-gray-400">No unreviewed anomalies — you&apos;re all clear.</p>
+        <div className="rounded-xl bg-slate-900 border border-slate-800 py-16 text-center">
+          <CheckCircle className="w-10 h-10 text-emerald-500/40 mx-auto mb-3" />
+          <p className="text-slate-400 font-medium">All clear</p>
+          <p className="text-slate-600 text-sm mt-1">No unreviewed anomalies at this time.</p>
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {anomalies.map((anomaly) => {
           const tx = anomaly.transaction;
           return (
             <div
               key={anomaly.id}
-              className="bg-gray-900 border border-gray-800 rounded-xl p-5"
+              className="rounded-xl bg-slate-900 border border-slate-800 p-5"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   {tx && (
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
                       <span className="font-semibold text-white truncate">
                         {tx.merchant || tx.raw_description}
                       </span>
-                      <span className="text-xl font-bold text-white shrink-0">
+                      <span className="text-lg font-bold text-white shrink-0 tabular-nums">
                         {fmt(tx.amount)}
                       </span>
                     </div>
                   )}
                   {tx && (
-                    <div className="flex items-center gap-3 text-sm text-gray-400 mb-3">
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-3 ml-7">
                       <span>{fmtDate(tx.date)}</span>
                       {tx.category && (
                         <>
@@ -107,9 +118,9 @@ export default function AnomaliesPage() {
                       )}
                     </div>
                   )}
-                  <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2.5 flex-wrap ml-7">
                     <ScoreBadge score={anomaly.anomaly_score} />
-                    <span className="text-sm text-gray-300">{anomaly.reason}</span>
+                    <span className="text-sm text-slate-400">{anomaly.reason}</span>
                   </div>
                 </div>
 
@@ -117,17 +128,17 @@ export default function AnomaliesPage() {
                   <button
                     onClick={() => handleReview(anomaly.id, "ok")}
                     disabled={reviewing === anomaly.id}
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-800 text-gray-300
-                               hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 disabled:opacity-50 transition-colors"
                   >
+                    <CheckCircle className="w-3.5 h-3.5" />
                     Looks OK
                   </button>
                   <button
                     onClick={() => handleReview(anomaly.id, "confirmed")}
                     disabled={reviewing === anomaly.id}
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-900/40 text-red-300
-                               border border-red-800 hover:bg-red-900/60 disabled:opacity-50 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-rose-500/10 border border-rose-500/30 text-rose-300 hover:bg-rose-500/20 disabled:opacity-50 transition-colors"
                   >
+                    <AlertTriangle className="w-3.5 h-3.5" />
                     Flag It
                   </button>
                 </div>
