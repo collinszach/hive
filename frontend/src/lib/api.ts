@@ -1,19 +1,7 @@
-/**
- * All API calls from client components go through /api/proxy/* which:
- *  1. Validates the NextAuth session (blocks unauthenticated browsers)
- *  2. Forwards the request to FastAPI with the INTERNAL_API_TOKEN header
- *  3. Never exposes the internal token to the browser
- *
- * The path mapping: /api/proxy/transactions → FastAPI /api/transactions
- */
-function proxyPath(apiPath: string): string {
-  // Strip leading /api/ and replace with /api/proxy/
-  const stripped = apiPath.replace(/^\/api\//, "");
-  return `/api/proxy/${stripped}`;
-}
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 async function get<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
-  const url = new URL(proxyPath(path), window.location.origin);
+  const url = new URL(`${BASE}${path}`, window.location.origin);
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
       if (v !== undefined) url.searchParams.set(k, String(v));
@@ -25,7 +13,7 @@ async function get<T>(path: string, params?: Record<string, string | number | bo
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(proxyPath(path), {
+  const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -36,7 +24,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function put<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(proxyPath(path), {
+  const res = await fetch(`${BASE}${path}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

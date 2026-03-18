@@ -15,7 +15,7 @@ export default function ConnectPage() {
   // Fetch link token on mount
   useEffect(() => {
     console.log("[Plaid] Fetching link token from", `${API_BASE}/api/plaid/link-token`);
-    fetch(`/api/proxy/plaid/link-token`, { method: "POST" })
+    fetch(`/api/plaid/link-token`, { method: "POST" })
       .then(async (r) => {
         console.log("[Plaid] link-token response status:", r.status);
         const data = await r.json();
@@ -43,7 +43,7 @@ export default function ConnectPage() {
     async (publicToken, metadata) => {
       setStatus("loading");
       try {
-        const res = await fetch(`/api/proxy/plaid/exchange-token`, {
+        const res = await fetch(`/api/plaid/exchange-token`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

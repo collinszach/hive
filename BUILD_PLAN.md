@@ -193,7 +193,7 @@ Plaid webhook, log rotation, NUC deployment, Tailscale setup, go-live.
   - Set up `.env` with real secrets on NUC
   - Run `docker compose up -d`
   - Configure Celery beat to start on boot
-- [ ] Configure Tailscale so MacBook can access NUC dashboard
+- [x] Configure Tailscale so MacBook can access NUC dashboard
 - [ ] Go live: link all 8 accounts through Plaid Link
 - [ ] Verify first daily sync completes successfully
 
@@ -207,6 +207,6 @@ These require you to act in a browser or terminal:
 1. **Plaid account linking** — must click through Plaid Link UI in browser and log into each bank
 2. **`.env` file** — fill in real API keys (never share with Claude Code)
 3. **Ollama installation on NUC** — run install script on host, not in Docker
-4. **Tailscale setup** — install on both NUC and MacBook, log into same account
+4. **setup** — install on both NUC and MacBook, log into same account
 5. **SnapTrade account linking** — separate OAuth flow for investment accounts
 6. **Points balances** — manually enter current points balances on each card initially

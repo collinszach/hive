@@ -1,15 +1,13 @@
 import logging
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.accounts import router as accounts_router
-from app.api.auth import router as auth_router
 from app.api.anomalies import router as anomalies_router
 from app.api.budgets import router as budgets_router
 from app.api.chat import router as chat_router
 from app.api.dashboard import router as dashboard_router
-from app.api.deps import verify_auth
 from app.api.forecast import router as forecast_router
 from app.api.net_worth import router as net_worth_router
 from app.api.plaid_link import router as plaid_router
@@ -32,34 +30,23 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# All routers below require the internal API token (sent by the Next.js proxy).
-# Plaid webhook and /api/health are intentionally excluded — they are called by
-# external systems that cannot carry the internal token.
-_auth = [Depends(verify_auth)]
-
-app.include_router(accounts_router, dependencies=_auth)
-app.include_router(anomalies_router, dependencies=_auth)
-app.include_router(budgets_router, dependencies=_auth)
-app.include_router(chat_router, dependencies=_auth)
-app.include_router(dashboard_router, dependencies=_auth)
-app.include_router(forecast_router, dependencies=_auth)
-app.include_router(net_worth_router, dependencies=_auth)
-app.include_router(plaid_router, dependencies=_auth)
-app.include_router(points_router, dependencies=_auth)
-app.include_router(transactions_router, dependencies=_auth)
-
-# Webhook is exempt — Plaid calls this directly with its own signature verification
+app.include_router(accounts_router)
+app.include_router(anomalies_router)
+app.include_router(budgets_router)
+app.include_router(chat_router)
+app.include_router(dashboard_router)
+app.include_router(forecast_router)
+app.include_router(net_worth_router)
+app.include_router(plaid_router)
 app.include_router(plaid_webhook_router)
-
-# Internal auth endpoint — called only by the Next.js proxy (carries internal token
-# via nginx /api/proxy/ routing), not directly accessible from the browser
-app.include_router(auth_router, dependencies=_auth)
+app.include_router(points_router)
+app.include_router(transactions_router)
 
 
 @app.get("/api/health")
