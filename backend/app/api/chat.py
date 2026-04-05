@@ -6,7 +6,7 @@ from typing import Optional
 import anthropic
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +29,7 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     response: str
     input_tokens: int
     output_tokens: int
@@ -196,8 +197,8 @@ async def _chat_with_claude(
     Raises HTTPException(502) on API error.
     """
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        response = client.messages.create(
+        client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        response = await client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1024,
             system=[
