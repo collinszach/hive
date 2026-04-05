@@ -2,11 +2,12 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { Send, MessageSquare } from "lucide-react";
+import { Send, Sparkles, ArrowUp } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  model_used?: string;
 }
 
 const SUGGESTED = [
@@ -17,13 +18,70 @@ const SUGGESTED = [
   "What's my net worth trend looking like?",
 ];
 
-export default function ChatPage() {
+// ── Typing dots ──────────────────────────────────────────────────────────
+
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-1 py-1">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="w-1.5 h-1.5 rounded-full bg-ink-tertiary"
+          style={{
+            animation: "dotPulse 1.4s ease-in-out infinite",
+            animationDelay: `${i * 0.16}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Message Bubble ───────────────────────────────────────────────────────
+
+function modelLabel(model_used: string): string {
+  if (model_used.startsWith("ollama/")) return `local · ${model_used.replace("ollama/", "")}`;
+  if (model_used === "claude-sonnet-4-6") return "claude · sonnet";
+  return model_used;
+}
+
+function MessageBubble({ msg }: { msg: Message }) {
+  const isUser = msg.role === "user";
+  return (
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} animate-slide-up`}>
+      {!isUser && (
+        <div className="w-7 h-7 rounded-lg bg-honey/[0.1] border border-honey/20 flex items-center justify-center mr-2.5 mt-0.5 shrink-0">
+          <Sparkles className="w-3.5 h-3.5 text-honey" />
+        </div>
+      )}
+      <div className="flex flex-col gap-1 max-w-[75%]">
+        <div
+          className={`rounded-2xl px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap ${
+            isUser
+              ? "bg-honey/[0.12] border border-honey/20 text-ink-primary rounded-br-sm"
+              : "bg-surface border border-white/[0.06] text-ink-primary rounded-bl-sm"
+          }`}
+        >
+          {msg.content}
+        </div>
+        {!isUser && msg.model_used && (
+          <p className="text-[10px] text-ink-tertiary/40 pl-1">{modelLabel(msg.model_used)}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Page ────────────────────────────────────────────────────────────────
+
+export default function InsightsPage() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [input, setInput]       = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+  const bottomRef               = useRef<HTMLDivElement>(null);
+  const inputRef                = useRef<HTMLTextAreaElement>(null);
+  const [useClaude, setUseClaude] = useState(false);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -42,9 +100,13 @@ export default function ChatPage() {
     try {
       const res = await api.chat.send(
         userMsg.content,
-        history.map((m) => ({ role: m.role, content: m.content }))
+        history.map((m) => ({ role: m.role, content: m.content })),
+        useClaude,
       );
-      setMessages((prev) => [...prev, { role: "assistant", content: res.response }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: res.response, model_used: res.model_used },
+      ]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to send message");
     } finally {
@@ -66,34 +128,44 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      {/* Header */}
-      <div className="pb-4 border-b border-slate-800 mb-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
-            <MessageSquare className="w-4 h-4 text-indigo-400" />
+    <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in">
+
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between pb-5 border-b border-white/[0.05]">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-[10px] bg-honey/[0.1] border border-honey/20 flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-honey" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-white">Finance Assistant</h1>
-            <p className="text-xs text-slate-500">
-              Powered by Claude Sonnet · Enter to send · Shift+Enter for new line
+            <h1 className="text-[17px] font-semibold tracking-[-0.01em] text-ink-primary">Insights</h1>
+            <p className="text-[11px] text-ink-tertiary">
+              {useClaude ? "Claude Sonnet" : "Local · qwen2.5:7b"} · Enter to send
             </p>
           </div>
         </div>
+        {messages.length > 0 && (
+          <button
+            onClick={() => setMessages([])}
+            className="text-[12px] text-ink-tertiary hover:text-ink-secondary transition-colors"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto py-6 space-y-4">
+      {/* ── Messages ────────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto py-6 space-y-4 pr-1">
         {messages.length === 0 && (
-          <div className="space-y-2.5 max-w-lg mx-auto">
-            <p className="text-xs text-slate-600 text-center mb-4 uppercase tracking-wider font-medium">
-              Suggested questions
-            </p>
+          <div className="max-w-lg mx-auto space-y-2 animate-slide-up">
+            <p className="hive-label text-center mb-5">Suggested</p>
             {SUGGESTED.map((q) => (
               <button
                 key={q}
                 onClick={() => sendMessage(q)}
-                className="block w-full text-left px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/40 hover:bg-slate-800/80 text-sm text-slate-400 hover:text-slate-200 transition-all"
+                className="block w-full text-left px-4 py-3 rounded-xl hive-card
+                           text-[13px] text-ink-secondary
+                           hover:border-honey/20 hover:text-ink-primary hover:bg-honey/[0.03]
+                           transition-all duration-150"
               >
                 {q}
               </button>
@@ -102,70 +174,104 @@ export default function ChatPage() {
         )}
 
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                msg.role === "user"
-                  ? "bg-indigo-600 text-white rounded-br-sm"
-                  : "bg-slate-800 border border-slate-700 text-slate-100 rounded-bl-sm"
-              }`}
-            >
-              {msg.content}
-            </div>
-          </div>
+          <MessageBubble key={i} msg={msg} />
         ))}
 
         {loading && (
-          <div className="flex justify-start">
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl rounded-bl-sm px-4 py-3 text-sm text-slate-500">
-              <span className="animate-pulse">Thinking…</span>
+          <div className="flex justify-start animate-fade-in">
+            <div className="w-7 h-7 rounded-lg bg-honey/[0.1] border border-honey/20 flex items-center justify-center mr-2.5 mt-0.5 shrink-0">
+              <Sparkles className="w-3.5 h-3.5 text-honey" />
+            </div>
+            <div className="bg-surface border border-white/[0.06] rounded-2xl rounded-bl-sm px-4 py-3">
+              <TypingDots />
             </div>
           </div>
         )}
 
         {error && (
-          <div className="text-center text-rose-400 text-sm bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+          <div className="text-center text-semantic-expense text-[13px] bg-semantic-expense/[0.08]
+                          border border-semantic-expense/20 rounded-xl px-4 py-3">
             {error}
+            {error.includes("Ollama") && !useClaude && (
+              <button
+                onClick={() => { setUseClaude(true); setError(null); }}
+                className="block mx-auto mt-2 text-[12px] text-honey underline hover:no-underline"
+              >
+                Switch to Claude instead
+              </button>
+            )}
           </div>
         )}
 
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="pt-4 border-t border-slate-800">
+      {/* ── Input ───────────────────────────────────────────────────── */}
+      <div className="pt-4 border-t border-white/[0.05]">
         <form onSubmit={handleSubmit} className="flex gap-2.5 items-end">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about your finances…"
-            rows={1}
-            className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white
-                       placeholder-slate-500 resize-none focus:outline-none focus:border-indigo-500
-                       max-h-32 overflow-y-auto transition-colors"
-            style={{ height: "auto" }}
-            onInput={(e) => {
-              const el = e.currentTarget;
-              el.style.height = "auto";
-              el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
-            }}
-          />
+          {/* Model toggle */}
+          <div className="flex items-center gap-1 bg-elevated border border-white/[0.06] rounded-xl p-1 shrink-0 self-end mb-0.5">
+            <button
+              type="button"
+              onClick={() => setUseClaude(false)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                !useClaude
+                  ? "bg-honey/[0.15] text-honey"
+                  : "text-ink-tertiary hover:text-ink-secondary"
+              }`}
+            >
+              Local
+            </button>
+            <button
+              type="button"
+              onClick={() => setUseClaude(true)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                useClaude
+                  ? "bg-honey/[0.15] text-honey"
+                  : "text-ink-tertiary hover:text-ink-secondary"
+              }`}
+            >
+              Claude
+            </button>
+          </div>
+          <div className="flex-1 relative">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about your finances…"
+              rows={1}
+              className="w-full bg-surface border border-white/[0.08] rounded-xl px-4 py-3 text-[13px]
+                         text-ink-primary placeholder-ink-tertiary/50 resize-none
+                         focus:outline-none focus:border-honey/40 focus:ring-1 focus:ring-honey/10
+                         max-h-32 overflow-y-auto transition-all duration-150"
+              style={{ height: "auto" }}
+              onInput={(e) => {
+                const el = e.currentTarget;
+                el.style.height = "auto";
+                el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+              }}
+            />
+          </div>
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="flex items-center gap-1.5 px-4 py-3 bg-indigo-600 hover:bg-indigo-500
-                       disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-xl text-sm font-medium
-                       transition-colors shrink-0"
+            className={`flex items-center justify-center w-10 h-10 rounded-xl shrink-0 transition-all duration-150
+              ${loading || !input.trim()
+                ? "bg-elevated border border-white/[0.06] text-ink-tertiary"
+                : "bg-honey text-[#0B0B0C] shadow-honey-sm hover:bg-honey-deep"
+              }`}
           >
-            <Send className="w-3.5 h-3.5" />
-            Send
+            {loading
+              ? <div className="w-3.5 h-3.5 rounded-full border border-current border-t-transparent animate-spin" />
+              : <ArrowUp className="w-4 h-4" />
+            }
           </button>
         </form>
+        <p className="text-[10px] text-ink-tertiary/40 text-center mt-2">
+          Shift+Enter for new line
+        </p>
       </div>
     </div>
   );
