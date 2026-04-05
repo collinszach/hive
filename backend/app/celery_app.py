@@ -16,6 +16,8 @@ app = Celery(
         "app.tasks.points",
         "app.tasks.ml_tasks",
         "app.tasks.maintenance",
+        "app.tasks.intelligence",
+        "app.tasks.snaptrade_sync",
     ],
 )
 
@@ -59,6 +61,21 @@ app.conf.beat_schedule = {
     "weekly-forecast": {
         "task": "app.tasks.ml_tasks.run_spending_forecast",
         "schedule": crontab(hour=9, minute=0, day_of_week=1),
+        "options": {"queue": "default"},
+    },
+    "daily-subscription-detect": {
+        "task": "app.tasks.intelligence.detect_subscriptions",
+        "schedule": crontab(hour=8, minute=30),
+        "options": {"queue": "default"},
+    },
+    "daily-insights": {
+        "task": "app.tasks.intelligence.generate_insights",
+        "schedule": crontab(hour=9, minute=0),
+        "options": {"queue": "default"},
+    },
+    "daily-snaptrade-sync": {
+        "task": "app.tasks.snaptrade_sync.sync_snaptrade_balances",
+        "schedule": crontab(hour=6, minute=45),
         "options": {"queue": "default"},
     },
 }
