@@ -390,6 +390,79 @@ export interface SpendByCategory {
   avg_transaction: number;
 }
 
+export interface TaxDocument {
+  id: string;
+  doc_type: string;
+  tax_year: number;
+  filename: string;
+  extraction_status: "pending" | "processing" | "done" | "failed";
+  extracted_json: Record<string, unknown> | null;
+}
+
+export interface TaxFederalResult {
+  gross_income: number;
+  w2_wages: number;
+  se_income: number;
+  ordinary_dividends: number;
+  qualified_dividends: number;
+  taxable_interest: number;
+  st_capital_gains: number;
+  lt_capital_gains: number;
+  unemployment_comp: number;
+  agi: number;
+  half_se_deduction: number;
+  qbi_deduction: number;
+  standard_deduction: number;
+  itemized_deduction: number;
+  deduction_used: number;
+  used_standard_deduction: boolean;
+  taxable_ordinary_income: number;
+  ordinary_income_tax: number;
+  ltcg_tax: number;
+  se_tax: number;
+  niit: number;
+  child_tax_credit: number;
+  child_dependent_care_credit: number;
+  education_credits: number;
+  total_federal_tax: number;
+  federal_withheld: number;
+  federal_owed: number;
+  federal_refund: number;
+  effective_rate_pct: number;
+  marginal_rate_pct: number;
+  quarterly_estimated_payment: number;
+}
+
+export interface TaxStateResult {
+  state: string;
+  state_tax: number;
+  state_withheld: number;
+  state_owed: number;
+  state_refund: number;
+}
+
+export interface TaxCalculationResult {
+  calculation_id: string;
+  federal: TaxFederalResult;
+  state: TaxStateResult;
+  combined_owed: number;
+  insights: string[];
+}
+
+export interface TaxCalculateRequest {
+  tax_year: number;
+  filing_status: string;
+  dependents: number;
+  state: string;
+  pull_transactions: boolean;
+  mortgage_interest: number;
+  state_local_taxes_paid: number;
+  se_health_insurance: number;
+  student_loan_interest: number;
+  child_dependent_care_credit: number;
+  education_credits: number;
+}
+
 // ---- API functions ----
 
 export const api = {
@@ -515,5 +588,33 @@ export const api = {
       get<{ month: string; expenses: number; income: number; net: number; expense_count: number }[]>("/api/reports/monthly-summary", year ? { year } : undefined),
     taxExport: (year?: number) =>
       get<{ date: string; amount: number; merchant: string; category: string; subcategory: string | null }[]>("/api/reports/tax-export", year ? { year } : undefined),
+  },
+  tax: {
+    listDocuments: (tax_year: number) =>
+      get<TaxDocument[]>("/api/tax/documents", { tax_year }),
+    uploadDocument: async (file: File, doc_type: string, tax_year: number): Promise<TaxDocument> => {
+      const base = typeof window === "undefined" ? (process.env.BACKEND_URL ?? "http://127.0.0.1:8000") : "";
+      const token = typeof window !== "undefined" ? localStorage.getItem("hive_token") : null;
+      const form = new FormData();
+      form.append("file", file);
+      form.append("doc_type", doc_type);
+      form.append("tax_year", String(tax_year));
+      const res = await fetch(`${base}/api/tax/documents/upload`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      return res.json();
+    },
+    extractDocument: (id: string) =>
+      post<TaxDocument>(`/api/tax/documents/${id}/extract`, {}),
+    updateDocument: (id: string, extracted_json: Record<string, unknown>) =>
+      put<TaxDocument>(`/api/tax/documents/${id}`, { extracted_json }),
+    deleteDocument: (id: string) => del<void>(`/api/tax/documents/${id}`),
+    calculate: (req: TaxCalculateRequest) =>
+      post<TaxCalculationResult>("/api/tax/calculate", req),
+    listCalculations: () => get<{ id: string; tax_year: number; filing_status: string; state: string; created_at: string }[]>("/api/tax/calculations"),
+    getCalculation: (id: string) => get<TaxCalculationResult>(`/api/tax/calculations/${id}`),
   },
 };
