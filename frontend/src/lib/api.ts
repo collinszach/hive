@@ -118,6 +118,8 @@ export interface Transaction {
   id: string;
   plaid_transaction_id: string | null;
   account_id: string;
+  account_name: string | null;
+  card_slug: string | null;
   date: string;
   amount: number;
   currency: string;
@@ -298,6 +300,51 @@ export interface CategorizationRule {
   updated_at: string;
 }
 
+export interface PlanEvent {
+  id: string;
+  name: string;
+  amount: number;
+  event_date: string;  // ISO date
+  category: string | null;
+  notes: string | null;
+  is_active: boolean;
+}
+
+export interface ProjectionPoint {
+  date: string;
+  net_worth: number;
+}
+
+export interface ProjectionResponse {
+  historical: ProjectionPoint[];
+  projected: ProjectionPoint[];
+  monthly_savings_avg: number;
+  events: PlanEvent[];
+}
+
+export interface GoalProjection {
+  goal_id: string;
+  current_amount: number;
+  target_amount: number;
+  gap: number;
+  monthly_savings_avg: number;
+  months_to_completion: number | null;
+  projected_completion_date: string | null;
+  required_monthly_to_hit_target: number | null;
+  months_until_target: number | null;
+  on_track: boolean;
+}
+
+export interface TrimRecommendation {
+  category: string;
+  subcategory: string | null;
+  current_monthly: number;
+  suggested_monthly: number;
+  savings_per_month: number;
+  rationale: string;
+  goal_impact: string | null;
+}
+
 export interface MonthlyCashFlow {
   month: string;
   income: number;
@@ -417,6 +464,19 @@ export const api = {
     update: (id: string, body: Partial<Pick<Goal, "name" | "description" | "target_amount" | "current_amount" | "target_date" | "is_completed" | "is_archived" | "sort_order">>) =>
       put<Goal>(`/api/goals/${id}`, body),
     delete: (id: string) => del<{ deleted: string }>(`/api/goals/${id}`),
+    projection: (id: string) => get<GoalProjection>(`/api/goals/${id}/projection`),
+  },
+  plan: {
+    projection: (months?: number) =>
+      get<ProjectionResponse>("/api/plan/projection", months ? { months } : undefined),
+    events: () => get<PlanEvent[]>("/api/plan/events"),
+    createEvent: (data: Omit<PlanEvent, "id" | "is_active">) =>
+      post<PlanEvent>("/api/plan/events", data),
+    updateEvent: (id: string, data: Partial<PlanEvent>) =>
+      put<PlanEvent>(`/api/plan/events/${id}`, data),
+    deleteEvent: (id: string) => del<void>(`/api/plan/events/${id}`),
+    trimRecommendations: (goalIds?: string[]) =>
+      post<TrimRecommendation[]>("/api/plan/trim-recommendations", { goal_ids: goalIds ?? [] }),
   },
   rules: {
     list: (active_only?: boolean) =>
