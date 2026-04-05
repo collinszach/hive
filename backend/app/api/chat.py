@@ -1,4 +1,4 @@
-"""AI chat endpoint — natural language financial Q&A using Claude Sonnet with prompt caching."""
+"""AI chat endpoint — natural language financial Q&A using Claude Sonnet 4.6."""
 import logging
 from datetime import date, timedelta
 from typing import Optional
@@ -75,9 +75,9 @@ async def _build_financial_context(db: AsyncSession) -> str:
 
     # Budgets
     budget_result = await db.execute(
-        select(Budget).where(Budget.month == today.strftime("%Y-%m"))
+        select(Budget).where(Budget.month == date(today.year, today.month, 1))
     )
-    budgets = {b.category: float(b.amount) for b in budget_result.scalars().all()}
+    budgets = {b.category: float(b.budget_amount) for b in budget_result.scalars().all()}
 
     # Account balances
     acct_result = await db.execute(
@@ -138,11 +138,8 @@ async def _build_financial_context(db: AsyncSession) -> str:
 async def chat(body: ChatRequest, db: AsyncSession = Depends(get_db)) -> ChatResponse:
     """
     AI financial Q&A using Claude Sonnet 4.6 with prompt caching.
-    Financial context is cached in the system prompt.
+    Financial context is injected into the system prompt.
     """
-    if not settings.anthropic_api_key:
-        raise HTTPException(status_code=503, detail="Anthropic API key not configured")
-
     if not body.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
@@ -164,18 +161,16 @@ async def chat(body: ChatRequest, db: AsyncSession = Depends(get_db)) -> ChatRes
         f"{financial_context}"
     )
 
-    # Build messages with optional conversation history
+    # Build messages for Claude
     messages = []
     if body.conversation_history:
-        for msg in body.conversation_history[-10:]:  # limit history to last 10 turns
+        for msg in body.conversation_history[-10:]:
             if msg.get("role") in ("user", "assistant") and msg.get("content"):
                 messages.append({"role": msg["role"], "content": msg["content"]})
-
     messages.append({"role": "user", "content": body.message})
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-
     try:
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
         response = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1024,
@@ -189,10 +184,13 @@ async def chat(body: ChatRequest, db: AsyncSession = Depends(get_db)) -> ChatRes
             messages=messages,
         )
     except anthropic.APIError as exc:
-        logger.error("Anthropic API error: %s", exc)
-        raise HTTPException(status_code=502, detail=f"AI service error: {exc}") from exc
+        logger.error("Claude chat request failed: %s", exc)
+        raise HTTPException(status_code=502, detail=f"AI service error: {exc}")
 
     answer = response.content[0].text if response.content else ""
+    if not answer:
+        raise HTTPException(status_code=502, detail="AI returned an empty response.")
+
     return ChatResponse(
         response=answer,
         input_tokens=response.usage.input_tokens,
