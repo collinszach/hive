@@ -25,6 +25,7 @@ from app.api.points import router as points_router
 from app.api.reports import router as reports_router
 from app.api.rules import router as rules_router
 from app.api.subscriptions import router as subscriptions_router
+from app.api.snaptrade import router as snaptrade_router
 from app.api.tax import router as tax_router
 from app.api.transactions import router as transactions_router
 from app.config import settings
@@ -86,6 +87,7 @@ app.include_router(plaid_webhook_router)
 app.include_router(points_router)
 app.include_router(reports_router)
 app.include_router(rules_router)
+app.include_router(snaptrade_router)
 app.include_router(subscriptions_router)
 app.include_router(tax_router)
 app.include_router(transactions_router)

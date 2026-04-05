@@ -35,10 +35,19 @@ class Settings(BaseSettings):
     # Ollama
     ollama_url: str = "http://host.docker.internal:11434"
     ollama_model: str = "llama3.2"
+    ollama_chat_model: str = "qwen2.5:7b"
 
     # SnapTrade
     snaptrade_client_id: str = ""
     snaptrade_consumer_key: str = ""
+    app_base_url: str = "http://localhost:3000"
+
+    # Encryption (Fernet key for access tokens at rest)
+    # Generate: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    fernet_key: str = ""
+
+    # Redis auth
+    redis_password: str = ""
 
     # App
     secret_key: str = ""
