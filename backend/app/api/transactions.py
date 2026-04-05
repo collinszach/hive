@@ -7,10 +7,14 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import and_, func, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
+from app.models.account import Account
+from app.models.points_ledger import PointsLedger
 from app.models.transaction import Transaction
+from app.points.tracker import compute_points_for_transaction
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +55,12 @@ class TransactionListResponse(BaseModel):
 class CategoryUpdateRequest(BaseModel):
     category: str
     subcategory: str
+
+
+class TransactionPatchRequest(BaseModel):
+    merchant: Optional[str] = None
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
 
 
 @router.get("", response_model=TransactionListResponse)
@@ -136,7 +146,7 @@ async def update_category(
     body: CategoryUpdateRequest,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Manually override a transaction's category. Sets category_source='manual'."""
+    """Manually override a transaction's category and sync-recompute points."""
     result = await db.execute(
         select(Transaction).where(Transaction.id == transaction_id)
     )
@@ -150,10 +160,93 @@ async def update_category(
     db.add(tx)
     await db.commit()
 
+    # Sync points recalc — fetch card_slug from account
+    acct_result = await db.execute(
+        select(Account.card_slug).where(Account.id == tx.account_id)
+    )
+    card_slug = acct_result.scalar_one_or_none()
+
+    if card_slug and not tx.is_excluded and not tx.pending:
+        pts = compute_points_for_transaction(
+            card_slug=card_slug,
+            category=tx.category,
+            subcategory=tx.subcategory,
+            amount=float(tx.amount),
+        )
+        if pts:
+            stmt = pg_insert(PointsLedger).values(
+                transaction_id=tx.id,
+                account_id=tx.account_id,
+                card_slug=pts.card_slug,
+                program=pts.program,
+                points_earned=pts.points_earned,
+                earn_rate=pts.earn_rate,
+                category=tx.category,
+                subcategory=tx.subcategory,
+            )
+            stmt = stmt.on_conflict_do_update(
+                constraint="uq_points_ledger_transaction",
+                set_={
+                    "card_slug": stmt.excluded.card_slug,
+                    "program": stmt.excluded.program,
+                    "points_earned": stmt.excluded.points_earned,
+                    "earn_rate": stmt.excluded.earn_rate,
+                    "category": stmt.excluded.category,
+                    "subcategory": stmt.excluded.subcategory,
+                },
+            )
+            await db.execute(stmt)
+            await db.commit()
+
     logger.info(
         "Manual category override tx=%s → %s / %s",
-        transaction_id,
-        body.category,
-        body.subcategory,
+        transaction_id, body.category, body.subcategory,
     )
     return {"id": str(transaction_id), "category": body.category, "subcategory": body.subcategory}
+
+
+@router.patch("/{transaction_id}")
+async def patch_transaction(
+    transaction_id: uuid.UUID,
+    body: TransactionPatchRequest,
+    db: AsyncSession = Depends(get_db),
+) -> TransactionOut:
+    """Update merchant name and/or category/subcategory on a transaction."""
+    result = await db.execute(select(Transaction).where(Transaction.id == transaction_id))
+    tx = result.scalar_one_or_none()
+    if tx is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    if body.merchant is not None:
+        tx.merchant = body.merchant.strip() or None
+    if body.category is not None:
+        tx.category = body.category.strip() or None
+        tx.category_source = "manual"
+    if body.subcategory is not None:
+        tx.subcategory = body.subcategory.strip() or None
+
+    db.add(tx)
+    await db.commit()
+    await db.refresh(tx)
+    return TransactionOut.model_validate(tx)
+
+
+@router.get("/categories")
+async def list_categories(
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Return distinct categories present in actual transactions, ordered by spend."""
+    result = await db.execute(
+        select(Transaction.category, func.count().label("count"))
+        .where(
+            and_(
+                Transaction.category.isnot(None),
+                Transaction.category != "Uncategorized",
+                Transaction.is_excluded == False,  # noqa: E712
+                Transaction.amount > 0,
+            )
+        )
+        .group_by(Transaction.category)
+        .order_by(func.count().desc())
+    )
+    return [{"category": row[0], "count": row[1]} for row in result.all()]
