@@ -43,6 +43,7 @@ class PointsSummaryResponse(BaseModel):
 
 class CardOptionOut(BaseModel):
     card_slug: str
+    account_name: Optional[str] = None
     program: str
     earn_rate: float
     points_earned: float
@@ -134,17 +135,27 @@ async def optimize_card(
     category: Optional[str] = Query(None),
     subcategory: Optional[str] = Query(None),
     amount: float = Query(100.0, gt=0),
+    db: AsyncSession = Depends(get_db),
 ) -> OptimizerResponse:
     """
     Return ranked card list for a given purchase category and amount.
     Best card is first, marked with is_best=True.
     """
+    from app.models.account import Account
+
     options: list[CardOption] = get_best_card_for_purchase(category, subcategory, amount)
+
+    slug_name_rows = await db.execute(
+        select(Account.card_slug, Account.name)
+        .where(Account.card_slug.isnot(None), Account.is_active == True)  # noqa: E712
+    )
+    slug_to_name: dict[str, str] = {row.card_slug: row.name for row in slug_name_rows.all()}
 
     cards_out = []
     for i, opt in enumerate(options):
         cards_out.append(CardOptionOut(
             card_slug=opt.card_slug,
+            account_name=slug_to_name.get(opt.card_slug),
             program=opt.program,
             earn_rate=opt.earn_rate,
             points_earned=opt.points_earned,

@@ -2,35 +2,26 @@
 
 import { useState } from "react";
 import { api, CardOption } from "@/lib/api";
-import { fmt, ALL_CATEGORIES, SUBCATEGORIES, CARD_NAMES } from "@/lib/utils";
+import { fmt, ALL_CATEGORIES, SUBCATEGORIES } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Zap, Trophy } from "lucide-react";
 
-const PROGRAM_ACCENTS: Record<string, string> = {
-  "Amex MR":           "border-emerald-500/30 bg-emerald-500/5",
-  "Chase UR":          "border-blue-500/30 bg-blue-500/5",
-  "SW RR":             "border-orange-500/30 bg-orange-500/5",
-  "Bilt Points":       "border-violet-500/30 bg-violet-500/5",
-  "WF Rewards":        "border-red-500/30 bg-red-500/5",
-  "Capital One Miles": "border-sky-500/30 bg-sky-500/5",
-};
-
 const PROGRAM_VALUE_COLORS: Record<string, string> = {
   "Amex MR":           "text-emerald-400",
-  "Chase UR":          "text-blue-400",
+  "Chase UR":          "text-sky-400",
   "SW RR":             "text-orange-400",
   "Bilt Points":       "text-violet-400",
-  "WF Rewards":        "text-red-400",
-  "Capital One Miles": "text-sky-400",
+  "WF Rewards":        "text-rose-400",
+  "Capital One Miles": "text-blue-400",
 };
 
 export default function OptimizerPage() {
-  const [category, setCategory] = useState("");
+  const [category, setCategory]       = useState("");
   const [subcategory, setSubcategory] = useState("");
-  const [amount, setAmount] = useState("100");
-  const [cards, setCards] = useState<CardOption[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [amount, setAmount]           = useState("100");
+  const [cards, setCards]             = useState<CardOption[]>([]);
+  const [loading, setLoading]         = useState(false);
+  const [searched, setSearched]       = useState(false);
 
   const subcats = SUBCATEGORIES[category] ?? [];
 
@@ -54,24 +45,23 @@ export default function OptimizerPage() {
   const best = cards[0];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-5 animate-fade-in">
+
+      {/* ── Header ──────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-xl font-semibold text-white">Card Optimizer</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Find the best card to use at checkout</p>
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Card Optimizer</h1>
+        <p className="text-[13px] text-ink-tertiary mt-0.5">Find the best card to use at checkout</p>
       </div>
 
-      {/* Input form */}
-      <div className="rounded-xl bg-slate-900 border border-slate-800 p-5 space-y-4">
+      {/* ── Input Form ──────────────────────────────────────────────── */}
+      <div className="hive-card p-5 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">
-              Category
-            </label>
+            <label className="hive-label block mb-2">Category</label>
             <select
               value={category}
               onChange={(e) => { setCategory(e.target.value); setSubcategory(""); }}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+              className="hive-select w-full"
             >
               <option value="">Any category</option>
               {ALL_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -79,14 +69,12 @@ export default function OptimizerPage() {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">
-              Subcategory
-            </label>
+            <label className="hive-label block mb-2">Subcategory</label>
             <select
               value={subcategory}
               onChange={(e) => setSubcategory(e.target.value)}
               disabled={!category}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white disabled:opacity-40 focus:outline-none focus:border-indigo-500"
+              className="hive-select w-full disabled:opacity-40"
             >
               <option value="">Any subcategory</option>
               {subcats.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -94,16 +82,14 @@ export default function OptimizerPage() {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">
-              Amount ($)
-            </label>
+            <label className="hive-label block mb-2">Amount ($)</label>
             <input
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               min="1"
               step="1"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+              className="hive-input font-mono"
               onKeyDown={(e) => e.key === "Enter" && optimize()}
             />
           </div>
@@ -112,90 +98,100 @@ export default function OptimizerPage() {
         <button
           onClick={optimize}
           disabled={loading}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+          className="hive-btn-primary"
         >
           <Zap className="w-4 h-4" />
           {loading ? "Calculating…" : "Find Best Card"}
         </button>
       </div>
 
-      {/* Winner callout */}
+      {/* ── Winner ──────────────────────────────────────────────────── */}
       {searched && best && (
-        <div className={cn(
-          "rounded-xl border p-5",
-          PROGRAM_ACCENTS[best.program] ?? "border-indigo-500/30 bg-indigo-500/5"
-        )}>
-          <div className="flex items-center gap-2 mb-1">
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Best Card</span>
+        <div className="hive-card p-5 border-honey/20"
+             style={{ background: "linear-gradient(135deg, rgba(245,185,66,0.06) 0%, transparent 50%)" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Trophy className="w-4 h-4 text-honey" />
+            <span className="hive-label text-honey/80">Best Card</span>
           </div>
-          <p className="text-lg font-bold text-white">{CARD_NAMES[best.card_slug] ?? best.card_slug}</p>
-          <div className="flex items-center gap-4 mt-2 text-sm">
-            <span className="text-slate-400">{best.earn_rate}x on {category || "this purchase"}</span>
-            <span className="text-slate-400">·</span>
-            <span className="font-semibold text-slate-200">{Math.round(best.points_earned).toLocaleString()} pts</span>
-            <span className="text-slate-400">·</span>
-            <span className={cn("font-bold text-base", PROGRAM_VALUE_COLORS[best.program] ?? "text-emerald-400")}>
+          <p className="text-[18px] font-semibold text-ink-primary mb-3">
+            {best.account_name ?? best.card_slug}
+          </p>
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className="text-[13px] text-ink-secondary">
+              {best.earn_rate}x on {category || "this purchase"}
+            </span>
+            <span className="text-ink-tertiary/30">·</span>
+            <span className="text-[13px] font-mono font-semibold text-ink-primary tabular-nums">
+              {Math.round(best.points_earned).toLocaleString()} pts
+            </span>
+            <span className="text-ink-tertiary/30">·</span>
+            <span className={cn("text-[15px] font-bold font-mono tabular-nums", PROGRAM_VALUE_COLORS[best.program] ?? "text-semantic-income")}>
               {fmt(best.dollar_value)} value
             </span>
           </div>
         </div>
       )}
 
-      {/* Full rankings */}
+      {/* ── Rankings ────────────────────────────────────────────────── */}
       {searched && cards.length > 1 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">All Cards Ranked</p>
-          {cards.map((card, i) => (
-            <div
-              key={card.card_slug}
-              className={cn(
-                "rounded-xl border px-4 py-3 flex items-center justify-between gap-4",
-                i === 0
-                  ? (PROGRAM_ACCENTS[card.program] ?? "border-indigo-500/30 bg-indigo-500/5")
-                  : "border-slate-800 bg-slate-900"
-              )}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className={cn(
-                  "w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shrink-0",
-                  i === 0 ? "bg-amber-500/20 text-amber-400" : "bg-slate-800 text-slate-500"
-                )}>
-                  {i + 1}
-                </span>
-                <div className="min-w-0">
-                  <p className="font-medium text-sm text-slate-200">{CARD_NAMES[card.card_slug] ?? card.card_slug}</p>
-                  <p className="text-xs text-slate-500">{card.program}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-5 shrink-0 text-right">
-                <div>
-                  <p className="text-xs text-slate-600">Earn rate</p>
-                  <p className="font-bold text-slate-200">{card.earn_rate}x</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-600">Points</p>
-                  <p className="font-medium text-slate-300 tabular-nums">{Math.round(card.points_earned).toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-600">Value</p>
-                  <p className={cn(
-                    "font-bold tabular-nums",
-                    i === 0 ? (PROGRAM_VALUE_COLORS[card.program] ?? "text-emerald-400") : "text-slate-400"
+          <p className="hive-label">All Cards Ranked</p>
+          <div className="hive-card overflow-hidden divide-y divide-white/[0.04]">
+            {cards.map((card, i) => (
+              <div
+                key={card.card_slug}
+                className={cn(
+                  "flex items-center justify-between gap-4 px-5 py-3.5 transition-colors",
+                  i === 0 ? "bg-honey/[0.04]" : "hover:bg-white/[0.02]"
+                )}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={cn(
+                    "w-6 h-6 flex items-center justify-center rounded-full text-[11px] font-bold shrink-0",
+                    i === 0 ? "bg-honey/20 text-honey" : "bg-white/[0.05] text-ink-tertiary"
                   )}>
-                    {fmt(card.dollar_value)}
-                  </p>
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium text-ink-primary">
+                      {card.account_name ?? card.card_slug}
+                    </p>
+                    <p className="text-[11px] text-ink-tertiary">{card.program}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6 shrink-0 text-right">
+                  <div>
+                    <p className="text-[10px] text-ink-tertiary/60 mb-0.5">Rate</p>
+                    <p className="text-[13px] font-semibold text-ink-secondary">{card.earn_rate}x</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-ink-tertiary/60 mb-0.5">Points</p>
+                    <p className="text-[12px] font-mono text-ink-secondary tabular-nums">
+                      {Math.round(card.points_earned).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-ink-tertiary/60 mb-0.5">Value</p>
+                    <p className={cn(
+                      "text-[13px] font-bold font-mono tabular-nums",
+                      i === 0
+                        ? (PROGRAM_VALUE_COLORS[card.program] ?? "text-semantic-income")
+                        : "text-ink-tertiary"
+                    )}>
+                      {fmt(card.dollar_value)}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
       {searched && cards.length > 0 && (
-        <p className="text-xs text-slate-600">
-          Values based on estimated points valuations (CPP). Actual redemption value may vary.
+        <p className="text-[11px] text-ink-tertiary/50">
+          Values based on estimated cents-per-point (CPP). Actual redemption value may vary by transfer partner.
         </p>
       )}
     </div>

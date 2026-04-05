@@ -8,17 +8,8 @@ import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, Check, X, Pencil 
 
 // ── Card Badge ─────────────────────────────────────────────────────────────
 
-const CARD_LABELS: Record<string, string> = {
-  amex_gold:       "Amex Gold",
-  chase_sapphire:  "Sapphire",
-  chase_southwest: "SW Plus",
-  bilt_blue:       "Bilt",
-  wf_autograph:    "Autograph",
-  venture_x:       "Venture X",
-};
-
 function CardBadge({ cardSlug, accountName }: { cardSlug: string | null; accountName: string | null }) {
-  const label = cardSlug ? (CARD_LABELS[cardSlug] ?? cardSlug) : (accountName ?? "—");
+  const label = accountName ?? cardSlug ?? "—";
   return (
     <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium
                      bg-white/[0.05] text-ink-tertiary border border-white/[0.07] whitespace-nowrap">

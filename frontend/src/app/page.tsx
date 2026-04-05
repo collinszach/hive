@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { api, Account, Budget, PointsSummary, Transaction } from "@/lib/api";
-import { fmt, previousMonth, monthLabel, CARD_NAMES, fmtDate } from "@/lib/utils";
+import { fmt, previousMonth, monthLabel, fmtDate } from "@/lib/utils";
 import Link from "next/link";
 import {
   Landmark,
@@ -137,6 +137,79 @@ function BudgetRow({
           style={{ width: `${Math.min(pct, 100)}%` }}
         />
       </div>
+    </div>
+  );
+}
+
+// ── Account Card ─────────────────────────────────────────────────────────────
+
+function AccountCard({
+  account: a,
+  isCredit,
+  onDragStart,
+  onDrop,
+}: {
+  account: Account;
+  isCredit: boolean;
+  onDragStart: (id: string) => void;
+  onDrop: (id: string) => void;
+}) {
+  return (
+    <div
+      draggable
+      onDragStart={() => onDragStart(a.id)}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={() => onDrop(a.id)}
+      className="relative"
+    >
+      <div className="absolute top-2 right-2 z-10 opacity-0 hover:opacity-100 cursor-grab active:cursor-grabbing transition-opacity">
+        <GripVertical className="w-3.5 h-3.5 text-ink-tertiary/40" />
+      </div>
+      <Link
+        href={`/transactions?account_id=${a.id}`}
+        className={`group relative overflow-hidden rounded-[14px] p-4 block
+                   bg-gradient-to-br border border-white/[0.06] transition-all duration-200
+                   ${isCredit
+                     ? "from-honey/[0.05] via-transparent to-transparent hover:border-honey/20 hover:from-honey/[0.09]"
+                     : "from-semantic-income/[0.05] via-transparent to-transparent hover:border-semantic-income/20 hover:from-semantic-income/[0.09]"
+                   }`}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.025] to-transparent pointer-events-none" />
+        <div className="relative">
+          <div className="flex items-start justify-between mb-5">
+            <div className="min-w-0">
+              <p className={`text-[9px] font-semibold tracking-[0.12em] uppercase ${isCredit ? "text-honey/50" : "text-semantic-income/50"}`}>
+                {a.institution || (a.is_manual ? "Manual" : "Bank")}
+              </p>
+              <p className="text-[12px] font-medium text-ink-primary mt-0.5 truncate">
+                {isCredit ? (a.official_name ?? a.name) : a.name}
+              </p>
+            </div>
+            {isCredit
+              ? <CreditCard className="w-4 h-4 text-ink-tertiary/40 group-hover:text-honey/50 transition-colors shrink-0" />
+              : <Landmark   className="w-4 h-4 text-ink-tertiary/40 group-hover:text-semantic-income/50 transition-colors shrink-0" />
+            }
+          </div>
+          {a.mask && (
+            <p className="text-[10px] font-mono text-ink-tertiary/40 mb-1 tracking-[0.18em]">
+              •••• {a.mask}
+            </p>
+          )}
+          <p className="text-[18px] font-semibold font-mono text-ink-primary leading-none">
+            {fmt(a.current_balance ?? 0)}
+          </p>
+          {isCredit && a.credit_limit ? (
+            <p className="text-[10px] text-ink-tertiary/50 mt-0.5">
+              of {fmt(a.credit_limit)} limit
+            </p>
+          ) : (
+            <p className="text-[10px] text-ink-tertiary/50 mt-0.5 capitalize">
+              {a.subtype ?? a.type}
+            </p>
+          )}
+        </div>
+        <ArrowRight className={`absolute bottom-3 right-3 w-3 h-3 text-ink-tertiary/30 group-hover:translate-x-0.5 transition-all duration-150 ${isCredit ? "group-hover:text-honey/60" : "group-hover:text-semantic-income/60"}`} />
+      </Link>
     </div>
   );
 }
@@ -318,71 +391,48 @@ export default function Dashboard() {
                 Manage <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
-            <div className="p-3 grid grid-cols-2 gap-2">
-              {sortedAccts.map((a) => {
-                const isCredit = a.type === "credit";
-                return (
-                  <div
-                    key={a.id}
-                    draggable
-                    onDragStart={() => handleDragStart(a.id)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => handleDrop(a.id)}
-                    className="relative"
-                  >
-                    {/* Drag handle */}
-                    <div className="absolute top-2 right-2 z-10 opacity-0 hover:opacity-100 group-hover:opacity-100 cursor-grab active:cursor-grabbing transition-opacity">
-                      <GripVertical className="w-3.5 h-3.5 text-ink-tertiary/40" />
-                    </div>
-                    <Link
-                      href={`/transactions?account_id=${a.id}`}
-                      className={`group relative overflow-hidden rounded-[14px] p-4 block
-                                 bg-gradient-to-br border border-white/[0.06] transition-all duration-200
-                                 ${isCredit
-                                   ? "from-honey/[0.05] via-transparent to-transparent hover:border-honey/20 hover:from-honey/[0.09]"
-                                   : "from-semantic-income/[0.05] via-transparent to-transparent hover:border-semantic-income/20 hover:from-semantic-income/[0.09]"
-                                 }`}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.025] to-transparent pointer-events-none" />
-                      <div className="relative">
-                        <div className="flex items-start justify-between mb-5">
-                          <div className="min-w-0">
-                            <p className={`text-[9px] font-semibold tracking-[0.12em] uppercase ${isCredit ? "text-honey/50" : "text-semantic-income/50"}`}>
-                              {a.institution || (a.is_manual ? "Manual" : "Bank")}
-                            </p>
-                            <p className="text-[12px] font-medium text-ink-primary mt-0.5 truncate">
-                              {isCredit ? (CARD_NAMES[a.card_slug ?? ""] ?? a.name) : a.name}
-                            </p>
-                          </div>
-                          {isCredit
-                            ? <CreditCard className="w-4 h-4 text-ink-tertiary/40 group-hover:text-honey/50 transition-colors shrink-0" />
-                            : <Landmark className="w-4 h-4 text-ink-tertiary/40 group-hover:text-semantic-income/50 transition-colors shrink-0" />
-                          }
-                        </div>
-                        {a.mask && (
-                          <p className="text-[10px] font-mono text-ink-tertiary/40 mb-1 tracking-[0.18em]">
-                            •••• {a.mask}
-                          </p>
-                        )}
-                        <p className="text-[18px] font-semibold font-mono text-ink-primary leading-none">
-                          {fmt(a.current_balance ?? 0)}
-                        </p>
-                        {isCredit && a.credit_limit ? (
-                          <p className="text-[10px] text-ink-tertiary/50 mt-0.5">
-                            of {fmt(a.credit_limit)} limit
-                          </p>
-                        ) : (
-                          <p className="text-[10px] text-ink-tertiary/50 mt-0.5 capitalize">
-                            {a.subtype ?? a.type}
-                          </p>
-                        )}
-                      </div>
-                      <ArrowRight className={`absolute bottom-3 right-3 w-3 h-3 text-ink-tertiary/30 group-hover:translate-x-0.5 transition-all duration-150 ${isCredit ? "group-hover:text-honey/60" : "group-hover:text-semantic-income/60"}`} />
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
+
+            {/* Bank Accounts */}
+            {bankAccts.length > 0 && (
+              <div className="p-3 pb-0">
+                <div className="flex items-center gap-2 px-1 mb-2">
+                  <Landmark className="w-3 h-3 text-semantic-income/60" />
+                  <span className="text-[10px] font-semibold tracking-[0.10em] uppercase text-ink-tertiary">Bank Accounts</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {bankAccts.map((a) => (
+                    <AccountCard
+                      key={a.id}
+                      account={a}
+                      isCredit={false}
+                      onDragStart={handleDragStart}
+                      onDrop={handleDrop}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Credit Cards */}
+            {creditCards.length > 0 && (
+              <div className="p-3">
+                <div className={`flex items-center gap-2 px-1 mb-2 ${bankAccts.length > 0 ? "mt-1" : ""}`}>
+                  <CreditCard className="w-3 h-3 text-honey/60" />
+                  <span className="text-[10px] font-semibold tracking-[0.10em] uppercase text-ink-tertiary">Credit Cards</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {creditCards.map((a) => (
+                    <AccountCard
+                      key={a.id}
+                      account={a}
+                      isCredit={true}
+                      onDragStart={handleDragStart}
+                      onDrop={handleDrop}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Spending by Category — 1/3 */}

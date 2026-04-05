@@ -34,6 +34,13 @@ export function currentMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+export function previousMonth(): string {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export function monthLabel(yyyyMm: string): string {
   const [year, mo] = yyyyMm.split("-").map(Number);
   return new Date(year, mo - 1, 1).toLocaleDateString("en-US", {
@@ -91,11 +98,3 @@ export const SUBCATEGORIES: Record<string, string[]> = {
   "Uncategorized": ["Uncategorized"],
 };
 
-export const CARD_NAMES: Record<string, string> = {
-  amex_gold: "Amex Gold",
-  chase_sapphire: "Chase Sapphire",
-  chase_southwest: "Chase Southwest",
-  bilt_blue: "Bilt Blue",
-  wf_autograph: "WF Autograph",
-  venture_x: "Venture X",
-};

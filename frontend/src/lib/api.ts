@@ -172,6 +172,7 @@ export interface PointsSummary {
 
 export interface CardOption {
   card_slug: string;
+  account_name?: string | null;
   program: string;
   earn_rate: number;
   points_earned: number;
