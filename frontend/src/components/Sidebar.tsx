@@ -24,6 +24,7 @@ import {
   BarChart3,
   Settings2,
   CheckCircle2,
+  Calculator,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clearToken } from "@/lib/auth";
@@ -59,8 +60,9 @@ const NAV_GROUPS = [
       { href: "/net-worth",  label: "Net Worth",  icon: TrendingUp,   exact: false },
       { href: "/merchants",  label: "Merchants",  icon: Store,        exact: false },
       { href: "/reports",    label: "Reports",    icon: BarChart3,    exact: false },
-      { href: "/anomalies",  label: "Anomalies",  icon: AlertTriangle,exact: false },
-      { href: "/chat",       label: "AI Chat",    icon: MessageSquare,exact: false },
+      { href: "/anomalies",  label: "Anomalies",  icon: AlertTriangle, exact: false },
+      { href: "/tax",        label: "Tax Calculator", icon: Calculator,    exact: false },
+      { href: "/chat",       label: "AI Chat",    icon: MessageSquare, exact: false },
     ],
   },
 ] as const;
