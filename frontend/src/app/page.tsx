@@ -397,7 +397,7 @@ export default function Dashboard() {
               <div className="p-3 pb-0">
                 <div className="flex items-center gap-2 px-1 mb-2">
                   <Landmark className="w-3 h-3 text-semantic-income/60" />
-                  <span className="text-[10px] font-semibold tracking-[0.10em] uppercase text-ink-tertiary">Bank Accounts</span>
+                  <span className="text-[10px] font-semibold tracking-[0.10em] uppercase text-ink-tertiary">Accounts</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {bankAccts.map((a) => (
