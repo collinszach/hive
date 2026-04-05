@@ -219,6 +219,7 @@ export interface ChatResponse {
   response: string;
   input_tokens: number;
   output_tokens: number;
+  model_used: string;
 }
 
 export interface Insight {
@@ -514,8 +515,12 @@ export const api = {
       post<Anomaly>(`/api/anomalies/${id}/review`, { status }),
   },
   chat: {
-    send: (message: string, conversation_history?: Array<{ role: string; content: string }>) =>
-      post<ChatResponse>("/api/chat", { message, conversation_history }),
+    send: (
+      message: string,
+      conversation_history?: Array<{ role: string; content: string }>,
+      use_claude?: boolean,
+    ) =>
+      post<ChatResponse>("/api/chat", { message, conversation_history, use_claude: use_claude ?? false }),
   },
   insights: {
     list: (limit?: number, include_dismissed?: boolean) =>
