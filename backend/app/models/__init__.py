@@ -15,6 +15,8 @@ from app.models.points_ledger import PointsLedger  # noqa: F401
 from app.models.subscription import Subscription  # noqa: F401
 from app.models.transaction import Transaction  # noqa: F401
 from app.models.plan_event import PlanEvent  # noqa: F401
+from app.models.tax_calculation import TaxCalculation  # noqa: F401
+from app.models.tax_document import TaxDocument  # noqa: F401
 from app.models.user import User  # noqa: F401
 
 __all__ = [
@@ -32,6 +34,8 @@ __all__ = [
     "PointsBalance",
     "PointsLedger",
     "Subscription",
+    "TaxCalculation",
+    "TaxDocument",
     "Transaction",
     "User",
 ]
