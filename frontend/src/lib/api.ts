@@ -491,6 +491,8 @@ export const api = {
     patch: (id: string, body: { merchant?: string; category?: string; subcategory?: string }) =>
       patch<Transaction>(`/api/transactions/${id}`, body),
     categories: () => get<{ category: string; count: number }[]>("/api/transactions/categories"),
+    spendByCategory: (month?: string) =>
+      get<{ category: string; spend: number }[]>("/api/transactions/spend-by-category", month ? { month } : undefined),
   },
   budgets: {
     list: (month?: string) => get<Budget[]>("/api/budgets", month ? { month } : undefined),

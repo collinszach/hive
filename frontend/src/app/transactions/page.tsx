@@ -1,86 +1,237 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api, Transaction } from "@/lib/api";
-import { fmt, fmtDate, currentMonth, CATEGORY_COLORS, ALL_CATEGORIES, SUBCATEGORIES } from "@/lib/utils";
+import { fmt, fmtDate, currentMonth } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { Search, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, Check, X, Pencil } from "lucide-react";
+
+// ── Card Badge ─────────────────────────────────────────────────────────────
+
+const CARD_LABELS: Record<string, string> = {
+  amex_gold:       "Amex Gold",
+  chase_sapphire:  "Sapphire",
+  chase_southwest: "SW Plus",
+  bilt_blue:       "Bilt",
+  wf_autograph:    "Autograph",
+  venture_x:       "Venture X",
+};
+
+function CardBadge({ cardSlug, accountName }: { cardSlug: string | null; accountName: string | null }) {
+  const label = cardSlug ? (CARD_LABELS[cardSlug] ?? cardSlug) : (accountName ?? "—");
+  return (
+    <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium
+                     bg-white/[0.05] text-ink-tertiary border border-white/[0.07] whitespace-nowrap">
+      {label}
+    </span>
+  );
+}
+
+// ── Category Badge ─────────────────────────────────────────────────────────
+
+const CAT_COLORS: Record<string, string> = {
+  "Food & Drink":   "bg-orange-400/10 text-orange-300 border-orange-400/15",
+  "Groceries":      "bg-emerald-400/10 text-emerald-300 border-emerald-400/15",
+  "Travel":         "bg-sky-400/10 text-sky-300 border-sky-400/15",
+  "Transportation": "bg-yellow-400/10 text-yellow-300 border-yellow-400/15",
+  "Entertainment":  "bg-violet-400/10 text-violet-300 border-violet-400/15",
+  "Shopping":       "bg-pink-400/10 text-pink-300 border-pink-400/15",
+  "Health":         "bg-rose-400/10 text-rose-300 border-rose-400/15",
+  "Utilities":      "bg-slate-400/10 text-slate-300 border-slate-400/15",
+  "Home":           "bg-teal-400/10 text-teal-300 border-teal-400/15",
+  "Education":      "bg-indigo-400/10 text-indigo-300 border-indigo-400/15",
+  "Personal Care":  "bg-fuchsia-400/10 text-fuchsia-300 border-fuchsia-400/15",
+  "Income":         "bg-emerald-400/10 text-emerald-300 border-emerald-400/15",
+  "Transfers":      "bg-zinc-400/10 text-zinc-400 border-white/10",
+  "Uncategorized":  "bg-zinc-400/10 text-zinc-400 border-white/10",
+};
 
 function CategoryBadge({ category }: { category: string | null }) {
-  const cls = CATEGORY_COLORS[category ?? ""] ?? "bg-slate-800 text-slate-400";
+  const cls = CAT_COLORS[category ?? ""] ?? "bg-white/[0.06] text-ink-tertiary border-white/10";
   return (
-    <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium", cls)}>
+    <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium border", cls)}>
       {category ?? "—"}
     </span>
   );
 }
 
-function CategoryEditor({
+// ── Inline Merchant Editor ──────────────────────────────────────────────────
+
+function MerchantCell({
   tx,
   onSave,
 }: {
   tx: Transaction;
-  onSave: (id: string, cat: string, sub: string) => void;
+  onSave: (id: string, merchant: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [cat, setCat] = useState(tx.category ?? "");
-  const [sub, setSub] = useState(tx.subcategory ?? "");
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(tx.merchant ?? tx.raw_description);
   const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const subs = SUBCATEGORIES[cat] ?? [];
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
 
   async function save() {
-    if (!cat || !sub) return;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === (tx.merchant ?? tx.raw_description)) {
+      setEditing(false);
+      return;
+    }
     setSaving(true);
     try {
-      await api.transactions.updateCategory(tx.id, cat, sub);
-      onSave(tx.id, cat, sub);
-      setOpen(false);
+      await api.transactions.patch(tx.id, { merchant: trimmed });
+      onSave(tx.id, trimmed);
+      setEditing(false);
     } finally {
       setSaving(false);
     }
   }
 
-  if (!open) {
+  function cancel() {
+    setValue(tx.merchant ?? tx.raw_description);
+    setEditing(false);
+  }
+
+  if (editing) {
     return (
-      <button onClick={() => setOpen(true)} className="text-left hover:opacity-80 group">
+      <div className="flex items-center gap-1.5">
+        <input
+          ref={inputRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
+          className="text-[13px] bg-elevated border border-honey/30 rounded-lg px-2 py-0.5 text-ink-primary
+                     focus:outline-none focus:border-honey/50 w-40"
+        />
+        <button
+          onClick={save}
+          disabled={saving}
+          className="flex items-center justify-center w-5 h-5 rounded text-honey hover:bg-honey/[0.12] disabled:opacity-40 transition-colors"
+        >
+          <Check className="w-3 h-3" />
+        </button>
+        <button
+          onClick={cancel}
+          className="flex items-center justify-center w-5 h-5 rounded text-ink-tertiary hover:bg-white/[0.06] transition-colors"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className="group flex items-center gap-1.5 text-left w-full"
+    >
+      {tx.logo_url && (
+        <img src={tx.logo_url} alt="" className="h-5 w-5 rounded-full object-cover shrink-0 opacity-80" />
+      )}
+      <span className="text-[13px] text-ink-primary truncate">
+        {tx.merchant ?? tx.raw_description}
+      </span>
+      <Pencil className="w-2.5 h-2.5 text-ink-tertiary/0 group-hover:text-ink-tertiary/50 transition-colors shrink-0" />
+      {tx.pending && (
+        <span className="shrink-0 text-[10px] text-honey/70 font-medium">pending</span>
+      )}
+    </button>
+  );
+}
+
+// ── Inline Category Editor ──────────────────────────────────────────────────
+
+function CategoryCell({
+  tx,
+  categories,
+  onSave,
+}: {
+  tx: Transaction;
+  categories: string[];
+  onSave: (id: string, cat: string, sub: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [cat, setCat] = useState(tx.category ?? "");
+  const [sub, setSub] = useState(tx.subcategory ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!cat) return;
+    setSaving(true);
+    try {
+      await api.transactions.patch(tx.id, { category: cat, subcategory: sub || undefined });
+      onSave(tx.id, cat, sub);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function cancel() {
+    setCat(tx.category ?? "");
+    setSub(tx.subcategory ?? "");
+    setEditing(false);
+  }
+
+  if (!editing) {
+    return (
+      <button onClick={() => setEditing(true)} className="group flex items-center gap-1.5 text-left">
         <CategoryBadge category={tx.category} />
         {tx.subcategory && (
-          <span className="ml-1.5 text-xs text-slate-500 group-hover:text-slate-400">{tx.subcategory}</span>
+          <span className="text-[11px] text-ink-tertiary group-hover:text-ink-secondary transition-colors truncate max-w-[80px]">
+            {tx.subcategory}
+          </span>
         )}
+        <Pencil className="w-2.5 h-2.5 text-ink-tertiary/0 group-hover:text-ink-tertiary/50 transition-colors shrink-0" />
       </button>
     );
   }
 
   return (
-    <div className="flex gap-1.5 items-center flex-wrap">
-      <select
+    <div className="flex flex-wrap gap-1.5 items-center">
+      <input
+        list="cat-list"
         value={cat}
-        onChange={(e) => { setCat(e.target.value); setSub(""); }}
-        className="text-xs bg-slate-800 border border-slate-700 rounded-md px-2 py-1 text-white focus:outline-none focus:border-indigo-500"
-      >
-        <option value="">Category</option>
-        {ALL_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-      </select>
-      <select
+        onChange={(e) => setCat(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
+        placeholder="Category"
+        autoFocus
+        className="text-[12px] bg-elevated border border-honey/30 rounded-lg px-2 py-1 text-ink-primary
+                   w-32 focus:outline-none focus:border-honey/50"
+      />
+      <datalist id="cat-list">
+        {categories.map((c) => <option key={c} value={c} />)}
+      </datalist>
+      <input
         value={sub}
         onChange={(e) => setSub(e.target.value)}
-        className="text-xs bg-slate-800 border border-slate-700 rounded-md px-2 py-1 text-white focus:outline-none focus:border-indigo-500"
-      >
-        <option value="">Subcategory</option>
-        {subs.map((s) => <option key={s} value={s}>{s}</option>)}
-      </select>
+        onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
+        placeholder="Subcategory"
+        className="text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-2 py-1 text-ink-primary
+                   w-28 focus:outline-none focus:border-honey/40"
+      />
       <button
         onClick={save}
-        disabled={!cat || !sub || saving}
-        className="text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-2.5 py-1 rounded-md text-white transition-colors"
+        disabled={!cat || saving}
+        className="flex items-center gap-1 text-[11px] bg-honey/[0.12] border border-honey/20
+                   text-honey px-2 py-1 rounded-lg hover:bg-honey/[0.2] disabled:opacity-40 transition-colors"
       >
+        <Check className="w-3 h-3" />
         {saving ? "…" : "Save"}
       </button>
-      <button onClick={() => setOpen(false)} className="text-xs text-slate-500 hover:text-slate-300 px-1">✕</button>
+      <button
+        onClick={cancel}
+        className="flex items-center justify-center w-6 h-6 rounded-lg text-ink-tertiary hover:bg-white/[0.06] transition-colors"
+      >
+        <X className="w-3 h-3" />
+      </button>
     </div>
   );
 }
+
+// ── Page ──────────────────────────────────────────────────────────────────
 
 export default function TransactionsPage() {
   const [month, setMonth] = useState(currentMonth());
@@ -91,6 +242,14 @@ export default function TransactionsPage() {
   const [includeExcluded, setIncludeExcluded] = useState(false);
   const [data, setData] = useState<{ items: Transaction[]; total: number; pages: number } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [txCategories, setTxCategories] = useState<string[]>([]);
+
+  // Load category list for autocomplete + filter
+  useEffect(() => {
+    api.transactions.categories()
+      .then((cats) => setTxCategories(cats.map((c) => c.category)))
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,10 +271,22 @@ export default function TransactionsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  function handleSaved(id: string, cat: string, sub: string) {
-    setData((prev) => prev
-      ? { ...prev, items: prev.items.map((t) => t.id === id ? { ...t, category: cat, subcategory: sub, category_source: "manual" } : t) }
-      : prev
+  function handleMerchantSaved(id: string, merchant: string) {
+    setData((prev) =>
+      prev ? { ...prev, items: prev.items.map((t) => t.id === id ? { ...t, merchant } : t) } : prev
+    );
+  }
+
+  function handleCategorySaved(id: string, cat: string, sub: string) {
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            items: prev.items.map((t) =>
+              t.id === id ? { ...t, category: cat, subcategory: sub, category_source: "manual" } : t
+            ),
+          }
+        : prev
     );
   }
 
@@ -127,95 +298,111 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Transactions</h1>
-          {data && (
-            <p className="text-sm text-slate-500 mt-0.5">{data.total.toLocaleString()} transactions</p>
-          )}
-        </div>
+    <div className="space-y-5 animate-fade-in">
+
+      {/* ── Header ────────────────────────────────────────────────────── */}
+      <div>
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Transactions</h1>
+        {data && (
+          <p className="text-[13px] text-ink-tertiary mt-0.5">
+            {data.total.toLocaleString()} transactions
+          </p>
+        )}
       </div>
 
-      {/* Filters */}
-      <div className="rounded-xl bg-slate-900 border border-slate-800 p-4">
-        <div className="flex flex-wrap gap-3 items-center">
-          <SlidersHorizontal className="w-4 h-4 text-slate-500 shrink-0" />
+      {/* ── Filters ───────────────────────────────────────────────────── */}
+      <div className="hive-card p-4">
+        <div className="flex flex-wrap gap-2.5 items-center">
+          <SlidersHorizontal className="w-[15px] h-[15px] text-ink-tertiary shrink-0" />
 
           <select
             value={month}
             onChange={(e) => { setMonth(e.target.value); setPage(1); }}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+            className="hive-select text-[13px] py-1.5 w-auto"
           >
             {months.map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
 
+          {/* Category filter — dynamic from real transaction data */}
           <select
             value={category}
             onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+            className="hive-select text-[13px] py-1.5 w-auto"
           >
             <option value="">All categories</option>
-            {ALL_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {txCategories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
 
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-ink-tertiary pointer-events-none" />
             <input
               type="search"
-              placeholder="Search merchant..."
+              placeholder="Search merchant…"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-sm text-white placeholder-slate-500 min-w-[200px] focus:outline-none focus:border-indigo-500"
+              className="bg-elevated border border-white/[0.08] rounded-xl pl-8 pr-3 py-1.5 text-[13px]
+                         text-ink-primary placeholder-ink-tertiary min-w-[200px]
+                         focus:outline-none focus:border-honey/40 transition-colors"
             />
           </div>
 
-          <label className="flex items-center gap-1.5 text-sm text-slate-400 cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-[13px] text-ink-secondary cursor-pointer select-none">
             <input
               type="checkbox"
               checked={includePending}
               onChange={(e) => setIncludePending(e.target.checked)}
-              className="rounded accent-indigo-600"
+              className="rounded accent-[#F5B942] w-3.5 h-3.5"
             />
             Pending
           </label>
-          <label className="flex items-center gap-1.5 text-sm text-slate-400 cursor-pointer select-none">
+
+          <label className="flex items-center gap-2 text-[13px] text-ink-secondary cursor-pointer select-none">
             <input
               type="checkbox"
               checked={includeExcluded}
               onChange={(e) => setIncludeExcluded(e.target.checked)}
-              className="rounded accent-indigo-600"
+              className="rounded accent-[#F5B942] w-3.5 h-3.5"
             />
             Excluded
           </label>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-xl border border-slate-800 overflow-hidden">
+      {/* ── Table ─────────────────────────────────────────────────────── */}
+      <div className="hive-card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-900 text-xs text-slate-500 uppercase tracking-wider border-b border-slate-800">
+          <thead className="border-b border-white/[0.05]">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Date</th>
-              <th className="px-4 py-3 text-left font-medium">Merchant</th>
-              <th className="px-4 py-3 text-left font-medium">Category</th>
-              <th className="px-4 py-3 text-right font-medium">Amount</th>
+              <th className="px-5 py-3 text-left w-[90px]">
+                <span className="hive-label">Date</span>
+              </th>
+              <th className="px-5 py-3 text-left">
+                <span className="hive-label">Merchant</span>
+              </th>
+              <th className="px-5 py-3 text-left">
+                <span className="hive-label">Category</span>
+              </th>
+              <th className="px-5 py-3 text-left w-[110px]">
+                <span className="hive-label">Card</span>
+              </th>
+              <th className="px-5 py-3 text-right w-[110px]">
+                <span className="hive-label">Amount</span>
+              </th>
             </tr>
           </thead>
-          <tbody className="bg-slate-950 divide-y divide-slate-800/50">
+          <tbody className="divide-y divide-white/[0.04]">
             {loading && (
               <tr>
-                <td colSpan={4} className="text-center py-12 text-slate-500">
-                  <div className="inline-block animate-pulse">Loading transactions…</div>
+                <td colSpan={5} className="text-center py-16 text-ink-tertiary">
+                  <div className="inline-block animate-pulse text-[13px]">Loading…</div>
                 </td>
               </tr>
             )}
             {!loading && data?.items.length === 0 && (
               <tr>
-                <td colSpan={4} className="text-center py-12 text-slate-500">
+                <td colSpan={5} className="text-center py-16 text-[13px] text-ink-tertiary">
                   No transactions found
                 </td>
               </tr>
@@ -224,31 +411,26 @@ export default function TransactionsPage() {
               <tr
                 key={tx.id}
                 className={cn(
-                  "hover:bg-slate-900/60 transition-colors",
-                  tx.is_excluded && "opacity-40",
-                  tx.pending && "italic"
+                  "hover:bg-white/[0.02] transition-colors",
+                  tx.is_excluded && "opacity-35",
+                  tx.pending && "opacity-60"
                 )}
               >
-                <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap text-xs font-mono">
-                  {fmtDate(tx.date)}
+                <td className="px-5 py-3 whitespace-nowrap">
+                  <span className="text-[12px] font-mono text-ink-tertiary">{fmtDate(tx.date)}</span>
                 </td>
-                <td className="px-4 py-2.5 max-w-[240px]">
-                  <div className="flex items-center gap-2">
-                    {tx.logo_url && (
-                      <img src={tx.logo_url} alt="" className="h-5 w-5 rounded-full object-cover shrink-0" />
-                    )}
-                    <span className="truncate text-slate-200">{tx.merchant ?? tx.raw_description}</span>
-                    {tx.pending && (
-                      <span className="shrink-0 text-xs text-amber-500/70 font-normal not-italic">pending</span>
-                    )}
-                  </div>
+                <td className="px-5 py-3 max-w-[260px]">
+                  <MerchantCell tx={tx} onSave={handleMerchantSaved} />
                 </td>
-                <td className="px-4 py-2.5">
-                  <CategoryEditor tx={tx} onSave={handleSaved} />
+                <td className="px-5 py-3 min-w-[200px]">
+                  <CategoryCell tx={tx} categories={txCategories} onSave={handleCategorySaved} />
+                </td>
+                <td className="px-5 py-3">
+                  <CardBadge cardSlug={tx.card_slug} accountName={tx.account_name} />
                 </td>
                 <td className={cn(
-                  "px-4 py-2.5 text-right font-mono whitespace-nowrap font-medium",
-                  tx.amount < 0 ? "text-emerald-400" : "text-slate-200"
+                  "px-5 py-3 text-right font-mono tabular-nums whitespace-nowrap text-[13px] font-medium",
+                  tx.amount < 0 ? "text-semantic-income" : "text-ink-primary"
                 )}>
                   {tx.amount < 0 ? `+${fmt(Math.abs(tx.amount))}` : fmt(tx.amount)}
                 </td>
@@ -258,22 +440,24 @@ export default function TransactionsPage() {
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* ── Pagination ────────────────────────────────────────────────── */}
       {data && data.pages > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-500 text-xs">{data.total.toLocaleString()} transactions · page {page} of {data.pages}</span>
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] text-ink-tertiary font-mono">
+            {data.total.toLocaleString()} transactions · page {page} of {data.pages}
+          </span>
+          <div className="flex items-center gap-1.5">
             <button
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
-              className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 rounded-lg text-slate-300 transition-colors text-xs"
+              className="hive-btn-secondary py-1.5 px-3 text-[12px] disabled:opacity-30"
             >
               <ChevronLeft className="w-3.5 h-3.5" /> Prev
             </button>
             <button
               disabled={page >= data.pages}
               onClick={() => setPage(page + 1)}
-              className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 rounded-lg text-slate-300 transition-colors text-xs"
+              className="hive-btn-secondary py-1.5 px-3 text-[12px] disabled:opacity-30"
             >
               Next <ChevronRight className="w-3.5 h-3.5" />
             </button>

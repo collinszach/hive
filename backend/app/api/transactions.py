@@ -25,6 +25,8 @@ class TransactionOut(BaseModel):
     id: uuid.UUID
     plaid_transaction_id: Optional[str]
     account_id: uuid.UUID
+    account_name: Optional[str] = None
+    card_slug: Optional[str] = None
     date: date
     amount: float
     currency: str
@@ -121,18 +123,27 @@ async def list_transactions(
 
     offset = (page - 1) * page_size
     result = await db.execute(
-        select(Transaction)
+        select(Transaction, Account.name.label("account_name"), Account.card_slug.label("account_card_slug"))
+        .join(Account, Account.id == Transaction.account_id, isouter=True)
         .where(where_clause)
         .order_by(Transaction.date.desc(), Transaction.created_at.desc())
         .offset(offset)
         .limit(page_size)
     )
-    transactions = result.scalars().all()
+    rows = result.all()
 
     pages = max(1, (total + page_size - 1) // page_size)
 
+    items = []
+    for row in rows:
+        tx, acct_name, acct_slug = row[0], row[1], row[2]
+        out = TransactionOut.model_validate(tx)
+        out.account_name = acct_name
+        out.card_slug = acct_slug
+        items.append(out)
+
     return TransactionListResponse(
-        items=[TransactionOut.model_validate(t) for t in transactions],
+        items=items,
         total=total,
         page=page,
         page_size=page_size,
@@ -229,6 +240,43 @@ async def patch_transaction(
     await db.commit()
     await db.refresh(tx)
     return TransactionOut.model_validate(tx)
+
+
+@router.get("/spend-by-category")
+async def spend_by_category(
+    month: Optional[str] = Query(None, description="YYYY-MM format, defaults to current month"),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Return spend totals by category for a given month, ordered by spend descending."""
+    if month:
+        try:
+            year, mo = int(month[:4]), int(month[5:7])
+            start = date(year, mo, 1)
+            end = date(year + 1, 1, 1) if mo == 12 else date(year, mo + 1, 1)
+        except (ValueError, IndexError):
+            raise HTTPException(status_code=400, detail="month must be YYYY-MM format")
+    else:
+        from datetime import date as _date
+        today = _date.today()
+        start = _date(today.year, today.month, 1)
+        end = _date(today.year + 1, 1, 1) if today.month == 12 else _date(today.year, today.month + 1, 1)
+
+    result = await db.execute(
+        select(Transaction.category, func.sum(Transaction.amount).label("total"))
+        .where(
+            and_(
+                Transaction.date >= start,
+                Transaction.date < end,
+                Transaction.is_excluded == False,  # noqa: E712
+                Transaction.pending == False,  # noqa: E712
+                Transaction.amount > 0,
+                Transaction.category.isnot(None),
+            )
+        )
+        .group_by(Transaction.category)
+        .order_by(func.sum(Transaction.amount).desc())
+    )
+    return [{"category": row[0], "spend": float(row[1])} for row in result.all()]
 
 
 @router.get("/categories")
