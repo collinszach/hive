@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16
     network_mode: host
+    command: postgres -c listen_addresses=127.0.0.1
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -23,8 +24,9 @@ services:
   redis:
     image: redis:7-alpine
     network_mode: host
+    command: redis-server --bind 127.0.0.1 --requirepass ${REDIS_PASSWORD}
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,16 +43,18 @@ services:
     env_file: .env
     environment:
       POSTGRES_HOST: "127.0.0.1"
-      REDIS_URL: "redis://127.0.0.1:6379/0"
-      CELERY_BROKER_URL: "redis://127.0.0.1:6379/0"
-      CELERY_RESULT_BACKEND: "redis://127.0.0.1:6379/1"
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0"
+      CELERY_BROKER_URL: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0"
+      CELERY_RESULT_BACKEND: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/1"
+    volumes:
+      - tax-docs:/data/tax-docs
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/health"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8005/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -69,9 +73,9 @@ services:
     env_file: .env
     environment:
       POSTGRES_HOST: "127.0.0.1"
-      REDIS_URL: "redis://127.0.0.1:6379/0"
-      CELERY_BROKER_URL: "redis://127.0.0.1:6379/0"
-      CELERY_RESULT_BACKEND: "redis://127.0.0.1:6379/1"
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0"
+      CELERY_BROKER_URL: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0"
+      CELERY_RESULT_BACKEND: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/1"
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,9 +95,9 @@ services:
     env_file: .env
     environment:
       POSTGRES_HOST: "127.0.0.1"
-      REDIS_URL: "redis://127.0.0.1:6379/0"
-      CELERY_BROKER_URL: "redis://127.0.0.1:6379/0"
-      CELERY_RESULT_BACKEND: "redis://127.0.0.1:6379/1"
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0"
+      CELERY_BROKER_URL: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0"
+      CELERY_RESULT_BACKEND: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/1"
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,12 +115,15 @@ services:
     network_mode: host
     env_file: .env
     environment:
-      NEXT_PUBLIC_API_URL: "http://127.0.0.1:8000"
+      NEXT_PUBLIC_API_URL: "http://127.0.0.1:8005"
+      BACKEND_URL: "http://127.0.0.1:8005"
+      PORT: "3001"
+      HOSTNAME: "127.0.0.1"
     depends_on:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O/dev/null http://127.0.0.1:3000 || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O/dev/null http://127.0.0.1:3001 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -145,3 +152,4 @@ services:
 
 volumes:
   postgres_data:
+  tax-docs:
