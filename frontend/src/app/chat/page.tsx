@@ -108,7 +108,12 @@ export default function InsightsPage() {
         { role: "assistant", content: res.response, model_used: res.model_used },
       ]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to send message");
+      const msg = e instanceof Error ? e.message : "Failed to send message";
+      if (msg.includes("503") && !useClaude) {
+        setError("Local AI unavailable — try Claude");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -192,7 +197,7 @@ export default function InsightsPage() {
           <div className="text-center text-semantic-expense text-[13px] bg-semantic-expense/[0.08]
                           border border-semantic-expense/20 rounded-xl px-4 py-3">
             {error}
-            {error.includes("Ollama") && !useClaude && (
+            {error === "Local AI unavailable — try Claude" && !useClaude && (
               <button
                 onClick={() => { setUseClaude(true); setError(null); }}
                 className="block mx-auto mt-2 text-[12px] text-honey underline hover:no-underline"
