@@ -1,50 +1,177 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState, FormEvent } from "react";
 import { usePlaidLink, PlaidLinkOptions, PlaidLinkOnSuccess } from "react-plaid-link";
-import { Link2, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import {
+  Link2, CheckCircle, AlertCircle, Building2, Trash2,
+  ChevronDown, ChevronUp, Info, RefreshCw, Copy, Check,
+  ExternalLink, Shield, Zap, PenLine, Plus, X, TrendingUp,
+} from "lucide-react";
+import { api, LinkedInstitution } from "@/lib/api";
+import { authedFetch } from "@/lib/auth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+interface ManualAccount {
+  id: string;
+  name: string;
+  institution: string;
+  type: string;
+  subtype: string | null;
+  current_balance: number | null;
+  currency: string;
+  is_manual: boolean;
+}
+
+const ACCOUNT_TYPES = [
+  { value: "depository",  label: "Bank / Checking / Savings" },
+  { value: "investment",  label: "Investment / Brokerage" },
+  { value: "credit",      label: "Credit Card" },
+  { value: "loan",        label: "Loan / Mortgage" },
+  { value: "other",       label: "Other" },
+];
+
+const OAUTH_BANKS = [
+  "Capital One", "Chase", "Wells Fargo", "American Express",
+  "Bank of America", "Citi", "US Bank",
+];
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      }}
+      className="flex items-center gap-1 text-[12px] text-ink-tertiary hover:text-ink-secondary transition-colors ml-1"
+    >
+      {copied ? <Check className="w-3 h-3 text-semantic-income" /> : <Copy className="w-3 h-3" />}
+    </button>
+  );
+}
 
 export default function ConnectPage() {
-  const router = useRouter();
-  const [linkToken, setLinkToken] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [message, setMessage] = useState<string>("");
+  const [linkToken, setLinkToken]                     = useState<string | null>(null);
+  const [receivedRedirectUri, setReceivedRedirectUri] = useState<string | undefined>(undefined);
+  const [status, setStatus]                           = useState<"idle" | "syncing" | "success" | "error">("idle");
+  const [message, setMessage]                         = useState<string>("");
+  const [linked, setLinked]                           = useState<LinkedInstitution[]>([]);
+  const [expandedItems, setExpandedItems]             = useState<Set<string>>(new Set());
+  const [unlinking, setUnlinking]                     = useState<string | null>(null);
+  const [confirmUnlink, setConfirmUnlink]             = useState<string | null>(null);
+  const [syncing, setSyncing]                         = useState(false);
+  const [showOAuthSetup, setShowOAuthSetup]           = useState(false);
+  const [manualAccounts, setManualAccounts]           = useState<ManualAccount[]>([]);
+  const [showAddManual, setShowAddManual]             = useState(false);
+  const [editingManual, setEditingManual]             = useState<ManualAccount | null>(null);
+  const [manualForm, setManualForm]                   = useState({
+    name: "", institution: "", type: "depository", subtype: "", current_balance: "", currency: "USD",
+  });
+  const [manualLoading, setManualLoading]             = useState(false);
+  const [snaptradeLoading, setSnaptradeLoading]       = useState(false);
+  const [snaptradeMessage, setSnaptradeMessage]       = useState<string>("");
 
-  useEffect(() => {
-    console.log("[Plaid] Fetching link token from", `${API_BASE}/api/plaid/link-token`);
-    fetch(`/api/plaid/link-token`, { method: "POST" })
+  const detectedRedirectUri = typeof window !== "undefined"
+    ? `${window.location.protocol}//${window.location.host}/connect`
+    : "";
+
+  const fetchLinkToken = useCallback(() => {
+    authedFetch(`/api/plaid/link-token`, { method: "POST" })
       .then(async (r) => {
-        console.log("[Plaid] link-token response status:", r.status);
         const data = await r.json();
-        console.log("[Plaid] link-token response body:", data);
-        if (!r.ok) {
-          throw new Error(data.detail ?? `Server error ${r.status}`);
-        }
-        if (!data.link_token) {
-          throw new Error("Server returned no link_token");
-        }
+        if (!r.ok) throw new Error(data.detail ?? `Server error ${r.status}`);
+        if (!data.link_token) throw new Error("Server returned no link_token");
         return data;
       })
-      .then((data) => {
-        console.log("[Plaid] link token received, length:", data.link_token.length);
-        setLinkToken(data.link_token);
-      })
+      .then((data) => setLinkToken(data.link_token))
       .catch((err) => {
-        console.error("[Plaid] link token error:", err);
         setStatus("error");
         setMessage(`Failed to get link token: ${err.message}`);
       });
   }, []);
 
+  const fetchLinked = useCallback(() => {
+    api.accounts.linked().then(setLinked).catch(() => {});
+  }, []);
+
+  const isOAuthReturn = typeof window !== "undefined" && window.location.href.includes("oauth_state_id=");
+
+  const fetchManualAccounts = useCallback(() => {
+    authedFetch("/api/accounts")
+      .then((r) => r.ok ? r.json() : [])
+      .then((accounts: ManualAccount[]) => setManualAccounts(accounts.filter((a) => a.is_manual)))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchLinked();
+    fetchManualAccounts();
+    if (isOAuthReturn) setReceivedRedirectUri(window.location.href);
+    fetchLinkToken();
+  }, [fetchLinkToken, fetchLinked, fetchManualAccounts, isOAuthReturn]);
+
+  function openAddManual() {
+    setEditingManual(null);
+    setManualForm({ name: "", institution: "", type: "depository", subtype: "", current_balance: "", currency: "USD" });
+    setShowAddManual(true);
+  }
+
+  function openEditManual(acct: ManualAccount) {
+    setEditingManual(acct);
+    setManualForm({
+      name: acct.name,
+      institution: acct.institution,
+      type: acct.type,
+      subtype: acct.subtype ?? "",
+      current_balance: acct.current_balance != null ? String(acct.current_balance) : "",
+      currency: acct.currency,
+    });
+    setShowAddManual(true);
+  }
+
+  async function handleManualSubmit(e: FormEvent) {
+    e.preventDefault();
+    setManualLoading(true);
+    const payload = {
+      name: manualForm.name,
+      institution: manualForm.institution,
+      type: manualForm.type,
+      subtype: manualForm.subtype || null,
+      current_balance: parseFloat(manualForm.current_balance) || 0,
+      currency: manualForm.currency,
+    };
+    try {
+      if (editingManual) {
+        const res = await authedFetch(`/api/accounts/manual/${editingManual.id}`, {
+          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error("Update failed");
+      } else {
+        const res = await authedFetch("/api/accounts/manual", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error("Create failed");
+      }
+      setShowAddManual(false);
+      fetchManualAccounts();
+    } catch {
+      // keep form open
+    } finally {
+      setManualLoading(false);
+    }
+  }
+
+  async function handleDeleteManual(id: string) {
+    await authedFetch(`/api/accounts/manual/${id}`, { method: "DELETE" });
+    setManualAccounts((prev) => prev.filter((a) => a.id !== id));
+  }
+
   const onSuccess = useCallback<PlaidLinkOnSuccess>(
     async (publicToken, metadata) => {
-      setStatus("loading");
+      setStatus("syncing");
       try {
-        const res = await fetch(`/api/plaid/exchange-token`, {
+        const res = await authedFetch(`/api/plaid/exchange-token`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -53,93 +180,535 @@ export default function ConnectPage() {
             institution_name: metadata.institution?.name ?? null,
           }),
         });
-
         if (!res.ok) {
           const err = await res.json();
           throw new Error(err.detail ?? "Exchange failed");
         }
-
         const data = await res.json();
+        setReceivedRedirectUri(undefined);
         setStatus("success");
-        setMessage(
-          `Connected! ${data.accounts_created} account(s) linked for ${
-            metadata.institution?.name ?? "your bank"
-          }. Syncing transactions now — redirecting to dashboard in a few seconds.`
-        );
-        setTimeout(() => router.push("/"), 4000);
+        setMessage(`Connected ${metadata.institution?.name ?? "your bank"} — ${data.accounts_created} account(s) linked. Syncing now…`);
+        fetchLinked();
+        if (window.location.search.includes("oauth_state_id")) {
+          window.history.replaceState({}, "", "/connect");
+        }
+        setTimeout(() => { setStatus("idle"); setMessage(""); fetchLinkToken(); }, 5000);
       } catch (err: unknown) {
         setStatus("error");
         setMessage(err instanceof Error ? err.message : "Unknown error");
       }
     },
-    []
+    [fetchLinked, fetchLinkToken]
   );
 
   const config: PlaidLinkOptions = {
-    token: linkToken ?? "",
+    token: linkToken,
     onSuccess,
+    ...(receivedRedirectUri ? { receivedRedirectUri } : {}),
   };
-
   const { open, ready } = usePlaidLink(config);
 
   useEffect(() => {
-    console.log("[Plaid] ready:", ready, "linkToken set:", !!linkToken);
-  }, [ready, linkToken]);
+    if (ready && receivedRedirectUri) open();
+  }, [ready, receivedRedirectUri, open]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("snaptrade_connected") !== "1") return;
+    window.history.replaceState({}, "", "/connect");
+    api.snaptrade.callback()
+      .then((data) => {
+        setSnaptradeMessage(`Connected ${data.accounts_added} investment account(s). Balances will sync shortly.`);
+        fetchLinked();
+      })
+      .catch(() => {
+        setSnaptradeMessage("SnapTrade connection completed but failed to fetch accounts. Try refreshing.");
+      });
+  }, [fetchLinked]);
+
+  const handleUnlink = async (item_id: string) => {
+    setUnlinking(item_id);
+    setConfirmUnlink(null);
+    try {
+      const result = await api.accounts.unlink(item_id, true);
+      setLinked((prev) => prev.filter((l) => l.item_id !== item_id));
+      setMessage(`Unlinked — ${result.accounts_removed} account(s) and ${result.transactions_deleted} transaction(s) removed.`);
+    } catch {
+      setStatus("error");
+      setMessage("Failed to unlink. Try again.");
+    } finally {
+      setUnlinking(null);
+    }
+  };
+
+  const handleSyncNow = async () => {
+    setSyncing(true);
+    try {
+      await authedFetch("/api/plaid/sync-now", { method: "POST" });
+      setStatus("success");
+      setMessage("Sync queued — transactions will update in ~30 seconds.");
+      setTimeout(() => { setStatus("idle"); setMessage(""); }, 5000);
+    } catch {
+      setStatus("error");
+      setMessage("Failed to trigger sync.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  async function handleSnaptradeConnect() {
+    setSnaptradeLoading(true);
+    setSnaptradeMessage("");
+    try {
+      const data = await api.snaptrade.connect();
+      window.location.href = data.redirect_url;
+    } catch {
+      setSnaptradeMessage("Failed to connect to SnapTrade. Check server configuration.");
+      setSnaptradeLoading(false);
+    }
+  }
+
+  const toggleExpand = (item_id: string) => {
+    setExpandedItems((prev) => {
+      const next = new Set(prev);
+      next.has(item_id) ? next.delete(item_id) : next.add(item_id);
+      return next;
+    });
+  };
+
+  const formatBalance = (acct: LinkedInstitution["accounts"][0]) => {
+    const val = acct.type === "credit"
+      ? acct.current_balance
+      : (acct.available_balance ?? acct.current_balance);
+    if (val == null) return "—";
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(val);
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href="/" className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          Dashboard
-        </Link>
+    <div className="space-y-5 max-w-2xl animate-fade-in">
+
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Connected Accounts</h1>
+          <p className="text-[13px] text-ink-tertiary mt-0.5">
+            Hive uses Plaid to securely pull transactions. Your credentials are never stored.
+          </p>
+        </div>
+        {linked.length > 0 && (
+          <button
+            onClick={handleSyncNow}
+            disabled={syncing}
+            className="hive-btn-secondary py-1.5 text-[13px]"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing…" : "Sync Now"}
+          </button>
+        )}
       </div>
 
-      <div className="max-w-md">
-        <div className="flex items-center gap-2.5 mb-1">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
-            <Link2 className="w-4 h-4 text-indigo-400" />
-          </div>
-          <h1 className="text-xl font-semibold text-white">Connect a Bank Account</h1>
+      {/* ── Status Banners ──────────────────────────────────────────── */}
+      {isOAuthReturn && !status.startsWith("success") && (
+        <div className="flex items-center gap-3 rounded-xl bg-honey/[0.08] border border-honey/20 p-4">
+          <div className="w-4 h-4 rounded-full border border-honey border-t-transparent animate-spin shrink-0" />
+          <p className="text-[13px] text-honey">Completing OAuth connection — opening Plaid…</p>
         </div>
-        <p className="text-sm text-slate-500 ml-10.5">
-          Hive uses Plaid to securely link your accounts. Your credentials are never stored — only a read-only access token.
+      )}
+      {status === "syncing" && (
+        <div className="flex items-center gap-3 rounded-xl bg-honey/[0.06] border border-honey/20 p-4">
+          <div className="w-4 h-4 rounded-full border border-honey border-t-transparent animate-spin shrink-0" />
+          <p className="text-[13px] text-ink-secondary">Connecting account…</p>
+        </div>
+      )}
+      {status === "success" && (
+        <div className="flex items-start gap-3 rounded-xl bg-semantic-income/[0.08] border border-semantic-income/20 p-4">
+          <CheckCircle className="w-4 h-4 text-semantic-income shrink-0 mt-0.5" />
+          <p className="text-[13px] text-semantic-income">{message}</p>
+        </div>
+      )}
+      {status === "error" && (
+        <div className="flex items-start gap-3 rounded-xl bg-semantic-expense/[0.08] border border-semantic-expense/20 p-4">
+          <AlertCircle className="w-4 h-4 text-semantic-expense shrink-0 mt-0.5" />
+          <p className="text-[13px] text-semantic-expense">{message}</p>
+        </div>
+      )}
+      {status === "idle" && message && (
+        <div className="flex items-start gap-3 rounded-xl hive-card p-4">
+          <CheckCircle className="w-4 h-4 text-ink-tertiary shrink-0 mt-0.5" />
+          <p className="text-[13px] text-ink-secondary">{message}</p>
+        </div>
+      )}
+
+      {/* ── Linked Institutions ─────────────────────────────────────── */}
+      {linked.length > 0 && (
+        <div className="space-y-2">
+          <p className="hive-label">
+            {linked.length} Linked Institution{linked.length !== 1 ? "s" : ""}
+          </p>
+          {linked.map((inst) => {
+            const expanded = expandedItems.has(inst.item_id);
+            const isUnlinking = unlinking === inst.item_id;
+            const isConfirming = confirmUnlink === inst.item_id;
+            const totalBalance = inst.accounts.reduce((s, a) => s + (a.current_balance ?? 0), 0);
+
+            return (
+              <div key={inst.item_id} className="hive-card overflow-hidden">
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="w-9 h-9 rounded-[10px] bg-elevated border border-white/[0.06] flex items-center justify-center shrink-0">
+                    <Building2 className="w-4 h-4 text-ink-tertiary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium text-ink-primary truncate">
+                      {inst.institution_name}
+                    </p>
+                    <p className="text-[11px] text-ink-tertiary font-mono">
+                      {inst.accounts.length} account{inst.accounts.length !== 1 ? "s" : ""}
+                      <span className="mx-1.5 opacity-40">·</span>
+                      {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totalBalance)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isConfirming ? (
+                      <>
+                        <span className="text-[12px] text-semantic-expense mr-1">Remove all data?</span>
+                        <button
+                          onClick={() => handleUnlink(inst.item_id)}
+                          disabled={isUnlinking}
+                          className="hive-btn-danger py-1 px-2.5 text-[12px]"
+                        >
+                          {isUnlinking ? "Removing…" : "Yes"}
+                        </button>
+                        <button
+                          onClick={() => setConfirmUnlink(null)}
+                          className="hive-btn-secondary py-1 px-2.5 text-[12px]"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmUnlink(inst.item_id)}
+                        className="flex items-center justify-center w-7 h-7 rounded-lg text-ink-tertiary/50
+                                   hover:text-semantic-expense hover:bg-semantic-expense/[0.08] transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => toggleExpand(inst.item_id)}
+                      className="flex items-center justify-center w-7 h-7 rounded-lg text-ink-tertiary
+                                 hover:bg-white/[0.05] transition-colors"
+                    >
+                      {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {expanded && (
+                  <div className="border-t border-white/[0.04]">
+                    {inst.accounts.map((acct, i) => (
+                      <div
+                        key={acct.id}
+                        className={`flex items-center gap-3 px-4 py-2.5 ${
+                          i < inst.accounts.length - 1 ? "border-b border-white/[0.04]" : ""
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0 pl-12">
+                          <p className="text-[13px] text-ink-secondary truncate">
+                            {acct.name}
+                            {acct.mask && (
+                              <span className="text-ink-tertiary ml-1.5 font-mono text-[11px]">
+                                ••{acct.mask}
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-[11px] text-ink-tertiary/60 capitalize">
+                            {acct.type}{acct.subtype ? ` · ${acct.subtype}` : ""}
+                          </p>
+                        </div>
+                        <p className="text-[13px] text-ink-secondary font-mono tabular-nums">
+                          {formatBalance(acct)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {linked.length === 0 && (
+        <div className="hive-card p-12 text-center border-dashed">
+          <Building2 className="w-8 h-8 text-ink-tertiary/30 mx-auto mb-2" />
+          <p className="text-[14px] text-ink-secondary mb-1">No accounts linked yet</p>
+          <p className="text-[12px] text-ink-tertiary">Connect your first bank or credit card below.</p>
+        </div>
+      )}
+
+      {/* ── Add Institution ─────────────────────────────────────────── */}
+      <div className="hive-card p-5">
+        <div className="flex items-center gap-2 mb-2">
+          <Zap className="w-4 h-4 text-honey" />
+          <h2 className="text-[14px] font-semibold text-ink-primary">Add Institution</h2>
+        </div>
+        <p className="text-[12px] text-ink-tertiary mb-4">
+          Connect any bank, credit card, or investment account. Plaid supports 12,000+ institutions.
+        </p>
+        <button
+          onClick={() => open()}
+          disabled={!ready || status === "syncing"}
+          className="hive-btn-primary"
+        >
+          <Link2 className="w-4 h-4" />
+          {!linkToken ? "Loading…" : status === "syncing" ? "Connecting…" : "Connect Bank Account"}
+        </button>
+      </div>
+
+      {/* ── SnapTrade / Investment Accounts ────────────────────────────────── */}
+      <div className="hive-card p-5 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-sky-400/10 flex items-center justify-center">
+            <TrendingUp className="w-4 h-4 text-sky-400" />
+          </div>
+          <div>
+            <p className="text-[14px] font-semibold text-ink-primary">Investment Accounts</p>
+            <p className="text-[12px] text-ink-tertiary">Connect brokerage &amp; retirement accounts via SnapTrade</p>
+          </div>
+        </div>
+
+        {snaptradeMessage && (
+          <p className="text-[12px] text-semantic-income">{snaptradeMessage}</p>
+        )}
+
+        <button
+          onClick={handleSnaptradeConnect}
+          disabled={snaptradeLoading}
+          className="hive-btn-secondary w-full"
+        >
+          {snaptradeLoading ? "Redirecting…" : "Connect Brokerage"}
+        </button>
+
+        <p className="text-[11px] text-ink-tertiary/50">
+          Supports Schwab, Fidelity, Vanguard, and 10,000+ other institutions. You&apos;ll be redirected to SnapTrade to authenticate securely.
         </p>
       </div>
 
-      <div className="max-w-md rounded-xl bg-slate-900 border border-slate-800 p-6 space-y-4">
-        {(status === "idle" || status === "loading") && (
+      {/* ── Manual Accounts ─────────────────────────────────────────── */}
+      <div className="hive-card overflow-hidden">
+        <div className="hive-section-header">
+          <div className="flex items-center gap-2">
+            <PenLine className="w-4 h-4 text-honey/70" />
+            <h2 className="text-[14px] font-semibold text-ink-primary">Manual Accounts</h2>
+            {manualAccounts.length > 0 && (
+              <span className="text-[12px] text-ink-tertiary">{manualAccounts.length}</span>
+            )}
+          </div>
           <button
-            onClick={() => open()}
-            disabled={!ready || status === "loading"}
-            className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800
-                       disabled:text-slate-500 rounded-xl font-semibold text-sm transition-colors"
+            onClick={openAddManual}
+            className="hive-btn-secondary py-1 px-2.5 text-[12px]"
           >
-            {!linkToken
-              ? "Loading…"
-              : status === "loading"
-              ? "Connecting…"
-              : "Connect Bank Account"}
+            <Plus className="w-3 h-3" /> Add
           </button>
-        )}
+        </div>
 
-        {status === "success" && (
-          <div className="flex items-start gap-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-4">
-            <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-emerald-300 leading-relaxed">{message}</p>
-              <Link href="/" className="mt-2 block text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
-                Go to Dashboard →
-              </Link>
-            </div>
+        {manualAccounts.length === 0 && !showAddManual && (
+          <div className="px-5 py-4 text-[13px] text-ink-tertiary">
+            Track cash, a non-managed brokerage, or any account not on Plaid.
           </div>
         )}
 
-        {status === "error" && (
-          <div className="flex items-start gap-3 rounded-xl bg-rose-500/10 border border-rose-500/30 p-4">
-            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-            <p className="text-sm text-rose-300">{message}</p>
+        {manualAccounts.length > 0 && (
+          <div className="divide-y divide-white/[0.04]">
+            {manualAccounts.map((acct) => (
+              <div key={acct.id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors">
+                <Building2 className="w-4 h-4 text-ink-tertiary/50 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] text-ink-primary truncate">{acct.name}</p>
+                  <p className="text-[11px] text-ink-tertiary/60 capitalize">
+                    {acct.institution}{acct.subtype ? ` · ${acct.subtype}` : ""}
+                  </p>
+                </div>
+                <p className="text-[13px] font-mono text-ink-secondary tabular-nums shrink-0">
+                  {acct.current_balance != null
+                    ? new Intl.NumberFormat("en-US", { style: "currency", currency: acct.currency }).format(acct.current_balance)
+                    : "—"}
+                </p>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => openEditManual(acct)}
+                    className="flex items-center justify-center w-7 h-7 rounded-lg text-ink-tertiary/50
+                               hover:text-ink-secondary hover:bg-white/[0.05] transition-colors"
+                  >
+                    <PenLine className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteManual(acct.id)}
+                    className="flex items-center justify-center w-7 h-7 rounded-lg text-ink-tertiary/50
+                               hover:text-semantic-expense hover:bg-semantic-expense/[0.08] transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {showAddManual && (
+          <form onSubmit={handleManualSubmit} className="border-t border-white/[0.04] px-5 py-4 space-y-3">
+            <div className="flex items-center justify-between mb-1">
+              <p className="hive-label">{editingManual ? "Edit account" : "New manual account"}</p>
+              <button type="button" onClick={() => setShowAddManual(false)} className="text-ink-tertiary hover:text-ink-secondary transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "Account name", field: "name", placeholder: "Fidelity Brokerage", type: "text" },
+                { label: "Institution", field: "institution", placeholder: "Fidelity", type: "text" },
+              ].map(({ label, field, placeholder, type }) => (
+                <div key={field}>
+                  <label className="block text-[11px] text-ink-tertiary mb-1.5">{label}</label>
+                  <input
+                    type={type}
+                    required
+                    value={(manualForm as Record<string, string>)[field]}
+                    onChange={(e) => setManualForm((f) => ({ ...f, [field]: e.target.value }))}
+                    placeholder={placeholder}
+                    className="hive-input text-[13px]"
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="block text-[11px] text-ink-tertiary mb-1.5">Type</label>
+                <select
+                  value={manualForm.type}
+                  onChange={(e) => setManualForm((f) => ({ ...f, type: e.target.value }))}
+                  className="hive-select w-full text-[13px]"
+                >
+                  {ACCOUNT_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] text-ink-tertiary mb-1.5">Balance</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-tertiary text-[13px]">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={manualForm.current_balance}
+                    onChange={(e) => setManualForm((f) => ({ ...f, current_balance: e.target.value }))}
+                    placeholder="0.00"
+                    className="hive-input pl-7 text-[13px] font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" onClick={() => setShowAddManual(false)} className="hive-btn-ghost text-[13px] py-1.5 px-3">
+                Cancel
+              </button>
+              <button type="submit" disabled={manualLoading} className="hive-btn-primary py-1.5 text-[13px]">
+                {manualLoading ? "Saving…" : editingManual ? "Save changes" : "Add account"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* ── OAuth Setup ─────────────────────────────────────────────── */}
+      <div className="hive-card overflow-hidden">
+        <button
+          onClick={() => setShowOAuthSetup(!showOAuthSetup)}
+          className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/[0.02] transition-colors"
+        >
+          <div className="flex items-center gap-2.5">
+            <Shield className="w-4 h-4 text-honey/70" />
+            <div className="text-left">
+              <p className="text-[13px] font-medium text-ink-primary">Capital One &amp; OAuth Banks</p>
+              <p className="text-[12px] text-ink-tertiary">Required setup for Capital One, Chase, Amex, and others</p>
+            </div>
+          </div>
+          {showOAuthSetup
+            ? <ChevronUp className="w-4 h-4 text-ink-tertiary shrink-0" />
+            : <ChevronDown className="w-4 h-4 text-ink-tertiary shrink-0" />
+          }
+        </button>
+
+        {showOAuthSetup && (
+          <div className="border-t border-white/[0.04] px-5 py-4 space-y-4">
+            <p className="text-[13px] text-ink-secondary leading-relaxed">
+              Some banks use <strong className="text-ink-primary">OAuth</strong> — they redirect your browser
+              to their website to authenticate, then back to Hive. This requires a registered redirect URI.
+            </p>
+
+            <div className="space-y-2">
+              <p className="hive-label">Banks requiring OAuth</p>
+              <div className="flex flex-wrap gap-1.5">
+                {OAUTH_BANKS.map((b) => (
+                  <span key={b} className="px-2.5 py-1 rounded-full bg-elevated border border-white/[0.07]
+                                           text-[12px] text-ink-secondary">
+                    {b}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-base border border-white/[0.06] p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Info className="w-3.5 h-3.5 text-honey shrink-0" />
+                <p className="text-[12px] font-semibold text-honey">Setup required — 2 steps</p>
+              </div>
+
+              <div className="space-y-3 mt-1">
+                <div>
+                  <p className="text-[12px] font-medium text-ink-secondary mb-1.5">
+                    Step 1 — Set in your <code className="text-honey/80">.env</code> file:
+                  </p>
+                  <div className="flex items-center gap-2 rounded-lg bg-elevated px-3 py-2 border border-white/[0.06]">
+                    <code className="text-[11px] text-semantic-income flex-1 break-all font-mono">
+                      PLAID_REDIRECT_URI={detectedRedirectUri || "http://your-server:8080/connect"}
+                    </code>
+                    {detectedRedirectUri && <CopyButton text={`PLAID_REDIRECT_URI=${detectedRedirectUri}`} />}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[12px] font-medium text-ink-secondary mb-1.5">
+                    Step 2 — Register in Plaid Dashboard:
+                  </p>
+                  <div className="flex items-center gap-2 rounded-lg bg-elevated px-3 py-2 border border-white/[0.06]">
+                    <code className="text-[11px] text-honey/80 flex-1 break-all font-mono">
+                      {detectedRedirectUri || "http://your-server:8080/connect"}
+                    </code>
+                    {detectedRedirectUri && <CopyButton text={detectedRedirectUri} />}
+                  </div>
+                  <a
+                    href="https://dashboard.plaid.com/team/api"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center gap-1 text-[12px] text-honey/70 hover:text-honey transition-colors"
+                  >
+                    Open Plaid Dashboard → Team Settings → API
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-ink-tertiary/60">
+              After completing both steps, restart the backend container and try connecting again.
+              The page will automatically complete the OAuth flow when you return from the bank&apos;s site.
+            </p>
           </div>
         )}
       </div>

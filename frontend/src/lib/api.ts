@@ -597,6 +597,10 @@ export const api = {
     taxExport: (year?: number) =>
       get<{ date: string; amount: number; merchant: string; category: string; subcategory: string | null }[]>("/api/reports/tax-export", year ? { year } : undefined),
   },
+  snaptrade: {
+    connect: () => post<{ redirect_url: string }>("/api/snaptrade/connect", {}),
+    callback: () => get<{ accounts_added: number }>("/api/snaptrade/callback"),
+  },
   tax: {
     listDocuments: (tax_year: number) =>
       get<TaxDocument[]>("/api/tax/documents", { tax_year }),
