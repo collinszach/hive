@@ -2,7 +2,7 @@
 import logging
 from datetime import date, timedelta
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.celery_app import app
@@ -99,5 +99,67 @@ def compute_points_ledger(self, days: int = 90) -> dict:
         db.rollback()
         raise self.retry(exc=exc)
 
+    finally:
+        db.close()
+
+
+@app.task(
+    name="app.tasks.points.recalculate_points_for_merchant",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=30,
+)
+def recalculate_points_for_merchant(self, merchant_name: str, category: str | None, subcategory: str | None) -> dict:
+    """Recompute points for all transactions matching a merchant name."""
+    db = get_sync_db()
+    try:
+        txns = db.execute(
+            select(Transaction, Account.card_slug)
+            .join(Account, Transaction.account_id == Account.id)
+            .where(
+                func.coalesce(Transaction.merchant, Transaction.raw_description).ilike(f"%{merchant_name}%"),
+                Transaction.is_excluded == False,  # noqa: E712
+                Transaction.pending == False,  # noqa: E712
+                Account.card_slug.isnot(None),
+            )
+        ).all()
+
+        rows = []
+        for tx, card_slug in txns:
+            pts = compute_points_for_transaction(
+                card_slug=card_slug,
+                category=tx.category,
+                subcategory=tx.subcategory,
+                amount=float(tx.amount),
+            )
+            if pts:
+                rows.append({
+                    "transaction_id": tx.id,
+                    "account_id": tx.account_id,
+                    "card_slug": pts.card_slug,
+                    "program": pts.program,
+                    "points_earned": pts.points_earned,
+                    "earn_rate": pts.earn_rate,
+                    "category": tx.category,
+                    "subcategory": tx.subcategory,
+                })
+
+        if rows:
+            from sqlalchemy.dialects.postgresql import insert as pg_insert
+            stmt = pg_insert(PointsLedger).values(rows)
+            stmt = stmt.on_conflict_do_update(
+                constraint="uq_points_ledger_transaction",
+                set_={k: getattr(stmt.excluded, k) for k in
+                      ["card_slug", "program", "points_earned", "earn_rate", "category", "subcategory"]},
+            )
+            db.execute(stmt)
+            db.commit()
+
+        logger.info("recalculate_points_for_merchant: merchant=%s updated=%d", merchant_name, len(rows))
+        return {"merchant": merchant_name, "updated": len(rows)}
+
+    except Exception as exc:
+        db.rollback()
+        raise self.retry(exc=exc)
     finally:
         db.close()
