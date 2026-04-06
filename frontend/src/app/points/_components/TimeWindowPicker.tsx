@@ -20,6 +20,7 @@ export function TimeWindowPicker({ value, onChange }: TimeWindowPickerProps) {
       {OPTIONS.map((opt) => (
         <button
           key={opt.days}
+          type="button"
           onClick={() => onChange(opt.days)}
           className={cn(
             "px-3 py-1 rounded-md text-[12px] font-medium transition-all duration-150",

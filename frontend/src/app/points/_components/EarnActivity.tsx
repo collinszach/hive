@@ -2,8 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Search, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { fmt } from "@/lib/utils";
+import { cn, fmt } from "@/lib/utils";
 import { LedgerEntry } from "@/lib/api";
 import { POINT_VALUES_CPP } from "@/lib/pointsConstants";
 
@@ -74,6 +73,7 @@ export function EarnActivity({ ledger, loading, error }: EarnActivityProps) {
         </h2>
         {hasFilters && (
           <button
+            type="button"
             onClick={clearFilters}
             className="text-[12px] text-ink-tertiary hover:text-ink-secondary flex items-center gap-1"
           >
@@ -100,6 +100,7 @@ export function EarnActivity({ ledger, loading, error }: EarnActivityProps) {
           {allPrograms.map((prog) => (
             <button
               key={prog}
+              type="button"
               onClick={() => toggleProgram(prog)}
               className={cn(
                 "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all duration-150",
@@ -115,6 +116,7 @@ export function EarnActivity({ ledger, loading, error }: EarnActivityProps) {
           {allCards.map((slug) => (
             <button
               key={slug}
+              type="button"
               onClick={() => toggleCard(slug)}
               className={cn(
                 "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all duration-150",

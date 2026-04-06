@@ -2,8 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Bell, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { fmt } from "@/lib/utils";
+import { cn, fmt } from "@/lib/utils";
 import { api, ProgramSummary } from "@/lib/api";
 
 const PROGRAM_ACCENTS: Record<string, { bar: string; text: string; bg: string }> = {
@@ -105,18 +104,20 @@ export function ProgramCard({ program: p, onBalanceUpdate }: ProgramCardProps) {
                 placeholder="0"
               />
               <button
+                type="button"
                 onClick={commitEdit}
                 disabled={saving}
                 className="text-semantic-income hover:opacity-80 disabled:opacity-40"
               >
                 <Check className="w-3.5 h-3.5" />
               </button>
-              <button onClick={cancelEdit} className="text-ink-tertiary hover:opacity-80">
+              <button type="button" onClick={cancelEdit} className="text-ink-tertiary hover:opacity-80">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : (
             <button
+              type="button"
               onClick={startEdit}
               className="group flex items-center gap-1"
             >
