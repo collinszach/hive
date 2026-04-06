@@ -154,6 +154,7 @@ async def register(body: RegisterRequest, request: Request, response: Response, 
         value=token,
         httponly=True,
         samesite="lax",
+        secure=settings.cookie_secure,
         path="/",
         max_age=60 * 60 * 12,  # 12 hours — matches ACCESS_TOKEN_EXPIRE_MINUTES
     )
@@ -195,6 +196,7 @@ async def login(body: LoginRequest, request: Request, response: Response, db: As
         value=token,
         httponly=True,
         samesite="lax",
+        secure=settings.cookie_secure,
         path="/",
         max_age=60 * 60 * 12,  # 12 hours — matches ACCESS_TOKEN_EXPIRE_MINUTES
     )

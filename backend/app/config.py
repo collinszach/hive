@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     # App
     secret_key: str
     allowed_origins: list[str] = ["http://localhost:3000"]
+    cookie_secure: bool = False  # Set to true when serving over HTTPS (e.g. via Tailscale)
     log_level: str = "INFO"
 
     # Frontend
