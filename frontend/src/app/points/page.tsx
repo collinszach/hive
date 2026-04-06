@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { TrendingUp, Star } from "lucide-react";
 import { api, PointsSummary, LedgerEntry } from "@/lib/api";
 import { fmt } from "@/lib/utils";
+import { POINT_VALUES_CPP, REDEMPTION_THRESHOLDS } from "@/lib/pointsConstants";
 import { TimeWindowPicker } from "./_components/TimeWindowPicker";
 import { ProgramCard } from "./_components/ProgramCard";
 import { EarnActivity } from "./_components/EarnActivity";
@@ -49,12 +50,23 @@ export default function PointsPage() {
 
   function handleBalanceUpdate(program: string, balance: number) {
     if (!summary) return;
-    setSummary({
-      ...summary,
-      programs: summary.programs.map((p) =>
-        p.program === program ? { ...p, manual_balance: balance } : p
-      ),
-    });
+    const cpp = POINT_VALUES_CPP[program] ?? 1.0;
+    const threshold = REDEMPTION_THRESHOLDS[program];
+    const newEstValue = parseFloat((balance * cpp / 100).toFixed(2));
+    const updatedPrograms = summary.programs.map((p) =>
+      p.program === program
+        ? {
+            ...p,
+            manual_balance: balance,
+            estimated_value_dollars: newEstValue,
+            above_threshold: threshold !== undefined && balance >= threshold,
+          }
+        : p
+    );
+    const newTotal = parseFloat(
+      updatedPrograms.reduce((sum, p) => sum + p.estimated_value_dollars, 0).toFixed(2)
+    );
+    setSummary({ ...summary, programs: updatedPrograms, total_estimated_value_dollars: newTotal });
   }
 
   if (summaryError && !summaryLoading) {
