@@ -1,7 +1,7 @@
 """Points API — summary, optimizer, balance upsert, and ledger endpoints."""
 import logging
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -170,8 +170,6 @@ async def upsert_balance(
     Upsert a manual points balance for a program.
     Uses today's date as the as_of date; updates if a row already exists for today.
     """
-    from datetime import datetime
-
     card_slug = _PROGRAM_TO_CARD_SLUG.get(body.program)
     if card_slug is None:
         raise HTTPException(status_code=422, detail=f"Unknown program: {body.program}")
@@ -198,7 +196,7 @@ async def upsert_balance(
     return BalanceUpsertResponse(
         program=body.program,
         balance=body.balance,
-        updated_at=datetime.now().isoformat(),
+        updated_at=datetime.now(tz=timezone.utc).isoformat(),
     )
 
 
