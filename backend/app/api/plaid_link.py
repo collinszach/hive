@@ -42,7 +42,23 @@ async def create_link_token(db: AsyncSession = Depends(get_db)) -> LinkTokenResp
         return LinkTokenResponse(link_token=link_token)
     except Exception as exc:
         logger.error("Failed to create link token: %s", exc)
-        raise HTTPException(status_code=502, detail=f"Plaid error: {exc}") from exc
+        raise HTTPException(status_code=502, detail="Failed to create link token. Please try again.") from exc
+
+
+@router.post("/sync-now", status_code=202)
+async def trigger_sync_now(db: AsyncSession = Depends(get_db)) -> dict:
+    """Manually trigger an immediate sync of all active Plaid links."""
+    from app.tasks.ingestion import sync_all_accounts
+    sync_all_accounts.delay()
+    return {"status": "queued", "message": "Sync started — transactions will update in ~30 seconds"}
+
+
+@router.post("/recategorize", status_code=202)
+async def trigger_recategorize() -> dict:
+    """Re-run categorization on all Uncategorized transactions."""
+    from app.tasks.ingestion import recategorize_uncategorized
+    recategorize_uncategorized.delay()
+    return {"status": "queued", "message": "Recategorization started — check back in ~60 seconds"}
 
 
 @router.post("/exchange-token", response_model=ExchangeTokenResponse)
@@ -58,7 +74,7 @@ async def exchange_token(
         access_token, item_id = plaid_connector.exchange_public_token(body.public_token)
     except Exception as exc:
         logger.error("Failed to exchange public token: %s", exc)
-        raise HTTPException(status_code=502, detail=f"Plaid error: {exc}") from exc
+        raise HTTPException(status_code=502, detail="Failed to exchange token. Please try again.") from exc
 
     # Check if this item_id already exists (re-link / update scenario)
     existing = await db.execute(
@@ -73,6 +89,33 @@ async def exchange_token(
         existing_link.is_active = True
         db.add(existing_link)
     else:
+        # Deactivate any existing link for the same institution to prevent duplicate data.
+        # This handles the case where the user goes through Plaid Link a second time for
+        # an already-connected institution (new item_id each time in Plaid).
+        if body.institution_id:
+            dup_result = await db.execute(
+                select(PlaidLink).where(
+                    PlaidLink.institution_id == body.institution_id,
+                    PlaidLink.is_active == True,  # noqa: E712
+                    PlaidLink.item_id != item_id,
+                )
+            )
+            for old_link in dup_result.scalars().all():
+                old_link.is_active = False
+                db.add(old_link)
+                # Mark its accounts inactive so they disappear from the UI
+                old_accts_result = await db.execute(
+                    select(Account).where(Account.plaid_item_id == old_link.item_id)
+                )
+                for old_acct in old_accts_result.scalars().all():
+                    old_acct.is_active = False
+                    db.add(old_acct)
+                logger.warning(
+                    "Deactivated duplicate link %s for institution %s",
+                    old_link.item_id,
+                    body.institution_id,
+                )
+
         link = PlaidLink(
             item_id=item_id,
             access_token=access_token,
@@ -86,7 +129,7 @@ async def exchange_token(
         plaid_accounts = plaid_connector.get_accounts(access_token)
     except Exception as exc:
         logger.error("Failed to fetch accounts for item %s: %s", item_id, exc)
-        raise HTTPException(status_code=502, detail=f"Plaid error fetching accounts: {exc}") from exc
+        raise HTTPException(status_code=502, detail="Failed to fetch accounts. Please try again.") from exc
 
     accounts_created = 0
     for acct in plaid_accounts:
