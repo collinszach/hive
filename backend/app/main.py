@@ -44,7 +44,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -58,11 +58,18 @@ async def require_auth(request: Request, call_next):
     """Require a valid JWT on all routes except auth and health endpoints."""
     if any(request.url.path.startswith(p) for p in _PUBLIC_PREFIXES):
         return await call_next(request)
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
+
+    # Try cookie first, then Bearer header
+    token = request.cookies.get("hive_auth")
+    if not token:
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            token = auth[7:]
+
+    if not token:
         return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
     try:
-        jwt.decode(auth[7:], settings.secret_key, algorithms=["HS256"])
+        jwt.decode(token, settings.secret_key, algorithms=["HS256"])
     except JWTError:
         return JSONResponse(status_code=401, content={"detail": "Invalid or expired token"})
     return await call_next(request)

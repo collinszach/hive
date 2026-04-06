@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     # Required for OAuth banks (Capital One, Chase, Wells Fargo, etc.)
     # Must match a URI registered in Plaid dashboard → Team Settings → API
     plaid_redirect_uri: str = ""
+    plaid_webhook_secret: str = ""
 
     # Anthropic
     anthropic_api_key: str = ""
@@ -50,7 +51,8 @@ class Settings(BaseSettings):
     redis_password: str = ""
 
     # App
-    secret_key: str = ""
+    secret_key: str
+    allowed_origins: list[str] = ["http://localhost:3000"]
     log_level: str = "INFO"
 
     # Frontend
