@@ -2,9 +2,7 @@ const IS_SERVER = typeof window === "undefined";
 const SERVER_BASE = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 
 function authHeader(): Record<string, string> {
-  if (IS_SERVER) return {};
-  const token = localStorage.getItem("hive_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {};
 }
 
 async function get<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
@@ -18,7 +16,7 @@ async function get<T>(path: string, params?: Record<string, string | number | bo
       )
     : "";
   const url = IS_SERVER ? `${SERVER_BASE}${path}${searchStr}` : `${path}${searchStr}`;
-  const res = await fetch(url, { cache: "no-store", headers: authHeader() });
+  const res = await fetch(url, { cache: "no-store", headers: authHeader(), credentials: "include" });
   if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
   return res.json();
 }
@@ -30,6 +28,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify(body),
     cache: "no-store",
+    credentials: "include",
   });
   if (!res.ok) throw new Error(`POST ${path} → ${res.status}`);
   return res.json();
@@ -50,6 +49,7 @@ async function del<T>(path: string, params?: Record<string, string | boolean | u
     method: "DELETE",
     headers: authHeader(),
     cache: "no-store",
+    credentials: "include",
   });
   if (!res.ok) throw new Error(`DELETE ${path} → ${res.status}`);
   // 204 No Content has no body — don't attempt to parse JSON
@@ -64,6 +64,7 @@ async function patch<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify(body),
     cache: "no-store",
+    credentials: "include",
   });
   if (!res.ok) throw new Error(`PATCH ${path} → ${res.status}`);
   return res.json();
@@ -76,6 +77,7 @@ async function put<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify(body),
     cache: "no-store",
+    credentials: "include",
   });
   if (!res.ok) throw new Error(`PUT ${path} → ${res.status}`);
   return res.json();
@@ -631,15 +633,14 @@ export const api = {
       get<TaxDocument[]>("/api/tax/documents", { tax_year }),
     uploadDocument: async (file: File, doc_type: string, tax_year: number): Promise<TaxDocument> => {
       const base = typeof window === "undefined" ? (process.env.BACKEND_URL ?? "http://127.0.0.1:8000") : "";
-      const token = typeof window !== "undefined" ? localStorage.getItem("hive_token") : null;
       const form = new FormData();
       form.append("file", file);
       form.append("doc_type", doc_type);
       form.append("tax_year", String(tax_year));
       const res = await fetch(`${base}/api/tax/documents/upload`, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
+        credentials: "include",
       });
       if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
       return res.json();
