@@ -8,7 +8,7 @@ import hmac
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +43,7 @@ def _trigger_sync(item_id: str) -> None:
 async def plaid_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
+    token: Optional[str] = Query(default=None),
 ) -> dict:
     """
     Receive Plaid webhook events and trigger transaction syncs.
@@ -53,6 +54,12 @@ async def plaid_webhook(
       TRANSACTIONS / TRANSACTIONS_REMOVED → transactions removed
       ITEM / ERROR                       → item needs re-linking
     """
+    # Verify webhook secret if configured
+    if settings.plaid_webhook_secret:
+        if token != settings.plaid_webhook_secret:
+            logger.warning("Webhook request with invalid or missing token")
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
     body = await request.body()
 
     try:
