@@ -47,10 +47,6 @@ export default function PointsPage() {
     fetchData(days);
   }, [days, fetchData]);
 
-  function handleWindowChange(d: number) {
-    setDays(d);
-  }
-
   function handleBalanceUpdate(program: string, balance: number) {
     if (!summary) return;
     setSummary({
@@ -78,15 +74,10 @@ export default function PointsPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Points</h1>
-          <p className="text-[13px] text-ink-tertiary mt-0.5">
-            Estimated total value:{" "}
-            <span className="text-semantic-income font-semibold">
-              {summaryLoading ? "—" : fmt(totalValue)}
-            </span>
-          </p>
+          <p className="text-[13px] text-ink-tertiary mt-0.5">Estimated portfolio value across all programs</p>
         </div>
         <div className="flex items-center gap-3">
-          <TimeWindowPicker value={days} onChange={handleWindowChange} />
+          <TimeWindowPicker value={days} onChange={setDays} />
           <div className="flex items-center gap-2 hive-card px-4 py-2.5">
             <TrendingUp className="w-4 h-4 text-semantic-income" />
             <span className="text-[15px] font-semibold font-mono text-semantic-income tabular-nums">
