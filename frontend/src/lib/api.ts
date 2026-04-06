@@ -187,6 +187,26 @@ export interface OptimizerResponse {
   cards: CardOption[];
 }
 
+export interface LedgerEntry {
+  transaction_id: string;
+  account_id: string;
+  card_slug: string;
+  program: string;
+  points_earned: number;
+  earn_rate: number;
+  category: string | null;
+  subcategory: string | null;
+  merchant: string | null;
+  amount: number;
+  date: string;  // ISO date YYYY-MM-DD
+}
+
+export interface PointsBalanceResponse {
+  program: string;
+  balance: number;
+  updated_at: string;
+}
+
 export interface NetWorthSnapshot {
   snapshot_date: string;
   total_assets: number;
@@ -503,9 +523,14 @@ export const api = {
     delete: (id: string) => del<void>(`/api/budgets/${id}`),
   },
   points: {
-    summary: () => get<PointsSummary>("/api/points/summary"),
+    summary: (days?: number) =>
+      get<PointsSummary>("/api/points/summary", days ? { days } : undefined),
     optimize: (params: { category?: string; subcategory?: string; amount: number }) =>
       get<OptimizerResponse>("/api/points/optimize", params as Record<string, string | number | undefined>),
+    ledger: (params?: { days?: number; account_id?: string }) =>
+      get<LedgerEntry[]>("/api/points/ledger", params as Record<string, string | number | undefined>),
+    setBalance: (program: string, balance: number) =>
+      put<PointsBalanceResponse>("/api/points/balance", { program, balance }),
   },
   netWorth: {
     history: (days?: number) => get<NetWorthSnapshot[]>("/api/net-worth/history", days ? { days } : undefined),
