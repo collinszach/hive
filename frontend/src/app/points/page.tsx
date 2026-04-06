@@ -1,144 +1,141 @@
-import { api } from "@/lib/api";
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { TrendingUp, Star } from "lucide-react";
+import { api, PointsSummary, LedgerEntry } from "@/lib/api";
 import { fmt } from "@/lib/utils";
-import { cn } from "@/lib/utils";
-import { Star, TrendingUp, Bell } from "lucide-react";
+import { TimeWindowPicker } from "./_components/TimeWindowPicker";
+import { ProgramCard } from "./_components/ProgramCard";
+import { EarnActivity } from "./_components/EarnActivity";
 
-export const revalidate = 60;
+export default function PointsPage() {
+  const [days, setDays]                     = useState<number>(90);
+  const [summary, setSummary]               = useState<PointsSummary | null>(null);
+  const [ledger, setLedger]                 = useState<LedgerEntry[]>([]);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [ledgerLoading, setLedgerLoading]   = useState(true);
+  const [summaryError, setSummaryError]     = useState(false);
+  const [ledgerError, setLedgerError]       = useState(false);
 
-const PROGRAM_ACCENTS: Record<string, { bar: string; badge: string }> = {
-  "Amex MR":           { bar: "bg-emerald-500", badge: "text-emerald-400" },
-  "Chase UR":          { bar: "bg-blue-500",    badge: "text-blue-400" },
-  "SW RR":             { bar: "bg-orange-500",   badge: "text-orange-400" },
-  "Bilt Points":       { bar: "bg-violet-500",   badge: "text-violet-400" },
-  "WF Rewards":        { bar: "bg-red-500",      badge: "text-red-400" },
-  "Capital One Miles": { bar: "bg-sky-500",      badge: "text-sky-400" },
-};
+  const fetchData = useCallback(async (d: number) => {
+    setSummaryLoading(true);
+    setLedgerLoading(true);
+    setSummaryError(false);
+    setLedgerError(false);
 
-export default async function PointsPage() {
-  let summary;
-  try {
-    summary = await api.points.summary();
-  } catch {
+    const [summaryResult, ledgerResult] = await Promise.allSettled([
+      api.points.summary(d),
+      api.points.ledger({ days: d }),
+    ]);
+
+    if (summaryResult.status === "fulfilled") {
+      setSummary(summaryResult.value);
+    } else {
+      setSummaryError(true);
+    }
+    setSummaryLoading(false);
+
+    if (ledgerResult.status === "fulfilled") {
+      setLedger(ledgerResult.value);
+    } else {
+      setLedgerError(true);
+    }
+    setLedgerLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchData(days);
+  }, [days, fetchData]);
+
+  function handleWindowChange(d: number) {
+    setDays(d);
+  }
+
+  function handleBalanceUpdate(program: string, balance: number) {
+    if (!summary) return;
+    setSummary({
+      ...summary,
+      programs: summary.programs.map((p) =>
+        p.program === program ? { ...p, manual_balance: balance } : p
+      ),
+    });
+  }
+
+  if (summaryError && !summaryLoading) {
     return (
-      <div className="rounded-xl bg-slate-900 border border-slate-800 p-8 text-center text-slate-500 text-sm">
+      <div className="hive-card p-10 text-center text-ink-tertiary text-[13px]">
         Failed to load points summary.
       </div>
     );
   }
 
+  const totalValue = summary?.total_estimated_value_dollars ?? 0;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+    <div className="space-y-6 animate-fade-in">
+
+      {/* ── Header ────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-semibold text-white">Points</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Total estimated value:{" "}
-            <span className="text-emerald-400 font-semibold">
-              {fmt(summary.total_estimated_value_dollars)}
+          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Points</h1>
+          <p className="text-[13px] text-ink-tertiary mt-0.5">
+            Estimated total value:{" "}
+            <span className="text-semantic-income font-semibold">
+              {summaryLoading ? "—" : fmt(totalValue)}
             </span>
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg bg-slate-900 border border-slate-800 px-3 py-2">
-          <TrendingUp className="w-4 h-4 text-emerald-400" />
-          <span className="text-sm font-bold text-white tabular-nums">
-            {fmt(summary.total_estimated_value_dollars)}
-          </span>
+        <div className="flex items-center gap-3">
+          <TimeWindowPicker value={days} onChange={handleWindowChange} />
+          <div className="flex items-center gap-2 hive-card px-4 py-2.5">
+            <TrendingUp className="w-4 h-4 text-semantic-income" />
+            <span className="text-[15px] font-semibold font-mono text-semantic-income tabular-nums">
+              {summaryLoading ? "—" : fmt(totalValue)}
+            </span>
+          </div>
         </div>
       </div>
 
-      {summary.programs.length === 0 && (
-        <div className="rounded-xl bg-slate-900 border border-slate-800 border-dashed p-12 text-center">
-          <Star className="w-8 h-8 text-slate-700 mx-auto mb-3" />
-          <p className="text-sm text-slate-500">
-            No points data yet — link accounts and run a sync to get started.
+      {/* ── Program Cards ──────────────────────────────────────────── */}
+      {summaryLoading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="hive-card p-5 h-44 animate-pulse bg-white/[0.02]" />
+          ))}
+        </div>
+      )}
+
+      {!summaryLoading && summary && summary.programs.length === 0 && (
+        <div className="hive-card p-16 text-center border-dashed">
+          <Star className="w-8 h-8 text-ink-tertiary/30 mx-auto mb-3" />
+          <p className="text-[14px] text-ink-secondary mb-1">No points data yet</p>
+          <p className="text-[12px] text-ink-tertiary">
+            Link accounts and run a sync to get started.
           </p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {summary.programs.map((p) => {
-          const accent = PROGRAM_ACCENTS[p.program] ?? { bar: "bg-indigo-500", badge: "text-indigo-400" };
-          return (
-            <div
+      {!summaryLoading && summary && summary.programs.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {summary.programs.map((p) => (
+            <ProgramCard
               key={p.program}
-              className={cn(
-                "rounded-xl border p-5 space-y-4",
-                p.above_threshold
-                  ? "border-amber-500/30 bg-amber-500/5"
-                  : "border-slate-800 bg-slate-900"
-              )}
-            >
-              {/* Program name + value */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-semibold text-slate-100">{p.program}</p>
-                  {p.above_threshold && (
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <Bell className="w-3 h-3 text-amber-400" />
-                      <span className="text-xs text-amber-400 font-medium">Ready to redeem</span>
-                    </div>
-                  )}
-                </div>
-                <p className={cn("text-xl font-bold tabular-nums", accent.badge)}>
-                  {fmt(p.estimated_value_dollars)}
-                </p>
-              </div>
+              program={p}
+              onBalanceUpdate={handleBalanceUpdate}
+            />
+          ))}
+        </div>
+      )}
 
-              {/* Stats */}
-              <div className="space-y-1.5 text-sm">
-                {p.manual_balance !== null && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Balance</span>
-                    <span className="font-mono font-medium text-slate-200 tabular-nums">
-                      {p.manual_balance.toLocaleString()} pts
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Earned (90d)</span>
-                  <span className="font-mono font-medium text-slate-200 tabular-nums">
-                    {Math.round(p.points_earned_90d).toLocaleString()} pts
-                  </span>
-                </div>
-                {p.redemption_threshold && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Threshold</span>
-                    <span className="font-mono text-slate-400 tabular-nums">
-                      {p.redemption_threshold.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-              </div>
+      {/* ── Earn Activity ──────────────────────────────────────────── */}
+      <EarnActivity
+        ledger={ledger}
+        loading={ledgerLoading}
+        error={ledgerError}
+      />
 
-              {/* Progress bar */}
-              {p.redemption_threshold && (
-                <div>
-                  <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className={cn("h-full rounded-full transition-all", accent.bar)}
-                      style={{
-                        width: `${Math.min(
-                          ((p.manual_balance ?? p.points_earned_90d) / p.redemption_threshold) * 100,
-                          100
-                        )}%`,
-                      }}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-600 mt-1">
-                    {p.above_threshold
-                      ? "Above redemption threshold"
-                      : `${(p.redemption_threshold - (p.manual_balance ?? p.points_earned_90d)).toLocaleString()} pts to threshold`}
-                  </p>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      <p className="text-xs text-slate-600">
-        Point values are estimates based on typical transfer partner redemptions. Enter manual balances via the API to track exact totals.
+      <p className="text-[11px] text-ink-tertiary/50">
+        Values are estimates based on typical transfer partner redemptions. Actual redemption value may vary.
       </p>
     </div>
   );
