@@ -200,7 +200,7 @@ export default function TransactionsPage() {
         ? {
             ...prev,
             items: prev.items.map((t) =>
-              t.id === id ? { ...t, category: cat, subcategory: sub ?? undefined, category_source: "manual" } : t
+              t.id === id ? { ...t, category: cat, subcategory: sub, category_source: "manual" } : t
             ),
           }
         : prev
