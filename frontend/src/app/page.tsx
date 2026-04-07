@@ -16,6 +16,7 @@ import {
   Bell,
   ChevronRight,
   GripVertical,
+  AlertTriangle,
 } from "lucide-react";
 import { PageHero } from "@/components/PageHero";
 import { AnimatedBar } from "@/components/AnimatedBar";
@@ -252,12 +253,14 @@ export default function Dashboard() {
   const month = previousMonth();
   const currentMonthLabel = monthLabel(month);
 
-  const [accts, setAccts]       = useState<Account[]>([]);
+  const [accts, setAccts]         = useState<Account[]>([]);
   const [acctOrder, setAcctOrder] = useState<string[]>([]);
-  const [bdgts, setBdgts]       = useState<Budget[]>([]);
-  const [pts, setPts]           = useState<PointsSummary | null>(null);
-  const [recentTx, setRecentTx] = useState<Transaction[]>([]);
+  const [bdgts, setBdgts]         = useState<Budget[]>([]);
+  const [pts, setPts]             = useState<PointsSummary | null>(null);
+  const [recentTx, setRecentTx]   = useState<Transaction[]>([]);
   const [spendData, setSpendData] = useState<{ category: string; spend: number }[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [criticalError, setCriticalError] = useState<string | null>(null);
   const dragSrc = useRef<string | null>(null);
 
   useEffect(() => {
@@ -274,6 +277,10 @@ export default function Dashboard() {
       if (pointsRes.status   === "fulfilled") setPts(pointsRes.value);
       if (txRes.status       === "fulfilled") setRecentTx(txRes.value.items);
       if (spendRes.status    === "fulfilled") setSpendData(spendRes.value);
+      if (accountsRes.status === "rejected" || budgetsRes.status === "rejected") {
+        setCriticalError("Some data failed to load. Check your connection or try refreshing.");
+      }
+      setLoading(false);
     });
   }, [month]);
 
@@ -285,7 +292,7 @@ export default function Dashboard() {
   const netCash       = totalAssets - totalDebt;
   const pointsValue   = pts?.total_estimated_value_dollars ?? 0;
   const alerts        = pts?.programs.filter((p) => p.above_threshold) ?? [];
-  const noAccounts    = accts.length === 0;
+  const noAccounts    = !loading && accts.length === 0;
 
   // Drag handlers for account reordering
   function handleDragStart(id: string) { dragSrc.current = id; }
@@ -307,6 +314,20 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5 animate-fade-in">
+
+      {/* ── Critical error banner ────────────────────────────────────── */}
+      {criticalError && (
+        <div className="glass-card-expense flex items-center gap-3 p-4 rounded-2xl">
+          <AlertTriangle className="w-4 h-4 text-semantic-expense flex-shrink-0" />
+          <p className="text-[13px] text-semantic-expense">{criticalError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="ml-auto hive-btn-ghost text-[12px]"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* ── Action buttons row ───────────────────────────────────────── */}
       <div className="flex items-center justify-end gap-2">
@@ -371,25 +392,50 @@ export default function Dashboard() {
 
       {/* ── Empty state ─────────────────────────────────────────────── */}
       {noAccounts && (
-        <div className="hive-card p-12 text-center"
-             style={{ background: "linear-gradient(135deg, rgba(245,185,66,0.04) 0%, transparent 60%)" }}>
-          <div className="w-14 h-14 rounded-2xl bg-honey/[0.08] border border-honey/20 flex items-center justify-center mx-auto mb-4">
-            <Link2 className="w-6 h-6 text-honey" />
+        <div className="flex flex-col items-center justify-center min-h-[60vh] animate-fade-in">
+          {/* Honeycomb hex icon */}
+          <div className="w-20 h-20 rounded-3xl bg-honey/[0.10] border border-honey/20 flex items-center justify-center mb-6">
+            <svg viewBox="0 0 40 46" className="w-10 h-10 fill-honey opacity-80" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20 0L40 11.5V34.5L20 46L0 34.5V11.5L20 0Z"/>
+            </svg>
           </div>
-          <p className="text-[15px] font-semibold text-ink-primary mb-1.5">No accounts connected</p>
-          <p className="text-[13px] text-ink-tertiary mb-6 max-w-sm mx-auto leading-relaxed">
-            Link your bank accounts and credit cards via Plaid to begin tracking spending,
-            points, and budgets automatically.
+          <h2 className="text-[22px] font-semibold text-ink-primary mb-2">Welcome to Hive</h2>
+          <p className="text-[14px] text-ink-secondary text-center max-w-sm mb-8">
+            Connect your bank accounts and credit cards to see your complete financial picture in one place.
           </p>
-          <Link href="/connect" className="hive-btn-primary">
-            <Link2 className="w-4 h-4" />
-            Connect Bank Account
-          </Link>
+          <a href="/connect" className="hive-btn-primary px-6 py-2.5 text-[14px] mb-10">
+            Connect Accounts
+          </a>
+          {/* Feature bullets */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl w-full">
+            {[
+              { icon: "💳", title: "Track Spending", desc: "See every transaction, auto-categorized" },
+              { icon: "⭐", title: "Optimize Rewards", desc: "Know which card earns the most on every purchase" },
+              { icon: "🤖", title: "Ask AI", desc: "Chat with your finances in plain language" },
+            ].map(f => (
+              <div key={f.title} className="glass-card p-4 text-center">
+                <div className="text-2xl mb-2">{f.icon}</div>
+                <p className="text-[13px] font-semibold text-ink-primary mb-1">{f.title}</p>
+                <p className="text-[12px] text-ink-tertiary">{f.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {/* ── KPI Tiles ───────────────────────────────────────────────── */}
-      {!noAccounts && (
+      {loading && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="glass-card p-5 space-y-3 animate-pulse">
+              <div className="h-2 bg-white/[0.06] rounded-full w-16" />
+              <div className="h-7 bg-white/[0.08] rounded-lg w-24" />
+              <div className="h-2 bg-white/[0.04] rounded-full w-20" />
+            </div>
+          ))}
+        </div>
+      )}
+      {!noAccounts && !loading && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <KpiTile
             label="Net Cash"
@@ -423,7 +469,44 @@ export default function Dashboard() {
       )}
 
       {/* ── Accounts + Spending ─────────────────────────────────────── */}
-      {!noAccounts && (
+      {loading && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <div className="lg:col-span-2 hive-card overflow-hidden">
+            <div className="hive-section-header">
+              <h2 className="hive-label">Accounts</h2>
+            </div>
+            <div className="p-3 space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="glass-card p-4 flex items-center gap-3 animate-pulse">
+                  <div className="w-9 h-9 rounded-full bg-white/[0.06] flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-2.5 bg-white/[0.08] rounded w-32" />
+                    <div className="h-2 bg-white/[0.04] rounded w-20" />
+                  </div>
+                  <div className="h-4 bg-white/[0.06] rounded w-16" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="hive-card overflow-hidden">
+            <div className="hive-section-header">
+              <h2 className="hive-label">Spend by Category</h2>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="space-y-1.5 animate-pulse">
+                  <div className="flex justify-between">
+                    <div className="h-2.5 bg-white/[0.06] rounded w-24" />
+                    <div className="h-2.5 bg-white/[0.04] rounded w-12" />
+                  </div>
+                  <div className="h-[2px] bg-white/[0.04] rounded-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {!noAccounts && !loading && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
 
           {/* Accounts — 2/3 */}
