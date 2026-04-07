@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { api, MonthlyCashFlow, CashFlowSummary, SpendByCategory } from "@/lib/api";
+import { api, MonthlyCashFlow, CashFlowSummary, SpendByCategory, FlowData } from "@/lib/api";
+import { SankeyFlow } from "./_components/SankeyFlow";
 import { fmt, monthLabel } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { X, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -70,6 +71,7 @@ interface DrillDownState {
 export default function CashFlowPage() {
   const [monthly, setMonthly]               = useState<MonthlyCashFlow[]>([]);
   const [summary, setSummary]               = useState<CashFlowSummary | null>(null);
+  const [flowData, setFlowData]             = useState<FlowData | null>(null);
   const [loading, setLoading]               = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [view, setView]                     = useState<"net" | "split">("split");
@@ -84,7 +86,12 @@ export default function CashFlowPage() {
     setSummaryLoading(true);
     api.cashFlow.summary(selectedKpiMonth)
       .then(setSummary)
+      .catch(() => setSummary(null))
       .finally(() => setSummaryLoading(false));
+  }, [selectedKpiMonth]);
+
+  useEffect(() => {
+    api.cashFlow.flow(selectedKpiMonth).then(setFlowData).catch(() => setFlowData(null));
   }, [selectedKpiMonth]);
 
   const selectMonth = useCallback(async (ym: string) => {
@@ -140,7 +147,7 @@ export default function CashFlowPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setSelectedKpiMonth(m => shiftMonth(m, -1))}
+              onClick={() => { setSelectedKpiMonth(m => shiftMonth(m, -1)); setDrillDown(null); }}
               className="p-1 rounded-md hover:bg-white/[0.05] text-ink-tertiary hover:text-ink-primary transition-colors"
               aria-label="Previous month"
             >
@@ -150,7 +157,7 @@ export default function CashFlowPage() {
               {monthLabel(selectedKpiMonth)}
             </p>
             <button
-              onClick={() => setSelectedKpiMonth(m => shiftMonth(m, 1))}
+              onClick={() => { setSelectedKpiMonth(m => shiftMonth(m, 1)); setDrillDown(null); }}
               className="p-1 rounded-md hover:bg-white/[0.05] text-ink-tertiary hover:text-ink-primary transition-colors"
               disabled={selectedKpiMonth >= currentYearMonth()}
               aria-label="Next month"
@@ -177,6 +184,19 @@ export default function CashFlowPage() {
           </div>
         )}
       </div>
+
+      {/* Flow chart */}
+      {flowData && flowData.income > 0 && (
+        <div className="hive-card p-5">
+          <div className="mb-4">
+            <p className="text-[13px] font-medium text-ink-primary">Income Flow</p>
+            <p className="text-[11px] text-ink-tertiary mt-0.5">
+              Where your {fmt(flowData.income)} went in {monthLabel(selectedKpiMonth)}
+            </p>
+          </div>
+          <SankeyFlow data={flowData} />
+        </div>
+      )}
 
       {/* Chart */}
       <div className="hive-card p-5">

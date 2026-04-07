@@ -395,6 +395,20 @@ export interface TrimRecommendation {
   goal_impact: string | null;
 }
 
+export interface FlowCategory {
+  category: string;
+  amount: number;
+  pct: number;
+}
+
+export interface FlowData {
+  month: string;
+  income: number;
+  expenses: number;
+  savings: number;
+  categories: FlowCategory[];
+}
+
 export interface MonthlyCashFlow {
   month: string;
   income: number;
@@ -629,6 +643,7 @@ export const api = {
     summary: (month?: string) => get<CashFlowSummary>("/api/cash-flow/summary", month ? { month } : undefined),
     categoryTrend: (category: string, months?: number) =>
       get<{ month: string; total: number }[]>("/api/cash-flow/category-trend", { category, ...(months ? { months } : {}) }),
+    flow: (month?: string) => get<FlowData>("/api/cash-flow/flow", month ? { month } : undefined),
   },
   merchants: {
     list: (params?: { days?: number; limit?: number; category?: string }) =>
