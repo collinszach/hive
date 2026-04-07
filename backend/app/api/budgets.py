@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, field_validator
 from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -27,6 +27,7 @@ class BudgetOut(BaseModel):
     actual_spend: float
     pct_used: float
     remaining: float
+    has_budget: bool = True  # False for categories with spend but no budget row in DB
 
     model_config = {"from_attributes": True}
 
@@ -91,8 +92,10 @@ async def list_budgets(
                 Transaction.date >= start,
                 Transaction.date < end,
                 Transaction.is_excluded == False,  # noqa: E712
+                Transaction.is_transfer == False,  # noqa: E712
                 Transaction.pending == False,  # noqa: E712
                 Transaction.amount > 0,
+                Transaction.category != "Transfers",
             )
         )
         .group_by(Transaction.category)
@@ -102,6 +105,7 @@ async def list_budgets(
     }
 
     out = []
+    budgeted_categories = set()
     for b in budgets:
         actual = actual_by_category.get(b.category, 0.0)
         budget_amt = float(b.budget_amount)
@@ -115,8 +119,26 @@ async def list_budgets(
             pct_used=pct,
             remaining=round(budget_amt - actual, 2),
         ))
+        budgeted_categories.add(b.category)
 
-    return out
+    # Also include categories with actual spend but no budget set
+    for category, actual in actual_by_category.items():
+        if category not in budgeted_categories:
+            out.append(BudgetOut(
+                id=uuid.uuid4(),
+                category=category,
+                month=start,
+                budget_amount=0.0,
+                actual_spend=round(actual, 2),
+                pct_used=0.0,
+                remaining=round(-actual, 2),
+                has_budget=False,
+            ))
+
+    out.sort(key=lambda x: x.actual_spend, reverse=True)
+    # Only return categories that have an actual budget row — ghost categories
+    # (spending but no budget set) are excluded; users add budgets explicitly.
+    return [b for b in out if b.has_budget]
 
 
 @router.post("", response_model=BudgetOut)
@@ -155,6 +177,7 @@ async def upsert_budget(
                 Transaction.date >= start,
                 Transaction.date < end,
                 Transaction.is_excluded == False,  # noqa: E712
+                Transaction.is_transfer == False,  # noqa: E712
                 Transaction.pending == False,  # noqa: E712
                 Transaction.amount > 0,
             )
@@ -173,3 +196,18 @@ async def upsert_budget(
         pct_used=pct,
         remaining=round(budget_amt - actual, 2),
     )
+
+
+@router.delete("/{budget_id}", status_code=204)
+async def delete_budget(
+    budget_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Delete a budget by ID."""
+    result = await db.execute(select(Budget).where(Budget.id == budget_id))
+    b = result.scalar_one_or_none()
+    if not b:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    await db.delete(b)
+    await db.commit()
+    return Response(status_code=204)
