@@ -92,7 +92,7 @@ function NavItem({
       href={href}
       className={cn(
         "group relative flex items-center gap-2.5 px-3 py-[6px] rounded-[9px]",
-        "text-[12.5px] font-medium transition-all duration-150",
+        "text-[13px] font-medium transition-all duration-150",
         active
           ? [
               "text-[#F5B942]",
@@ -155,22 +155,22 @@ export function Sidebar() {
     <aside
       className="w-[210px] shrink-0 h-screen sticky top-0 flex flex-col z-10"
       style={{
-        background: "#0C0A09",
-        borderRight: "1px solid rgba(245, 185, 66, 0.07)",
+        background: "#09090E",
+        borderRight: "1px solid rgba(255, 255, 255, 0.05)",
       }}
     >
       {/* ── Ambient amber glow at top ─────────────────────── */}
       <div
         className="absolute top-0 left-0 right-0 h-[180px] pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse 160% 100% at 50% 0%, rgba(245,185,66,0.10) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse 160% 100% at 50% 0%, rgba(245,185,66,0.08) 0%, transparent 70%)",
         }}
       />
 
       {/* ── Brand mark ───────────────────────────────────── */}
       <div
         className="relative px-4 pt-5 pb-4"
-        style={{ borderBottom: "1px solid rgba(245, 185, 66, 0.07)" }}
+        style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
       >
         <Link href="/" className="flex items-center gap-3 group">
           {/* Honeycomb hex mark */}
@@ -244,7 +244,7 @@ export function Sidebar() {
             {gi < NAV_GROUPS.length - 1 && (
               <div
                 className="mx-3 mt-3"
-                style={{ height: "1px", background: "rgba(245,185,66,0.06)" }}
+                style={{ height: "1px", background: "rgba(255,255,255,0.04)" }}
               />
             )}
           </div>
@@ -254,7 +254,7 @@ export function Sidebar() {
       {/* ── Footer ───────────────────────────────────────── */}
       <div
         className="px-2.5 py-3 space-y-[2px]"
-        style={{ borderTop: "1px solid rgba(245, 185, 66, 0.07)" }}
+        style={{ borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}
       >
         {/* Sync button */}
         <button
@@ -262,7 +262,7 @@ export function Sidebar() {
           disabled={syncing}
           className={cn(
             "w-full flex items-center gap-2.5 px-3 py-[6px] rounded-[9px]",
-            "text-[12.5px] font-medium transition-all duration-150",
+            "text-[13px] font-medium transition-all duration-150",
             syncDone
               ? "text-[#3DD68C] bg-[rgba(61,214,140,0.07)]"
               : "text-[#7A7268] hover:text-[#C8BFB4] hover:bg-[rgba(245,185,66,0.04)] disabled:opacity-40"
@@ -294,7 +294,7 @@ export function Sidebar() {
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-2.5 px-3 py-[6px] rounded-[9px]
-                     text-[12.5px] font-medium tracking-[-0.01em]
+                     text-[13px] font-medium tracking-[-0.01em]
                      text-[#4A4640] hover:text-[#F87171] hover:bg-[rgba(248,113,113,0.06)]
                      transition-all duration-150"
         >
