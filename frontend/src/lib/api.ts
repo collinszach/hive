@@ -624,6 +624,9 @@ export const api = {
     taxExport: (year?: number) =>
       get<{ date: string; amount: number; merchant: string; category: string; subcategory: string | null }[]>("/api/reports/tax-export", year ? { year } : undefined),
   },
+  plaid: {
+    applyRules: () => post<{ status: string; message: string }>("/api/plaid/apply-rules", {}),
+  },
   snaptrade: {
     connect: () => post<{ redirect_url: string }>("/api/snaptrade/connect", {}),
     callback: () => get<{ accounts_added: number }>("/api/snaptrade/callback"),

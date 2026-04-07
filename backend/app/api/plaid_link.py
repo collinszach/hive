@@ -61,6 +61,14 @@ async def trigger_recategorize() -> dict:
     return {"status": "queued", "message": "Recategorization started — check back in ~60 seconds"}
 
 
+@router.post("/apply-rules", status_code=202)
+async def trigger_apply_rules() -> dict:
+    """Apply all active custom categorization rules to all existing transactions."""
+    from app.tasks.ingestion import apply_custom_rules_to_all
+    apply_custom_rules_to_all.delay()
+    return {"status": "queued", "message": "Applying custom rules — transactions will update in ~30 seconds"}
+
+
 @router.post("/exchange-token", response_model=ExchangeTokenResponse)
 async def exchange_token(
     body: ExchangeTokenRequest,

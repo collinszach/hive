@@ -1,5 +1,6 @@
 """Daily transaction sync task — pulls from all linked Plaid accounts."""
 import logging
+import re as _re
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -16,6 +17,32 @@ from app.models.transaction import Transaction
 from app.plaid.connector import plaid_connector
 
 logger = logging.getLogger(__name__)
+
+
+def _apply_custom_rules(description: str, rules: list) -> tuple[str, str, str] | None:
+    """
+    Check active custom DB rules against a transaction description.
+    Rules are pre-sorted by priority (lower = higher precedence).
+    Returns (category, subcategory, source) or None if no rule matches.
+    """
+    desc_lower = description.lower()
+    for rule in rules:
+        matched = False
+        mt, mv = rule.match_type, rule.match_value
+        if mt == "contains":
+            matched = mv.lower() in desc_lower
+        elif mt == "starts_with":
+            matched = desc_lower.startswith(mv.lower())
+        elif mt == "exact":
+            matched = desc_lower == mv.lower()
+        elif mt == "regex":
+            try:
+                matched = bool(_re.search(mv, description, _re.IGNORECASE))
+            except _re.error:
+                logger.warning("Invalid regex in custom rule: %s", mv)
+        if matched:
+            return rule.category, rule.subcategory or "", "custom_rule"
+    return None
 
 
 @app.task(
@@ -56,6 +83,24 @@ def sync_single_link(self, item_id: str) -> dict:
         added_count = _upsert_transactions(db, account_map, added)
         mod_count = _upsert_transactions(db, account_map, modified)
         removed_count = _remove_transactions(db, removed)
+
+        # Refresh account balances from Plaid
+        try:
+            plaid_accounts = plaid_connector.get_accounts(link.access_token)
+            for pa in plaid_accounts:
+                acct = db.execute(
+                    select(Account).where(Account.plaid_account_id == pa["account_id"])
+                ).scalar_one_or_none()
+                if acct:
+                    balances = pa.get("balances") or {}
+                    acct.current_balance = balances.get("current")
+                    acct.available_balance = balances.get("available")
+                    acct.credit_limit = balances.get("limit")
+                    db.add(acct)
+            db.commit()
+            logger.info("Refreshed balances for %d accounts on item %s", len(plaid_accounts), item_id)
+        except Exception as bal_exc:
+            logger.warning("Balance refresh failed for item %s: %s", item_id, bal_exc)
 
         link.sync_cursor = next_cursor
         link.last_sync_at = datetime.now(timezone.utc)
@@ -110,6 +155,50 @@ def sync_all_accounts(self) -> dict:
             logger.info("Queued sync for item %s", link.item_id)
 
         return {"queued": len(links)}
+    finally:
+        db.close()
+
+
+@app.task(
+    name="app.tasks.ingestion.recategorize_uncategorized",
+    bind=True,
+    max_retries=2,
+)
+def recategorize_uncategorized(self) -> dict:
+    """Re-run the categorization pipeline on all Uncategorized transactions.
+
+    Also re-runs transfer detection so newly-matched autopay/transfer
+    patterns get is_excluded set correctly.
+    """
+    db = get_sync_db()
+    try:
+        rows = db.execute(
+            select(Transaction).where(Transaction.category == "Uncategorized")
+        ).scalars().all()
+
+        updated = 0
+        for tx in rows:
+            tx_is_transfer, tx_is_excluded = is_transfer(tx.raw_description)
+            if tx_is_transfer:
+                cat, sub, source = "Transfers", "Payment", "rules"
+            else:
+                try:
+                    cat, sub, source = categorize_transaction(tx.raw_description)
+                except Exception:
+                    continue
+
+            if cat != "Uncategorized":
+                tx.category = cat
+                tx.subcategory = sub
+                tx.category_source = source
+                tx.is_transfer = tx_is_transfer
+                tx.is_excluded = tx_is_excluded
+                db.add(tx)
+                updated += 1
+
+        db.commit()
+        logger.info("recategorize_uncategorized: updated %d transactions", updated)
+        return {"updated": updated}
     finally:
         db.close()
 
@@ -233,3 +322,52 @@ def _remove_transactions(db, removed: list) -> int:
     count = result.rowcount
     logger.info("Removed %d transactions", count)
     return count
+
+
+@app.task(
+    name="app.tasks.ingestion.apply_custom_rules_to_all",
+    bind=True,
+    max_retries=2,
+)
+def apply_custom_rules_to_all(self) -> dict:
+    """
+    Apply all active custom categorization rules to ALL non-excluded transactions.
+    Runs after a rule is created/modified from the Settings page.
+    Skips transactions already correctly categorized by the rule.
+    """
+    from app.models.categorization_rule import CategorizationRule
+
+    db = get_sync_db()
+    try:
+        rules = db.execute(
+            select(CategorizationRule)
+            .where(CategorizationRule.is_active.is_(True))
+            .order_by(CategorizationRule.priority)
+        ).scalars().all()
+
+        if not rules:
+            logger.info("apply_custom_rules_to_all: no active rules")
+            return {"updated": 0}
+
+        txns = db.execute(
+            select(Transaction).where(Transaction.is_excluded == False)  # noqa: E712
+        ).scalars().all()
+
+        updated = 0
+        for tx in txns:
+            result = _apply_custom_rules(tx.raw_description, rules)
+            if result:
+                cat, sub, source = result
+                sub = sub or None
+                if tx.category != cat or tx.subcategory != sub:
+                    tx.category = cat
+                    tx.subcategory = sub
+                    tx.category_source = source
+                    db.add(tx)
+                    updated += 1
+
+        db.commit()
+        logger.info("apply_custom_rules_to_all: updated %d transactions", updated)
+        return {"updated": updated}
+    finally:
+        db.close()
