@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { TrendingUp, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { api, PointsSummary, LedgerEntry, LeakageResponse } from "@/lib/api";
 import { fmt } from "@/lib/utils";
 import { POINT_VALUES_CPP, REDEMPTION_THRESHOLDS } from "@/lib/pointsConstants";
@@ -9,6 +9,7 @@ import { TimeWindowPicker } from "./_components/TimeWindowPicker";
 import { ProgramCard } from "./_components/ProgramCard";
 import { EarnActivity } from "./_components/EarnActivity";
 import { LeakageSummary } from "./_components/LeakageSummary";
+import { PageHero } from "@/components/PageHero";
 
 export default function PointsPage() {
   const [days, setDays]                     = useState<number>(90);
@@ -92,24 +93,52 @@ export default function PointsPage() {
   }
 
   const totalValue = summary?.total_estimated_value_dollars ?? 0;
+  const programCount = summary?.programs.length ?? 0;
+
+  // Compute 90d earned estimate across all programs
+  const earned90d = summary?.programs.reduce((s, p) => s + p.points_earned_90d, 0) ?? 0;
+  // Find best single card by estimated value
+  const bestProgram = summary?.programs.reduce(
+    (best, p) => (p.estimated_value_dollars > (best?.estimated_value_dollars ?? 0) ? p : best),
+    null as (typeof summary.programs)[0] | null
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
 
-      {/* ── Header ────────────────────────────────────────────────── */}
+      {/* ── PageHero ──────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Points</h1>
-          <p className="text-[13px] text-ink-tertiary mt-0.5">Estimated portfolio value across all programs</p>
+        <div className="flex-1 min-w-0">
+          <PageHero
+            eyebrow="Points & Rewards"
+            headline={
+              <>
+                <span className="text-honey">{summaryLoading ? "—" : fmt(totalValue)}</span>
+              </>
+            }
+            subtext="estimated redemption value across all programs"
+            glowColor="honey"
+            statStrip={[
+              {
+                label: "Programs",
+                value: `${programCount} program${programCount !== 1 ? "s" : ""}`,
+                color: "default",
+              },
+              {
+                label: `${days}d Earned`,
+                value: summaryLoading ? "—" : `${Math.round(earned90d).toLocaleString()} pts`,
+                color: "amber",
+              },
+              {
+                label: "Best Card",
+                value: bestProgram?.program ?? "—",
+                color: "default",
+              },
+            ]}
+          />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="shrink-0 pt-1">
           <TimeWindowPicker value={days} onChange={setDays} />
-          <div className="flex items-center gap-2 hive-card px-4 py-2.5">
-            <TrendingUp className="w-4 h-4 text-semantic-income" />
-            <span className="text-[15px] font-semibold font-mono text-semantic-income tabular-nums">
-              {summaryLoading ? "—" : fmt(totalValue)}
-            </span>
-          </div>
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { api, CardOption } from "@/lib/api";
 import { fmt, ALL_CATEGORIES, SUBCATEGORIES } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Zap, Trophy } from "lucide-react";
+import { GlassCard } from "@/components/GlassCard";
 
 const PROGRAM_VALUE_COLORS: Record<string, string> = {
   "Amex MR":           "text-emerald-400",
@@ -46,6 +47,9 @@ export default function OptimizerPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
+
+      {/* ── Ambient honey glow ──────────────────────────────────────── */}
+      <div className="pointer-events-none fixed top-0 left-56 w-96 h-96 rounded-full opacity-[0.06] blur-[80px] bg-honey" />
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div>
@@ -107,8 +111,7 @@ export default function OptimizerPage() {
 
       {/* ── Winner ──────────────────────────────────────────────────── */}
       {searched && best && (
-        <div className="hive-card p-5 border-honey/20"
-             style={{ background: "linear-gradient(135deg, rgba(245,185,66,0.06) 0%, transparent 50%)" }}>
+        <GlassCard tint="income" className="p-5">
           <div className="flex items-center gap-2 mb-2">
             <Trophy className="w-4 h-4 text-honey" />
             <span className="hive-label text-honey/80">Best Card</span>
@@ -129,20 +132,21 @@ export default function OptimizerPage() {
               {fmt(best.dollar_value)} value
             </span>
           </div>
-        </div>
+        </GlassCard>
       )}
 
       {/* ── Rankings ────────────────────────────────────────────────── */}
       {searched && cards.length > 1 && (
         <div className="space-y-2">
           <p className="hive-label">All Cards Ranked</p>
-          <div className="hive-card overflow-hidden divide-y divide-white/[0.04]">
+          <div className="space-y-1.5">
             {cards.map((card, i) => (
-              <div
+              <GlassCard
                 key={card.card_slug}
+                tint={i === 0 ? "none" : "none"}
                 className={cn(
                   "flex items-center justify-between gap-4 px-5 py-3.5 transition-colors",
-                  i === 0 ? "bg-honey/[0.04]" : "hover:bg-white/[0.02]"
+                  i === 0 ? "bg-honey/[0.04] border-honey/[0.08]" : ""
                 )}
               >
                 <div className="flex items-center gap-3 min-w-0">
@@ -183,7 +187,7 @@ export default function OptimizerPage() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </GlassCard>
             ))}
           </div>
         </div>

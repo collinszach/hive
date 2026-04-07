@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LeakageEntry, LeakageResponse } from "@/lib/api";
 import { fmt } from "@/lib/utils";
 import { AlertTriangle, ChevronDown, ChevronUp, TrendingDown } from "lucide-react";
+import { GlassCard } from "@/components/GlassCard";
 
 function slugToLabel(slug: string): string {
   const map: Record<string, string> = {
@@ -46,7 +47,7 @@ export function LeakageSummary({
   const hasLeakage = data.total_leakage_dollars > 0;
 
   return (
-    <div className="hive-card overflow-hidden">
+    <GlassCard tint={hasLeakage ? "expense" : "none"} className="overflow-hidden">
       {/* Header */}
       <button
         type="button"
@@ -116,6 +117,6 @@ export function LeakageSummary({
           </table>
         </div>
       )}
-    </div>
+    </GlassCard>
   );
 }

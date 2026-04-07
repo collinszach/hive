@@ -17,6 +17,9 @@ import {
   ChevronRight,
   GripVertical,
 } from "lucide-react";
+import { PageHero } from "@/components/PageHero";
+import { AnimatedBar } from "@/components/AnimatedBar";
+import { GlassCard } from "@/components/GlassCard";
 
 // ── Category colors ──────────────────────────────────────────────────────────
 
@@ -54,17 +57,24 @@ function KpiTile({
   value,
   sub,
   icon: Icon,
-  accent,
+  tint,
 }: {
   label: string;
   value: string;
   sub?: string;
   icon: React.ElementType;
-  accent: string;
+  tint: "income" | "expense" | "amber" | "sky";
 }) {
+  const accentMap = {
+    income:  "rgba(50,213,131,0.12)",
+    expense: "rgba(249,112,102,0.12)",
+    amber:   "rgba(245,185,66,0.12)",
+    sky:     "rgba(56,189,248,0.12)",
+  };
+  const accent = accentMap[tint];
+
   return (
-    <div className="hive-card p-5 relative overflow-hidden group hover:border-white/[0.08] transition-all duration-200">
-      {/* Subtle corner glow */}
+    <GlassCard tint={tint} className="p-5 relative overflow-hidden group">
       <div
         aria-hidden
         className="pointer-events-none absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -87,7 +97,7 @@ function KpiTile({
           <p className="mt-2 text-[12px] text-ink-tertiary leading-snug">{sub}</p>
         )}
       </div>
-    </div>
+    </GlassCard>
   );
 }
 
@@ -98,19 +108,23 @@ function BudgetRow({
   actual,
   budget,
   pct,
+  index,
 }: {
   category: string;
   actual: number;
   budget: number;
   pct: number;
+  index: number;
 }) {
   const over = pct > 100;
   const warn = pct > 80 && !over;
+
   const barColor = over
-    ? "bg-semantic-expense"
+    ? "linear-gradient(90deg, #F87171, #EF4444)"
     : warn
-    ? "bg-semantic-warning"
-    : "bg-semantic-income";
+    ? "linear-gradient(90deg, #FBBF24, #F59E0B)"
+    : "linear-gradient(90deg, #34D399, #10B981)";
+
   const pctColor = over
     ? "text-semantic-expense"
     : warn
@@ -131,12 +145,12 @@ function BudgetRow({
           </span>
         </div>
       </div>
-      <div className="h-[3px] bg-white/[0.05] rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-          style={{ width: `${Math.min(pct, 100)}%` }}
-        />
-      </div>
+      <AnimatedBar
+        pct={Math.min(pct, 100)}
+        color={barColor}
+        height={3}
+        delay={index * 60}
+      />
     </div>
   );
 }
@@ -236,6 +250,7 @@ function applyOrder(accounts: Account[], order: string[]): Account[] {
 
 export default function Dashboard() {
   const month = previousMonth();
+  const currentMonthLabel = monthLabel(month);
 
   const [accts, setAccts]       = useState<Account[]>([]);
   const [acctOrder, setAcctOrder] = useState<string[]>([]);
@@ -293,38 +308,66 @@ export default function Dashboard() {
   return (
     <div className="space-y-5 animate-fade-in">
 
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Dashboard</h1>
-          <p className="text-[13px] text-ink-tertiary mt-0.5 font-mono">{monthLabel(month)}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {alerts.length > 0 && (
-            <Link
-              href="/points"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-                         bg-honey/[0.08] border border-honey/20
-                         text-[12px] font-semibold text-honey
-                         hover:bg-honey/[0.14] transition-all duration-150"
-            >
-              <Bell className="w-3 h-3" />
-              {alerts.length} reward{alerts.length > 1 ? "s" : ""} ready
-            </Link>
-          )}
+      {/* ── Action buttons row ───────────────────────────────────────── */}
+      <div className="flex items-center justify-end gap-2">
+        {alerts.length > 0 && (
           <Link
-            href="/connect"
+            href="/points"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-                       bg-elevated border border-white/[0.07]
-                       text-[12px] font-medium text-ink-secondary
-                       hover:text-ink-primary hover:bg-white/[0.06]
-                       transition-all duration-150"
+                       bg-honey/[0.08] border border-honey/20
+                       text-[12px] font-semibold text-honey
+                       hover:bg-honey/[0.14] transition-all duration-150"
           >
-            <Link2 className="w-3 h-3" />
-            {noAccounts ? "Connect account" : "Add account"}
+            <Bell className="w-3 h-3" />
+            {alerts.length} reward{alerts.length > 1 ? "s" : ""} ready
           </Link>
-        </div>
+        )}
+        <Link
+          href="/connect"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                     bg-elevated border border-white/[0.07]
+                     text-[12px] font-medium text-ink-secondary
+                     hover:text-ink-primary hover:bg-white/[0.06]
+                     transition-all duration-150"
+        >
+          <Link2 className="w-3 h-3" />
+          {noAccounts ? "Connect account" : "Add account"}
+        </Link>
       </div>
+
+      {/* ── PageHero ─────────────────────────────────────────────────── */}
+      <PageHero
+        eyebrow={`Dashboard · ${currentMonthLabel}`}
+        headline={
+          <>
+            <span className="text-honey">{fmt(netCash)}</span>
+          </>
+        }
+        subtext="net cash position this month"
+        glowColor="honey"
+        statStrip={[
+          {
+            label: "Total Assets",
+            value: fmt(totalAssets),
+            color: "green",
+          },
+          {
+            label: "Credit Used",
+            value: fmt(totalDebt),
+            color: "red",
+          },
+          {
+            label: "Points Value",
+            value: pts ? fmt(pointsValue) : "—",
+            color: "amber",
+          },
+          {
+            label: currentMonthLabel,
+            value: `${bdgts.length} budget${bdgts.length !== 1 ? "s" : ""}`,
+            color: "default",
+          },
+        ]}
+      />
 
       {/* ── Empty state ─────────────────────────────────────────────── */}
       {noAccounts && (
@@ -353,28 +396,28 @@ export default function Dashboard() {
             value={fmt(netCash)}
             sub={netCash >= 0 ? "assets minus liabilities" : "net negative"}
             icon={netCash >= 0 ? TrendingUp : TrendingDown}
-            accent={netCash >= 0 ? "rgba(50,213,131,0.12)" : "rgba(249,112,102,0.12)"}
+            tint={netCash >= 0 ? "income" : "expense"}
           />
           <KpiTile
             label="Total Assets"
             value={fmt(totalAssets)}
             sub={`${bankAccts.length} bank account${bankAccts.length !== 1 ? "s" : ""}`}
             icon={Landmark}
-            accent="rgba(50,213,131,0.12)"
+            tint="income"
           />
           <KpiTile
             label="Credit Balances"
             value={fmt(totalDebt)}
             sub={`across ${creditCards.length} card${creditCards.length !== 1 ? "s" : ""}`}
             icon={CreditCard}
-            accent="rgba(249,112,102,0.12)"
+            tint="expense"
           />
           <KpiTile
             label="Points Value"
             value={pts ? fmt(pointsValue) : "—"}
             sub="estimated · 90-day earned"
             icon={Gem}
-            accent="rgba(245,185,66,0.12)"
+            tint="amber"
           />
         </div>
       )}
@@ -499,13 +542,14 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="px-5 divide-y divide-white/[0.04]">
-            {bdgts.map((b) => (
+            {bdgts.map((b, i) => (
               <BudgetRow
                 key={b.id}
                 category={b.category}
                 actual={b.actual_spend}
                 budget={b.budget_amount}
                 pct={b.pct_used}
+                index={i}
               />
             ))}
           </div>

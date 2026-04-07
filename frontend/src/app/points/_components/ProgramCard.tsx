@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Bell, Check, X } from "lucide-react";
 import { cn, fmt } from "@/lib/utils";
 import { api, ProgramSummary } from "@/lib/api";
+import { GlassCard } from "@/components/GlassCard";
 
 const PROGRAM_ACCENTS: Record<string, { bar: string; text: string; bg: string }> = {
   "Amex MR":           { bar: "bg-emerald-400", text: "text-emerald-400", bg: "bg-emerald-400/10" },
@@ -65,10 +66,13 @@ export function ProgramCard({ program: p, onBalanceUpdate }: ProgramCardProps) {
   }
 
   return (
-    <div className={cn(
-      "hive-card p-5 space-y-4 transition-all duration-200",
-      p.above_threshold && "border-honey/20",
-    )}>
+    <GlassCard
+      tint="amber"
+      className={cn(
+        "p-5 space-y-4 transition-all duration-200",
+        p.above_threshold && "border-honey/30",
+      )}
+    >
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -172,6 +176,6 @@ export function ProgramCard({ program: p, onBalanceUpdate }: ProgramCardProps) {
           </p>
         </div>
       )}
-    </div>
+    </GlassCard>
   );
 }
