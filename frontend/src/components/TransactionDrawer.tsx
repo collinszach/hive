@@ -89,7 +89,7 @@ export function TransactionDrawer({ transaction, onClose, onCategoryChange }: Tr
       {/* Drawer panel */}
       <div
         className={cn(
-          "fixed top-0 right-0 z-50 h-full w-full max-w-md bg-[#0F1117] border-l border-white/[0.06]",
+          "fixed top-0 right-0 z-50 h-full w-80 bg-[#0F1117] border-l border-white/[0.06]",
           "flex flex-col transition-transform duration-300 ease-out",
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
