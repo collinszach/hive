@@ -5,6 +5,7 @@ import { api, CategorizationRule } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Settings2, Plus, Trash2, Edit2, Check, X, Tag, Shield, Database, ChevronRight } from "lucide-react";
 import { ALL_CATEGORIES, SUBCATEGORIES } from "@/lib/utils";
+import { GlassCard } from "@/components/GlassCard";
 
 const MATCH_TYPES = [
   { value: "contains", label: "Contains" },
@@ -142,7 +143,7 @@ function RulesTab() {
       </div>
 
       {showForm && (
-        <div className="hive-card p-5">
+        <GlassCard className="p-5">
           <h3 className="text-[14px] font-semibold text-ink-primary mb-4">New Rule</h3>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -209,10 +210,10 @@ function RulesTab() {
               <button type="button" onClick={() => setShowForm(false)} className="hive-btn-secondary">Cancel</button>
             </div>
           </form>
-        </div>
+        </GlassCard>
       )}
 
-      <div className="hive-card overflow-hidden">
+      <GlassCard className="overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-ink-tertiary text-[13px]">Loading…</div>
         ) : rules.length === 0 ? (
@@ -263,7 +264,7 @@ function RulesTab() {
             ))}
           </div>
         )}
-      </div>
+      </GlassCard>
     </div>
   );
 }
@@ -271,7 +272,7 @@ function RulesTab() {
 function DataTab() {
   return (
     <div className="space-y-3">
-      <div className="hive-card divide-y divide-white/[0.04]">
+      <GlassCard className="divide-y divide-white/[0.04]">
         {[
           { label: "Export all transactions", description: "Download a CSV of your full transaction history", href: "/api/reports/tax-export" },
           { label: "Plaid connections", description: "Manage linked bank accounts and credentials", href: "/connect" },
@@ -288,7 +289,7 @@ function DataTab() {
             <ChevronRight className="w-4 h-4 text-ink-tertiary/40" />
           </a>
         ))}
-      </div>
+      </GlassCard>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { api, MerchantSummary } from "@/lib/api";
 import { fmt } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Store, ChevronRight, ArrowLeft, Loader2 } from "lucide-react";
+import { GlassCard } from "@/components/GlassCard";
 import {
   BarChart,
   Bar,
@@ -131,6 +132,8 @@ export default function MerchantsPage() {
   if (selected && detail) {
     return (
       <div className="space-y-5 animate-fade-in">
+        <div className="pointer-events-none fixed top-0 left-56 w-96 h-96 rounded-full opacity-[0.06] blur-[80px]"
+             style={{ background: "#38BDF8" }} />
         <div className="flex items-center gap-3">
           <button
             onClick={() => { setSelected(null); setDetail(null); }}
@@ -146,7 +149,7 @@ export default function MerchantsPage() {
 
         {/* Monthly chart */}
         {detail.monthly.length > 0 && (
-          <div className="hive-card p-5">
+          <GlassCard tint="sky" className="p-5">
             <p className="text-[13px] font-medium text-ink-primary mb-4">Monthly Spend</p>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={detail.monthly.map((m) => ({ ...m, month: fmtMonth(m.month) }))}>
@@ -160,12 +163,12 @@ export default function MerchantsPage() {
                 <Bar dataKey="total" fill="#F5B942" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </GlassCard>
         )}
 
         {/* Bulk recategorize */}
         {detail.transactions.length > 1 && (
-          <div className="hive-card p-4">
+          <GlassCard className="p-4">
             <p className="text-[12px] font-medium text-ink-primary mb-3">
               Apply category to all {detail.transaction_count} transactions from this merchant
             </p>
@@ -211,11 +214,11 @@ export default function MerchantsPage() {
                 <span className="text-[11px] text-semantic-expense">Error — try again</span>
               )}
             </div>
-          </div>
+          </GlassCard>
         )}
 
         {/* Transaction list */}
-        <div className="hive-card overflow-hidden">
+        <GlassCard className="overflow-hidden">
           <div className="px-5 py-3 border-b border-white/[0.04]">
             <p className="text-[13px] font-medium text-ink-primary">All Transactions</p>
           </div>
@@ -281,13 +284,17 @@ export default function MerchantsPage() {
               </div>
             ))}
           </div>
-        </div>
+        </GlassCard>
       </div>
     );
   }
 
   return (
     <div className="space-y-5 animate-fade-in">
+      {/* Sky ambient glow */}
+      <div className="pointer-events-none fixed top-0 left-56 w-96 h-96 rounded-full opacity-[0.06] blur-[80px]"
+           style={{ background: "#38BDF8" }} />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Merchants</h1>
@@ -309,7 +316,7 @@ export default function MerchantsPage() {
         </div>
       </div>
 
-      <div className="hive-card overflow-hidden">
+      <GlassCard tint="sky" className="overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-ink-tertiary text-[13px]">Loading…</div>
         ) : (
@@ -341,7 +348,7 @@ export default function MerchantsPage() {
             ))}
           </div>
         )}
-      </div>
+      </GlassCard>
     </div>
   );
 }

@@ -158,6 +158,15 @@ export default function InsightsPage() {
         )}
       </div>
 
+      {/* ── Violet ambient header band ──────────────────────────────── */}
+      <div className="relative px-5 py-4 border-b border-white/[0.05] overflow-hidden"
+           style={{ background: "linear-gradient(160deg, rgba(167,139,250,0.07) 0%, transparent 60%)" }}>
+        <div aria-hidden className="pointer-events-none absolute -top-8 -left-4 w-48 h-24 rounded-full"
+             style={{ background: "radial-gradient(ellipse, rgba(167,139,250,0.18) 0%, transparent 70%)" }} />
+        <p className="relative text-[9px] font-bold tracking-[0.14em] uppercase text-[#A78BFA]">AI Financial Advisor</p>
+        <p className="relative text-[14px] font-semibold text-ink-primary mt-0.5">Ask me anything about your finances</p>
+      </div>
+
       {/* ── Messages ────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto py-6 space-y-4 pr-1">
         {messages.length === 0 && (
