@@ -15,6 +15,10 @@ from app.db import get_db
 from app.models.account import Account
 from app.models.anomaly import Anomaly
 from app.models.budget import Budget
+from app.models.goal import Goal
+from app.models.points_balance import PointsBalance
+from app.models.points_ledger import PointsLedger
+from app.models.subscription import Subscription
 from app.models.transaction import Transaction
 
 logger = logging.getLogger(__name__)
@@ -37,10 +41,17 @@ class ChatResponse(BaseModel):
 
 
 async def _build_financial_context(db: AsyncSession) -> str:
-    """Build a financial snapshot for the AI system prompt (last 3 months)."""
+    """Build a comprehensive financial snapshot for the AI system prompt."""
     today = date.today()
     three_months_ago = today - timedelta(days=90)
+    month_start = date(today.year, today.month, 1)
+    month_end = (
+        date(today.year + 1, 1, 1)
+        if today.month == 12
+        else date(today.year, today.month + 1, 1)
+    )
 
+    # --- Existing queries ---
     spend_result = await db.execute(
         select(Transaction.category, func.sum(Transaction.amount).label("total"))
         .where(
@@ -55,13 +66,6 @@ async def _build_financial_context(db: AsyncSession) -> str:
         .order_by(func.sum(Transaction.amount).desc())
     )
     category_spend = spend_result.all()
-
-    month_start = date(today.year, today.month, 1)
-    month_end = (
-        date(today.year + 1, 1, 1)
-        if today.month == 12
-        else date(today.year, today.month + 1, 1)
-    )
 
     current_month_result = await db.execute(
         select(Transaction.category, func.sum(Transaction.amount).label("total"))
@@ -80,7 +84,7 @@ async def _build_financial_context(db: AsyncSession) -> str:
     current_month_spend = current_month_result.all()
 
     budget_result = await db.execute(
-        select(Budget).where(Budget.month == date(today.year, today.month, 1))
+        select(Budget).where(Budget.month == month_start)
     )
     budgets = {b.category: float(b.budget_amount) for b in budget_result.scalars().all()}
 
@@ -94,6 +98,52 @@ async def _build_financial_context(db: AsyncSession) -> str:
     )
     anomalies = anomaly_result.scalars().all()
 
+    # --- New queries ---
+
+    # Points portfolio: latest balance per program
+    points_result = await db.execute(
+        select(PointsBalance.program, func.sum(PointsBalance.balance).label("total"))
+        .group_by(PointsBalance.program)
+    )
+    points_balances = points_result.all()
+
+    # Subscriptions: active, non-cancelled
+    subs_result = await db.execute(
+        select(Subscription).where(
+            Subscription.is_active == True,  # noqa: E712
+            Subscription.is_cancelled == False,  # noqa: E712
+        ).order_by(Subscription.amount.desc())
+    )
+    subscriptions = subs_result.scalars().all()
+
+    # Goals: active, non-archived
+    goals_result = await db.execute(
+        select(Goal).where(
+            Goal.is_archived == False,  # noqa: E712
+            Goal.is_completed == False,  # noqa: E712
+        ).order_by(Goal.sort_order)
+    )
+    goals = goals_result.scalars().all()
+
+    # Top merchants by spend (last 90 days)
+    merchant_result = await db.execute(
+        select(Transaction.merchant, func.sum(Transaction.amount).label("total"))
+        .where(
+            and_(
+                Transaction.date >= three_months_ago,
+                Transaction.is_excluded == False,  # noqa: E712
+                Transaction.pending == False,  # noqa: E712
+                Transaction.amount > 0,
+                Transaction.merchant.isnot(None),
+            )
+        )
+        .group_by(Transaction.merchant)
+        .order_by(func.sum(Transaction.amount).desc())
+        .limit(15)
+    )
+    top_merchants = merchant_result.all()
+
+    # --- Build context string ---
     lines = [
         f"Today's date: {today.isoformat()}",
         "",
@@ -127,6 +177,60 @@ async def _build_financial_context(db: AsyncSession) -> str:
         if cat:
             lines.append(f"- {cat}: ${float(total):,.2f}")
 
+    if top_merchants:
+        lines += [
+            "",
+            "=== TOP 15 MERCHANTS — LAST 90 DAYS ===",
+        ]
+        for merchant, total in top_merchants:
+            lines.append(f"- {merchant}: ${float(total):,.2f}")
+
+    if points_balances:
+        from app.points.tracker import POINT_VALUES_CPP
+        lines += [
+            "",
+            "=== POINTS & REWARDS PORTFOLIO ===",
+        ]
+        total_points_value = 0.0
+        for program, balance in points_balances:
+            cpp = POINT_VALUES_CPP.get(program, 1.0)
+            est_value = float(balance) * cpp / 100.0
+            total_points_value += est_value
+            lines.append(f"- {program}: {int(balance):,} pts ≈ ${est_value:,.2f}")
+        lines.append(f"Total estimated points value: ${total_points_value:,.2f}")
+
+    if subscriptions:
+        total_monthly = sum(
+            float(s.amount) if s.frequency == "monthly"
+            else float(s.amount) / 12 if s.frequency == "annual"
+            else float(s.amount) / 3 if s.frequency == "quarterly"
+            else float(s.amount)
+            for s in subscriptions
+        )
+        lines += [
+            "",
+            f"=== SUBSCRIPTIONS ({len(subscriptions)} active, ~${total_monthly:,.2f}/mo) ===",
+        ]
+        for s in subscriptions[:15]:
+            freq = s.frequency or "monthly"
+            lines.append(f"- {s.merchant_name}: ${float(s.amount):,.2f}/{freq}")
+
+    if goals:
+        lines += [
+            "",
+            "=== FINANCIAL GOALS ===",
+        ]
+        for g in goals:
+            target = float(g.target_amount) if g.target_amount else 0.0
+            current = float(g.current_amount) if g.current_amount else 0.0
+            pct = (current / target * 100) if target > 0 else 0.0
+            on_track = " (on track)" if g.on_track else " (behind)" if g.on_track is False else ""
+            target_str = f", target: ${target:,.2f}" if target else ""
+            current_str = f", current: ${current:,.2f}" if current else ""
+            lines.append(
+                f"- {g.name} ({g.goal_type}): {pct:.0f}% complete{target_str}{current_str}{on_track}"
+            )
+
     if anomalies:
         lines += [
             "",
@@ -141,13 +245,17 @@ async def _build_financial_context(db: AsyncSession) -> str:
 def _build_system_prompt(financial_context: str) -> str:
     return (
         "You are a personal finance assistant for a self-hosted finance platform called Hive. "
-        "You have access to the user's real financial data shown below. Answer questions "
-        "accurately and helpfully. Be concise. Format dollar amounts with $ and commas. "
-        "If you don't have enough data to answer a question, say so clearly.\n\n"
+        "You have access to the user's complete financial picture shown below, including: "
+        "account balances, spending by category, top merchants, points/rewards portfolio, "
+        "active subscriptions, financial goals, and anomalies. "
+        "Answer questions accurately and helpfully. Be concise but thorough. "
+        "Format dollar amounts with $ and commas. "
+        "If you don't have enough data to answer, say so clearly.\n\n"
         "IMPORTANT RULES:\n"
         "- Never suggest linking accounts (they're already linked via Plaid)\n"
         "- Venmo/Zelle transfers are excluded from spending totals — they are not real expenses\n"
-        "- Pending transactions are excluded from totals\n\n"
+        "- Pending transactions are excluded from totals\n"
+        "- Points values are estimates based on typical transfer partner redemptions\n\n"
         f"{financial_context}"
     )
 
