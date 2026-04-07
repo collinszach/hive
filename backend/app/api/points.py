@@ -95,6 +95,32 @@ class BalanceUpsertResponse(BaseModel):
     updated_at: str
 
 
+class LeakageEntry(BaseModel):
+    transaction_id: uuid.UUID
+    merchant: Optional[str]
+    date: str
+    amount: float
+    category: Optional[str]
+    subcategory: Optional[str]
+    actual_card_slug: str
+    actual_earn_rate: float
+    actual_points: float
+    actual_value_dollars: float
+    best_card_slug: str
+    best_program: str
+    best_earn_rate: float
+    best_points: float
+    best_value_dollars: float
+    leakage_dollars: float
+
+
+class LeakageResponse(BaseModel):
+    entries: list[LeakageEntry]
+    total_leakage_dollars: float
+    transaction_count: int
+    days: int
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -289,3 +315,110 @@ async def points_ledger(
         ))
 
     return entries
+
+
+@router.get("/leakage", response_model=LeakageResponse)
+async def points_leakage(
+    days: int = Query(90, ge=7, le=365),
+    db: AsyncSession = Depends(get_db),
+) -> LeakageResponse:
+    """
+    Identify transactions where a better card was available but not used.
+    Only reports leakage where the optimal card's value exceeds the actual by >10%
+    AND leakage >= $0.25. Filtered to cards the user actually has.
+    """
+    from app.models.account import Account
+    from app.models.transaction import Transaction
+
+    cutoff = date.today() - timedelta(days=days)
+
+    # Load user's active card slugs (only flag leakage for cards they own)
+    acct_result = await db.execute(
+        select(Account.card_slug)
+        .where(Account.card_slug.isnot(None), Account.is_active == True)  # noqa: E712
+    )
+    owned_slugs: set[str] = {row[0] for row in acct_result.all()}
+
+    if not owned_slugs:
+        return LeakageResponse(entries=[], total_leakage_dollars=0.0, transaction_count=0, days=days)
+
+    # Fetch ledger entries with transaction data
+    result = await db.execute(
+        select(
+            PointsLedger,
+            Transaction.merchant,
+            Transaction.amount,
+            Transaction.date,
+        )
+        .join(Transaction, PointsLedger.transaction_id == Transaction.id)
+        .where(
+            Transaction.date >= cutoff,
+            Transaction.is_excluded == False,  # noqa: E712
+            Transaction.pending == False,  # noqa: E712
+            Transaction.amount > 0,
+        )
+        .order_by(Transaction.date.desc())
+        .limit(2000)
+    )
+
+    entries: list[LeakageEntry] = []
+    total_leakage = 0.0
+
+    for row in result.all():
+        ledger, merchant, amount, txn_date = row
+        amount_f = float(amount)
+
+        # Actual value
+        cpp = POINT_VALUES_CPP.get(ledger.program, 1.0)
+        actual_points = float(ledger.points_earned)
+        actual_value = round(actual_points * cpp / 100.0, 4)
+
+        # Best available card (filtered to cards user owns)
+        options = get_best_card_for_purchase(ledger.category, ledger.subcategory, amount_f)
+        owned_options = [o for o in options if o.card_slug in owned_slugs]
+        if not owned_options:
+            continue
+
+        best = owned_options[0]
+
+        # Skip if best card IS the actual card
+        if best.card_slug == ledger.card_slug:
+            continue
+
+        best_value = round(best.dollar_value, 4)
+        leakage = round(best_value - actual_value, 4)
+
+        # Only report meaningful leakage (>10% better AND >=$0.25)
+        if leakage < 0.25 or best_value <= actual_value * 1.10:
+            continue
+
+        entries.append(LeakageEntry(
+            transaction_id=ledger.transaction_id,
+            merchant=merchant,
+            date=txn_date.isoformat(),
+            amount=amount_f,
+            category=ledger.category,
+            subcategory=ledger.subcategory,
+            actual_card_slug=ledger.card_slug,
+            actual_earn_rate=float(ledger.earn_rate),
+            actual_points=actual_points,
+            actual_value_dollars=actual_value,
+            best_card_slug=best.card_slug,
+            best_program=best.program,
+            best_earn_rate=best.earn_rate,
+            best_points=round(best.points_earned, 2),
+            best_value_dollars=best_value,
+            leakage_dollars=leakage,
+        ))
+        total_leakage += leakage
+
+    # Sort by leakage descending, cap at 50
+    entries.sort(key=lambda e: e.leakage_dollars, reverse=True)
+    entries = entries[:50]
+
+    return LeakageResponse(
+        entries=entries,
+        total_leakage_dollars=round(total_leakage, 2),
+        transaction_count=len(entries),
+        days=days,
+    )

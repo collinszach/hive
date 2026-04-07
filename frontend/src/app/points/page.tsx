@@ -2,31 +2,38 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { TrendingUp, Star } from "lucide-react";
-import { api, PointsSummary, LedgerEntry } from "@/lib/api";
+import { api, PointsSummary, LedgerEntry, LeakageResponse } from "@/lib/api";
 import { fmt } from "@/lib/utils";
 import { POINT_VALUES_CPP, REDEMPTION_THRESHOLDS } from "@/lib/pointsConstants";
 import { TimeWindowPicker } from "./_components/TimeWindowPicker";
 import { ProgramCard } from "./_components/ProgramCard";
 import { EarnActivity } from "./_components/EarnActivity";
+import { LeakageSummary } from "./_components/LeakageSummary";
 
 export default function PointsPage() {
   const [days, setDays]                     = useState<number>(90);
   const [summary, setSummary]               = useState<PointsSummary | null>(null);
   const [ledger, setLedger]                 = useState<LedgerEntry[]>([]);
+  const [leakage, setLeakage]               = useState<LeakageResponse | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [ledgerLoading, setLedgerLoading]   = useState(true);
+  const [leakageLoading, setLeakageLoading] = useState(true);
   const [summaryError, setSummaryError]     = useState(false);
   const [ledgerError, setLedgerError]       = useState(false);
+  const [leakageError, setLeakageError]     = useState(false);
 
   const fetchData = useCallback(async (d: number) => {
     setSummaryLoading(true);
     setLedgerLoading(true);
+    setLeakageLoading(true);
     setSummaryError(false);
     setLedgerError(false);
+    setLeakageError(false);
 
-    const [summaryResult, ledgerResult] = await Promise.allSettled([
+    const [summaryResult, ledgerResult, leakageResult] = await Promise.allSettled([
       api.points.summary(d),
       api.points.ledger({ days: d }),
+      api.points.leakage(d),
     ]);
 
     if (summaryResult.status === "fulfilled") {
@@ -42,6 +49,13 @@ export default function PointsPage() {
       setLedgerError(true);
     }
     setLedgerLoading(false);
+
+    if (leakageResult.status === "fulfilled") {
+      setLeakage(leakageResult.value);
+    } else {
+      setLeakageError(true);
+    }
+    setLeakageLoading(false);
   }, []);
 
   useEffect(() => {
@@ -135,6 +149,13 @@ export default function PointsPage() {
         ledger={ledger}
         loading={ledgerLoading}
         error={ledgerError}
+      />
+
+      {/* ── Missed Earnings / Leakage ──────────────────────────────── */}
+      <LeakageSummary
+        data={leakage}
+        loading={leakageLoading}
+        error={leakageError}
       />
 
       <p className="text-[11px] text-ink-tertiary/50">

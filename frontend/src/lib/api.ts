@@ -209,6 +209,32 @@ export interface PointsBalanceResponse {
   updated_at: string;
 }
 
+export interface LeakageEntry {
+  transaction_id: string;
+  merchant: string | null;
+  date: string;
+  amount: number;
+  category: string | null;
+  subcategory: string | null;
+  actual_card_slug: string;
+  actual_earn_rate: number;
+  actual_points: number;
+  actual_value_dollars: number;
+  best_card_slug: string;
+  best_program: string;
+  best_earn_rate: number;
+  best_points: number;
+  best_value_dollars: number;
+  leakage_dollars: number;
+}
+
+export interface LeakageResponse {
+  entries: LeakageEntry[];
+  total_leakage_dollars: number;
+  transaction_count: number;
+  days: number;
+}
+
 export interface NetWorthSnapshot {
   snapshot_date: string;
   total_assets: number;
@@ -533,6 +559,8 @@ export const api = {
       get<LedgerEntry[]>("/api/points/ledger", params as Record<string, string | number | undefined>),
     setBalance: (program: string, balance: number) =>
       put<PointsBalanceResponse>("/api/points/balance", { program, balance }),
+    leakage: (days: number) =>
+      get<LeakageResponse>("/api/points/leakage", { days }),
   },
   netWorth: {
     history: (days?: number) => get<NetWorthSnapshot[]>("/api/net-worth/history", days ? { days } : undefined),
