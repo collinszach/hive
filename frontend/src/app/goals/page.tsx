@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api, type Goal } from "@/lib/api";
 import { fmt } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { Target, TrendingUp, Calendar, CheckCircle2, Plus, Loader2 } from "lucide-react";
+import { Target, TrendingUp, Calendar, CheckCircle2, Plus, Loader2, X } from "lucide-react";
 import { PageHero } from "@/components/PageHero";
 import { AnimatedBar } from "@/components/AnimatedBar";
 import { GlassCard } from "@/components/GlassCard";
@@ -64,6 +64,15 @@ export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    goal_type: "savings",
+    target_amount: "",
+    current_amount: "",
+    target_date: "",
+  });
 
   useEffect(() => {
     api.goals
@@ -72,6 +81,28 @@ export default function GoalsPage() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim() || !form.target_amount) return;
+    setSaving(true);
+    try {
+      const goal = await api.goals.create({
+        name: form.name.trim(),
+        goal_type: form.goal_type,
+        target_amount: parseFloat(form.target_amount),
+        current_amount: form.current_amount ? parseFloat(form.current_amount) : undefined,
+        target_date: form.target_date || undefined,
+      });
+      setGoals((prev) => [...prev, goal]);
+      setShowAdd(false);
+      setForm({ name: "", goal_type: "savings", target_amount: "", current_amount: "", target_date: "" });
+    } catch {
+      // error stays silent for now — form remains open
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const activeGoals = goals.filter((g) => !g.is_completed && !g.is_archived);
   const completedGoals = goals.filter((g) => g.is_completed);
@@ -115,7 +146,10 @@ export default function GoalsPage() {
           <p className="text-[12px] text-ink-tertiary max-w-xs">
             Create savings, debt payoff, or investment goals to track your progress here.
           </p>
-          <button className="mt-2 flex items-center gap-1.5 px-4 py-2 rounded-full bg-honey/[0.12] border border-honey/25 text-honey text-[12px] font-semibold hover:bg-honey/[0.18] transition-colors">
+          <button
+            onClick={() => setShowAdd(true)}
+            className="mt-2 flex items-center gap-1.5 px-4 py-2 rounded-full bg-honey/[0.12] border border-honey/25 text-honey text-[12px] font-semibold hover:bg-honey/[0.18] transition-colors"
+          >
             <Plus size={13} />
             Add Goal
           </button>
@@ -124,7 +158,16 @@ export default function GoalsPage() {
 
       {!loading && !error && activeGoals.length > 0 && (
         <div className="space-y-3">
-          <p className="text-[11px] font-bold text-ink-tertiary uppercase tracking-wider px-0.5">Active</p>
+          <div className="flex items-center justify-between px-0.5">
+            <p className="text-[11px] font-bold text-ink-tertiary uppercase tracking-wider">Active</p>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="hive-btn-secondary flex items-center gap-1.5 text-[12px] py-1 px-3"
+            >
+              <Plus size={13} />
+              Add Goal
+            </button>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {activeGoals.map((goal, index) => {
               const accentCls = goalAccentClass(goal.goal_type);
@@ -252,6 +295,101 @@ export default function GoalsPage() {
                 </GlassCard>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Add Goal Modal */}
+      {showAdd && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-card p-6 w-full max-w-md space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[16px] font-semibold text-ink-primary">New Goal</h2>
+              <button onClick={() => setShowAdd(false)} className="hive-btn-ghost p-1">
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleCreate} className="space-y-4">
+              {/* Name */}
+              <div>
+                <label className="hive-label">Goal Name</label>
+                <input
+                  className="hive-input"
+                  value={form.name}
+                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="e.g. Emergency Fund"
+                  required
+                />
+              </div>
+              {/* Type */}
+              <div>
+                <label className="hive-label">Goal Type</label>
+                <select
+                  className="hive-select w-full"
+                  value={form.goal_type}
+                  onChange={(e) => setForm((p) => ({ ...p, goal_type: e.target.value }))}
+                >
+                  <option value="savings">Savings</option>
+                  <option value="debt">Debt Payoff</option>
+                  <option value="purchase">Purchase</option>
+                  <option value="investment">Investment</option>
+                </select>
+              </div>
+              {/* Target Amount */}
+              <div>
+                <label className="hive-label">Target Amount</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  className="hive-input"
+                  value={form.target_amount}
+                  onChange={(e) => setForm((p) => ({ ...p, target_amount: e.target.value }))}
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              {/* Current Amount */}
+              <div>
+                <label className="hive-label">Current Amount (optional)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="hive-input"
+                  value={form.current_amount}
+                  onChange={(e) => setForm((p) => ({ ...p, current_amount: e.target.value }))}
+                  placeholder="0.00"
+                />
+              </div>
+              {/* Target Date */}
+              <div>
+                <label className="hive-label">Target Date (optional)</label>
+                <input
+                  type="date"
+                  className="hive-input"
+                  value={form.target_date}
+                  onChange={(e) => setForm((p) => ({ ...p, target_date: e.target.value }))}
+                  style={{ colorScheme: "dark" }}
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAdd(false)}
+                  className="hive-btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="hive-btn-primary flex-1"
+                >
+                  {saving ? "Saving…" : "Create Goal"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -68,20 +68,31 @@ export default function MerchantsPage() {
   // Poll task status when bulkTaskId is set
   useEffect(() => {
     if (!bulkTaskId) return;
+    const startTime = Date.now();
     const interval = setInterval(async () => {
+      if (Date.now() - startTime > 30_000) {
+        clearInterval(interval);
+        setBulkStatus("error");
+        setBulkTaskId(null);
+        return;
+      }
       try {
         const s = await api.tasks.status(bulkTaskId);
         if (s.status === "SUCCESS") {
+          clearInterval(interval);
           setBulkStatus("done");
           setBulkTaskId(null);
-          clearInterval(interval);
           setTimeout(() => setBulkStatus("idle"), 3000);
         } else if (s.status === "FAILURE") {
+          clearInterval(interval);
           setBulkStatus("error");
           setBulkTaskId(null);
-          clearInterval(interval);
         }
-      } catch { clearInterval(interval); }
+      } catch {
+        clearInterval(interval);
+        setBulkStatus("error");
+        setBulkTaskId(null);
+      }
     }, 1500);
     return () => clearInterval(interval);
   }, [bulkTaskId]);

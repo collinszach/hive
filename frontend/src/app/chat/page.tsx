@@ -103,10 +103,10 @@ export default function InsightsPage() {
         history.map((m) => ({ role: m.role, content: m.content })),
         useClaude,
       );
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: res.response, model_used: res.model_used },
-      ]);
+      setMessages((prev) => {
+        const updated = [...prev, { role: "assistant" as const, content: res.response, model_used: res.model_used }];
+        return updated.length > 50 ? updated.slice(-50) : updated;
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to send message";
       if (msg.includes("503") && !useClaude) {
@@ -257,15 +257,10 @@ export default function InsightsPage() {
               placeholder="Ask about your finances…"
               rows={1}
               className="w-full bg-surface border border-white/[0.08] rounded-xl px-4 py-3 text-[13px]
-                         text-ink-primary placeholder-ink-tertiary/50 resize-none
+                         text-ink-primary placeholder-ink-tertiary/50
                          focus:outline-none focus:border-honey/40 focus:ring-1 focus:ring-honey/10
-                         max-h-32 overflow-y-auto transition-all duration-150"
-              style={{ height: "auto" }}
-              onInput={(e) => {
-                const el = e.currentTarget;
-                el.style.height = "auto";
-                el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
-              }}
+                         transition-all duration-150"
+              style={{ resize: "none", overflowY: "auto", maxHeight: "120px" }}
             />
           </div>
           <button
