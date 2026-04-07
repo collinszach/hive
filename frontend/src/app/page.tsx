@@ -31,7 +31,7 @@ const CAT_BAR: Record<string, string> = {
   "Entertainment":  "bg-violet-400",
   "Shopping":       "bg-pink-400",
   "Health":         "bg-rose-400",
-  "Utilities":      "bg-slate-400",
+  "Utilities":      "bg-ink-secondary",
   "Home":           "bg-teal-400",
   "Education":      "bg-indigo-400",
   "Personal Care":  "bg-fuchsia-400",
@@ -46,7 +46,7 @@ const CAT_DOT: Record<string, string> = {
   "Entertainment":  "bg-violet-400",
   "Shopping":       "bg-pink-400",
   "Health":         "bg-rose-400",
-  "Utilities":      "bg-slate-400",
+  "Utilities":      "bg-ink-secondary",
   "Home":           "bg-teal-400",
 };
 
