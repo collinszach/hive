@@ -134,8 +134,7 @@ export default function CashFlowPage() {
   const selectedPeriodLabel = monthLabel(selectedKpiMonth);
 
   // Custom bar click handler shape from recharts
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleBarClick = (data: any) => {
+  const handleBarClick = (data: { activePayload?: Array<{ payload: { monthKey?: string } }> } | null) => {
     const mk = data?.activePayload?.[0]?.payload?.monthKey;
     if (mk) {
       selectMonth(mk);

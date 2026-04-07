@@ -21,6 +21,7 @@ import {
   ReferenceLine,
   ResponsiveContainer,
 } from "recharts";
+import { ChartTooltip } from "@/components/ChartTooltip";
 import {
   TrendingUp,
   Plus,
@@ -183,17 +184,7 @@ function ProjectionTab() {
               tickLine={false}
               tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}
             />
-            <Tooltip
-              contentStyle={{
-                background: "#1A1A1D",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: "10px",
-                fontSize: 12,
-                color: "#F5F5F7",
-              }}
-              formatter={(v: number, name: string) => [fmt(v), name === "historical" ? "Actual" : "Projected"]}
-              labelFormatter={fmtDate}
-            />
+            <Tooltip content={<ChartTooltip />} />
             <Area
               type="monotone"
               dataKey="historical"

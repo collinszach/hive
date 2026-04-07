@@ -15,6 +15,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { ChartTooltip, CHART_GRID_PROPS, CHART_AXIS_PROPS } from "@/components/ChartTooltip";
 
 const MONTH_ABBR: Record<string, string> = {
   "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr",
@@ -153,13 +154,10 @@ export default function MerchantsPage() {
             <p className="text-[13px] font-medium text-ink-primary mb-4">Monthly Spend</p>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={detail.monthly.map((m) => ({ ...m, month: fmtMonth(m.month) }))}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                <XAxis dataKey="month" tick={{ fill: "#6B6B73", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#6B6B73", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
-                <Tooltip
-                  contentStyle={{ background: "#1A1A1D", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px", color: "#F5F5F7", fontSize: 12 }}
-                  formatter={(v: number) => [fmt(v), "Spent"]}
-                />
+                <CartesianGrid {...CHART_GRID_PROPS} vertical={false} />
+                <XAxis dataKey="month" {...CHART_AXIS_PROPS} />
+                <YAxis {...CHART_AXIS_PROPS} tickFormatter={(v) => `$${v}`} />
+                <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="total" fill="#F5B942" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
