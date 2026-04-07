@@ -5,15 +5,20 @@ import { api, Budget } from "@/lib/api";
 import { fmt, currentMonth, monthLabel, ALL_CATEGORIES } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2, Check, X } from "lucide-react";
+import { PageHero } from "@/components/PageHero";
+import { AnimatedBar } from "@/components/AnimatedBar";
+import { GlassCard } from "@/components/GlassCard";
 
 // ── Budget Card ────────────────────────────────────────────────────────────
 
 function BudgetCard({
   b,
+  index,
   onUpdate,
   onDelete,
 }: {
   b: Budget;
+  index: number;
   onUpdate: (b: Budget) => void;
   onDelete: (id: string) => void;
 }) {
@@ -25,8 +30,12 @@ function BudgetCard({
 
   const isOver    = b.pct_used > 100;
   const isWarning = b.pct_used > 80 && !isOver;
-  const barColor  = isOver ? "bg-semantic-expense" : isWarning ? "bg-semantic-warning" : "bg-semantic-income";
-  const pctColor  = isOver ? "text-semantic-expense" : isWarning ? "text-semantic-warning" : "text-semantic-income";
+  const barColor  = isOver
+    ? "linear-gradient(90deg, #F87171, #EF4444)"
+    : isWarning
+    ? "linear-gradient(90deg, #FBBF24, #F59E0B)"
+    : "linear-gradient(90deg, #34D399, #10B981)";
+  const pctColor  = isOver ? "text-semantic-expense" : isWarning ? "text-honey" : "text-semantic-income";
   const barPct    = Math.min(b.pct_used, 100);
 
   async function save() {
@@ -55,11 +64,14 @@ function BudgetCard({
   }
 
   return (
-    <div className={cn(
-      "hive-card p-5 transition-all duration-200",
-      isOver && "border-semantic-expense/20",
-      isWarning && "border-semantic-warning/20"
-    )}>
+    <GlassCard
+      tint="none"
+      className={cn(
+        "p-5 transition-all duration-200",
+        isOver && "border-semantic-expense/20",
+        isWarning && "border-honey/20"
+      )}
+    >
       {/* Header row */}
       <div className="flex items-center justify-between mb-4">
         <span className="text-[14px] font-medium text-ink-primary">{b.category}</span>
@@ -130,13 +142,14 @@ function BudgetCard({
         )}
       </div>
 
-      {/* Progress bar */}
-      <div className="h-[3px] bg-white/[0.05] rounded-full overflow-hidden mb-4">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-          style={{ width: `${barPct}%` }}
-        />
-      </div>
+      {/* Animated progress bar */}
+      <AnimatedBar
+        pct={barPct}
+        color={barColor}
+        height={6}
+        delay={index * 80}
+        className="mb-4"
+      />
 
       {/* Stats */}
       <div className="flex items-center justify-between">
@@ -152,7 +165,7 @@ function BudgetCard({
           ? `${fmt(b.remaining)} remaining`
           : `${fmt(Math.abs(b.remaining))} over budget`}
       </p>
-    </div>
+    </GlassCard>
   );
 }
 
@@ -216,16 +229,47 @@ export default function BudgetsPage() {
   const totalBudgeted = budgets.reduce((s, b) => s + b.budget_amount, 0);
   const totalSpent    = budgets.reduce((s, b) => s + b.actual_spend, 0);
   const remaining     = totalBudgeted - totalSpent;
+  const onTrackCount  = budgets.filter((b) => b.pct_used <= 80).length;
+  const currentMonthLabel = monthLabel(month);
 
   return (
     <div className="space-y-5 animate-fade-in">
 
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Budgets</h1>
-          <p className="text-[13px] text-ink-tertiary mt-0.5">{monthLabel(month)}</p>
-        </div>
+      {/* ── PageHero ────────────────────────────────────────────────── */}
+      {budgets.length > 0 && (
+        <PageHero
+          eyebrow={`Budgets · ${currentMonthLabel}`}
+          headline={
+            <>
+              <span className="text-semantic-income">{onTrackCount}</span>
+              <span className="text-ink-tertiary text-[28px] font-semibold">/{budgets.length}</span>
+            </>
+          }
+          subtext="budgets on track this month"
+          glowColor="emerald"
+          statStrip={[
+            {
+              label: "Total Budgeted",
+              value: fmt(totalBudgeted),
+              color: "default",
+            },
+            {
+              label: "Total Spent",
+              value: fmt(totalSpent),
+              color: totalSpent > totalBudgeted ? "red" : "default",
+            },
+            {
+              label: "Savings Available",
+              value: fmt(Math.max(remaining, 0)),
+              color: remaining >= 0 ? "green" : "red",
+            },
+          ]}
+        />
+      )}
+
+      {/* ── Month Selector ──────────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Budgets</h1>
         <select
           value={month}
           onChange={(e) => setMonth(e.target.value)}
@@ -234,26 +278,6 @@ export default function BudgetsPage() {
           {months.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
       </div>
-
-      {/* ── Summary Tiles ───────────────────────────────────────────── */}
-      {budgets.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Total Budgeted", value: fmt(totalBudgeted), color: "text-ink-primary" },
-            { label: "Total Spent",    value: fmt(totalSpent),    color: "text-ink-primary" },
-            {
-              label: "Remaining",
-              value: fmt(remaining),
-              color: remaining >= 0 ? "text-semantic-income" : "text-semantic-expense",
-            },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="hive-card px-5 py-4 text-center">
-              <p className="hive-label mb-2">{label}</p>
-              <p className={`text-[20px] font-semibold font-mono tabular-nums ${color}`}>{value}</p>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* ── Add Budget ──────────────────────────────────────────────── */}
       <div className="hive-card p-5">
@@ -308,8 +332,8 @@ export default function BudgetsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {budgets.map((b) => (
-            <BudgetCard key={b.id} b={b} onUpdate={handleUpdate} onDelete={handleDelete} />
+          {budgets.map((b, index) => (
+            <BudgetCard key={b.id} b={b} index={index} onUpdate={handleUpdate} onDelete={handleDelete} />
           ))}
         </div>
       )}

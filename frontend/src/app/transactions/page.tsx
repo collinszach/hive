@@ -5,6 +5,21 @@ import { api, Transaction } from "@/lib/api";
 import { fmt, fmtDate, currentMonth } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, Check, X, Pencil } from "lucide-react";
+import { FilterPills } from "@/components/FilterPills";
+import { TransactionDrawer } from "@/components/TransactionDrawer";
+
+// ── Filter pill options ─────────────────────────────────────────────────────
+
+const FILTER_OPTIONS = [
+  { label: "All",          value: "" },
+  { label: "Food & Drink", value: "Food & Drink" },
+  { label: "Groceries",    value: "Groceries" },
+  { label: "Travel",       value: "Travel" },
+  { label: "Shopping",     value: "Shopping" },
+  { label: "Entertainment",value: "Entertainment" },
+  { label: "Health",       value: "Health" },
+  { label: "Transfers",    value: "Transfers" },
+];
 
 // ── Card Badge ─────────────────────────────────────────────────────────────
 
@@ -28,7 +43,7 @@ const CAT_COLORS: Record<string, string> = {
   "Entertainment":  "bg-violet-400/10 text-violet-300 border-violet-400/15",
   "Shopping":       "bg-pink-400/10 text-pink-300 border-pink-400/15",
   "Health":         "bg-rose-400/10 text-rose-300 border-rose-400/15",
-  "Utilities":      "bg-slate-400/10 text-slate-300 border-slate-400/15",
+  "Utilities":      "bg-zinc-400/10 text-zinc-400 border-white/10",
   "Home":           "bg-teal-400/10 text-teal-300 border-teal-400/15",
   "Education":      "bg-indigo-400/10 text-indigo-300 border-indigo-400/15",
   "Personal Care":  "bg-fuchsia-400/10 text-fuchsia-300 border-fuchsia-400/15",
@@ -87,7 +102,7 @@ function MerchantCell({
 
   if (editing) {
     return (
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
         <input
           ref={inputRef}
           value={value}
@@ -115,7 +130,7 @@ function MerchantCell({
 
   return (
     <button
-      onClick={() => setEditing(true)}
+      onClick={(e) => { e.stopPropagation(); setEditing(true); }}
       className="group flex items-center gap-1.5 text-left w-full"
     >
       {tx.logo_url && (
@@ -132,96 +147,6 @@ function MerchantCell({
   );
 }
 
-// ── Inline Category Editor ──────────────────────────────────────────────────
-
-function CategoryCell({
-  tx,
-  categories,
-  onSave,
-}: {
-  tx: Transaction;
-  categories: string[];
-  onSave: (id: string, cat: string, sub: string) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [cat, setCat] = useState(tx.category ?? "");
-  const [sub, setSub] = useState(tx.subcategory ?? "");
-  const [saving, setSaving] = useState(false);
-
-  async function save() {
-    if (!cat) return;
-    setSaving(true);
-    try {
-      await api.transactions.patch(tx.id, { category: cat, subcategory: sub || undefined });
-      onSave(tx.id, cat, sub);
-      setEditing(false);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function cancel() {
-    setCat(tx.category ?? "");
-    setSub(tx.subcategory ?? "");
-    setEditing(false);
-  }
-
-  if (!editing) {
-    return (
-      <button onClick={() => setEditing(true)} className="group flex items-center gap-1.5 text-left">
-        <CategoryBadge category={tx.category} />
-        {tx.subcategory && (
-          <span className="text-[11px] text-ink-tertiary group-hover:text-ink-secondary transition-colors truncate max-w-[80px]">
-            {tx.subcategory}
-          </span>
-        )}
-        <Pencil className="w-2.5 h-2.5 text-ink-tertiary/0 group-hover:text-ink-tertiary/50 transition-colors shrink-0" />
-      </button>
-    );
-  }
-
-  return (
-    <div className="flex flex-wrap gap-1.5 items-center">
-      <input
-        list="cat-list"
-        value={cat}
-        onChange={(e) => setCat(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
-        placeholder="Category"
-        autoFocus
-        className="text-[12px] bg-elevated border border-honey/30 rounded-lg px-2 py-1 text-ink-primary
-                   w-32 focus:outline-none focus:border-honey/50"
-      />
-      <datalist id="cat-list">
-        {categories.map((c) => <option key={c} value={c} />)}
-      </datalist>
-      <input
-        value={sub}
-        onChange={(e) => setSub(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
-        placeholder="Subcategory"
-        className="text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-2 py-1 text-ink-primary
-                   w-28 focus:outline-none focus:border-honey/40"
-      />
-      <button
-        onClick={save}
-        disabled={!cat || saving}
-        className="flex items-center gap-1 text-[11px] bg-honey/[0.12] border border-honey/20
-                   text-honey px-2 py-1 rounded-lg hover:bg-honey/[0.2] disabled:opacity-40 transition-colors"
-      >
-        <Check className="w-3 h-3" />
-        {saving ? "…" : "Save"}
-      </button>
-      <button
-        onClick={cancel}
-        className="flex items-center justify-center w-6 h-6 rounded-lg text-ink-tertiary hover:bg-white/[0.06] transition-colors"
-      >
-        <X className="w-3 h-3" />
-      </button>
-    </div>
-  );
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export default function TransactionsPage() {
@@ -234,6 +159,7 @@ export default function TransactionsPage() {
   const [data, setData] = useState<{ items: Transaction[]; total: number; pages: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [txCategories, setTxCategories] = useState<string[]>([]);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
   // Load category list for autocomplete + filter
   useEffect(() => {
@@ -268,13 +194,13 @@ export default function TransactionsPage() {
     );
   }
 
-  function handleCategorySaved(id: string, cat: string, sub: string) {
+  function handleCategoryChanged(id: string, cat: string, sub: string | null) {
     setData((prev) =>
       prev
         ? {
             ...prev,
             items: prev.items.map((t) =>
-              t.id === id ? { ...t, category: cat, subcategory: sub, category_source: "manual" } : t
+              t.id === id ? { ...t, category: cat, subcategory: sub ?? undefined, category_source: "manual" } : t
             ),
           }
         : prev
@@ -301,6 +227,13 @@ export default function TransactionsPage() {
         )}
       </div>
 
+      {/* ── FilterPills ───────────────────────────────────────────────── */}
+      <FilterPills
+        options={FILTER_OPTIONS}
+        value={category}
+        onChange={(v) => { setCategory(v); setPage(1); }}
+      />
+
       {/* ── Filters ───────────────────────────────────────────────────── */}
       <div className="hive-card p-4">
         <div className="flex flex-wrap gap-2.5 items-center">
@@ -314,16 +247,6 @@ export default function TransactionsPage() {
             {months.map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
-          </select>
-
-          {/* Category filter — dynamic from real transaction data */}
-          <select
-            value={category}
-            onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-            className="hive-select text-[13px] py-1.5 w-auto"
-          >
-            <option value="">All categories</option>
-            {txCategories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
 
           <div className="relative">
@@ -398,14 +321,16 @@ export default function TransactionsPage() {
                 </td>
               </tr>
             )}
-            {!loading && data?.items.map((tx) => (
+            {!loading && data?.items.map((tx, index) => (
               <tr
                 key={tx.id}
+                onClick={() => setSelectedTx(tx)}
                 className={cn(
-                  "hover:bg-white/[0.02] transition-colors",
+                  "hover:bg-white/[0.02] cursor-pointer transition-colors animate-slide-in-row",
                   tx.is_excluded && "opacity-35",
                   tx.pending && "opacity-60"
                 )}
+                style={index < 10 ? { animationDelay: `${index * 40}ms` } : undefined}
               >
                 <td className="px-5 py-3 whitespace-nowrap">
                   <span className="text-[12px] font-mono text-ink-tertiary">{fmtDate(tx.date)}</span>
@@ -414,7 +339,14 @@ export default function TransactionsPage() {
                   <MerchantCell tx={tx} onSave={handleMerchantSaved} />
                 </td>
                 <td className="px-5 py-3 min-w-[200px]">
-                  <CategoryCell tx={tx} categories={txCategories} onSave={handleCategorySaved} />
+                  <div className="flex items-center gap-1.5">
+                    <CategoryBadge category={tx.category} />
+                    {tx.subcategory && (
+                      <span className="text-[11px] text-ink-tertiary truncate max-w-[80px]">
+                        {tx.subcategory}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-5 py-3">
                   <CardBadge cardSlug={tx.card_slug} accountName={tx.account_name} />
@@ -455,6 +387,13 @@ export default function TransactionsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Transaction Drawer ────────────────────────────────────────── */}
+      <TransactionDrawer
+        transaction={selectedTx}
+        onClose={() => setSelectedTx(null)}
+        onCategoryChange={handleCategoryChanged}
+      />
     </div>
   );
 }
