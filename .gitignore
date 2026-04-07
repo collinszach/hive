@@ -44,3 +44,4 @@ ml_models/
 __pycache__/
 node_modules/
 .next/
+.worktrees/
