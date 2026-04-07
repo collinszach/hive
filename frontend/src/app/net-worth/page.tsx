@@ -2,17 +2,20 @@
 
 import { useEffect, useState } from "react";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 import { api, type NetWorthSnapshot } from "@/lib/api";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { PageHero } from "@/components/PageHero";
+import { GlassCard } from "@/components/GlassCard";
+import { ChartTooltip, CHART_GRID_PROPS, CHART_AXIS_PROPS } from "@/components/ChartTooltip";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
@@ -50,114 +53,131 @@ export default function NetWorthPage() {
     Liabilities: Math.round(s.total_liabilities),
   }));
 
+  const changeDeltaStr = change !== null
+    ? `${change >= 0 ? "+" : ""}${fmt(change)} this period`
+    : undefined;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Net Worth</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Balance sheet over time</p>
-        </div>
-        <div className="flex gap-1">
-          {([30, 90, 180, 365] as Range[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                range === r
-                  ? "bg-indigo-600 text-white"
-                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:bg-slate-800"
-              }`}
-            >
-              {r === 365 ? "1Y" : `${r}D`}
-            </button>
-          ))}
-        </div>
+    <div className="space-y-5 animate-fade-in">
+      {/* PageHero */}
+      <PageHero
+        eyebrow="Net Worth"
+        headline={
+          latest ? (
+            <span className="text-[#38BDF8]">{fmt(latest.net_worth)}</span>
+          ) : (
+            <span className="text-ink-secondary">—</span>
+          )
+        }
+        subtext={changeDeltaStr ?? "balance sheet over time"}
+        glowColor="sky"
+        statStrip={latest ? [
+          { label: "Assets",      value: fmt(latest.total_assets),      color: "green" },
+          { label: "Liabilities", value: fmt(latest.total_liabilities),  color: "red" },
+          { label: "Change",      value: change !== null ? `${change >= 0 ? "+" : ""}${fmt(change)}` : "—", color: change !== null && change >= 0 ? "green" : "red" },
+        ] : undefined}
+      />
+
+      {/* Range tabs */}
+      <div className="flex gap-1.5">
+        {([30, 90, 180, 365] as Range[]).map((r) => (
+          <button
+            key={r}
+            onClick={() => setRange(r)}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors",
+              range === r
+                ? "bg-honey/[0.12] border border-honey/25 text-honey font-semibold"
+                : "bg-elevated border border-white/[0.06] text-ink-secondary hover:text-ink-primary"
+            )}
+          >
+            {r === 365 ? "1Y" : `${r}D`}
+          </button>
+        ))}
       </div>
 
       {/* KPI cards */}
       {latest && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="rounded-xl bg-slate-900 border border-slate-800 border-l-[3px] border-l-indigo-500 p-5">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Net Worth</p>
-            <p className="text-2xl font-bold text-white tabular-nums">{fmt(latest.net_worth)}</p>
+          <GlassCard tint="sky" className="p-5">
+            <p className="text-[10px] font-bold text-ink-ghost uppercase tracking-wider mb-3">Net Worth</p>
+            <p className="text-[22px] font-bold text-ink-primary tabular-nums">{fmt(latest.net_worth)}</p>
             {change !== null && (
-              <div className={`flex items-center gap-1 mt-1.5 text-sm ${change >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+              <div className={cn("flex items-center gap-1 mt-1.5 text-[13px]", change >= 0 ? "text-semantic-income" : "text-semantic-expense")}>
                 {change > 0 ? <TrendingUp className="w-3.5 h-3.5" /> : change < 0 ? <TrendingDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
                 <span className="font-medium tabular-nums">{change >= 0 ? "+" : ""}{fmt(change)}</span>
-                <span className="text-slate-500 text-xs">this period</span>
+                <span className="text-ink-tertiary text-[11px]">this period</span>
               </div>
             )}
-          </div>
-          <div className="rounded-xl bg-slate-900 border border-slate-800 border-l-[3px] border-l-emerald-500 p-5">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Total Assets</p>
-            <p className="text-2xl font-bold text-emerald-400 tabular-nums">{fmt(latest.total_assets)}</p>
-          </div>
-          <div className="rounded-xl bg-slate-900 border border-slate-800 border-l-[3px] border-l-rose-500 p-5">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Total Liabilities</p>
-            <p className="text-2xl font-bold text-rose-400 tabular-nums">{fmt(latest.total_liabilities)}</p>
-          </div>
+          </GlassCard>
+          <GlassCard tint="income" className="p-5">
+            <p className="text-[10px] font-bold text-ink-ghost uppercase tracking-wider mb-3">Total Assets</p>
+            <p className="text-[22px] font-bold text-semantic-income tabular-nums">{fmt(latest.total_assets)}</p>
+          </GlassCard>
+          <GlassCard tint="expense" className="p-5">
+            <p className="text-[10px] font-bold text-ink-ghost uppercase tracking-wider mb-3">Total Liabilities</p>
+            <p className="text-[22px] font-bold text-semantic-expense tabular-nums">{fmt(latest.total_liabilities)}</p>
+          </GlassCard>
         </div>
       )}
 
       {/* Chart */}
-      <div className="rounded-xl bg-slate-900 border border-slate-800 p-5">
-        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-5">Net Worth Over Time</h2>
+      <GlassCard className="p-5">
+        <p className="text-[11px] font-semibold text-ink-secondary uppercase tracking-wider mb-5">Net Worth Over Time</p>
         {loading ? (
-          <div className="h-64 flex items-center justify-center text-slate-500 text-sm animate-pulse">Loading…</div>
+          <div className="h-64 flex items-center justify-center text-ink-tertiary text-[13px] animate-pulse">Loading…</div>
         ) : error ? (
-          <div className="h-64 flex items-center justify-center text-rose-400 text-sm">{error}</div>
+          <div className="h-64 flex items-center justify-center text-semantic-expense text-[13px]">{error}</div>
         ) : chartData.length === 0 ? (
-          <div className="h-64 flex items-center justify-center text-slate-500 text-sm text-center">
+          <div className="h-64 flex items-center justify-center text-ink-tertiary text-[13px] text-center">
             No data yet — net worth is snapshotted daily once accounts are linked.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 11 }} tickLine={false} axisLine={false} />
+            <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="nwGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#38BDF8" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#38BDF8" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid {...CHART_GRID_PROPS} />
+              <XAxis dataKey="date" {...CHART_AXIS_PROPS} />
               <YAxis
-                tick={{ fill: "#64748b", fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
+                {...CHART_AXIS_PROPS}
                 tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
               />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#0f172a",
-                  border: "1px solid #1e293b",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                labelStyle={{ color: "#e2e8f0" }}
-                formatter={(value: number) => [fmt(value), ""]}
+              <Tooltip content={<ChartTooltip />} cursor={{ stroke: "rgba(255,255,255,0.08)" }} />
+              <Area
+                type="monotone"
+                dataKey="Net Worth"
+                stroke="#38BDF8"
+                strokeWidth={2.5}
+                fill="url(#nwGrad)"
+                dot={false}
               />
-              <Legend wrapperStyle={{ color: "#64748b", fontSize: 12 }} />
-              <Line type="monotone" dataKey="Net Worth" stroke="#6366f1" strokeWidth={2.5} dot={false} />
-              <Line type="monotone" dataKey="Assets" stroke="#10b981" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
-              <Line type="monotone" dataKey="Liabilities" stroke="#f43f5e" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         )}
-      </div>
+      </GlassCard>
 
       {/* Account breakdown */}
       {latest && Object.keys(latest.breakdown).length > 0 && (
-        <div className="rounded-xl bg-slate-900 border border-slate-800 p-5">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Account Breakdown</h2>
-          <div className="divide-y divide-slate-800/60">
+        <GlassCard className="p-5">
+          <p className="text-[11px] font-semibold text-ink-secondary uppercase tracking-wider mb-4">Account Breakdown</p>
+          <div className="divide-y divide-white/[0.04]">
             {Object.entries(latest.breakdown)
               .sort(([, a], [, b]) => b - a)
               .map(([name, value]) => (
-                <div key={name} className="flex justify-between items-center py-2.5 text-sm">
-                  <span className="text-slate-300">{name}</span>
-                  <span className={`font-medium tabular-nums ${value >= 0 ? "text-slate-200" : "text-rose-400"}`}>
+                <div key={name} className="flex justify-between items-center py-2.5 text-[13px]">
+                  <span className="text-ink-secondary">{name}</span>
+                  <span className={cn("font-medium tabular-nums", value >= 0 ? "text-ink-primary" : "text-semantic-expense")}>
                     {fmt(value)}
                   </span>
                 </div>
               ))}
           </div>
-        </div>
+        </GlassCard>
       )}
     </div>
   );

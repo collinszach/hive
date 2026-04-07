@@ -17,6 +17,9 @@ import {
   ReferenceLine,
   Cell,
 } from "recharts";
+import { PageHero } from "@/components/PageHero";
+import { GlassCard } from "@/components/GlassCard";
+import { ChartTooltip, CHART_GRID_PROPS, CHART_AXIS_PROPS } from "@/components/ChartTooltip";
 
 const MONTH_ABBR: Record<string, string> = {
   "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr",
@@ -125,6 +128,11 @@ export default function CashFlowPage() {
 
   const totalCategorySpend = drillDown?.categories.reduce((s, c) => s + c.total, 0) ?? 0;
 
+  // Derive hero stats from summary
+  const netCashFlow = summary ? summary.net_savings : 0;
+  const savingsRate = summary ? (summary.savings_rate_pct ?? 0) : 0;
+  const selectedPeriodLabel = monthLabel(selectedKpiMonth);
+
   // Custom bar click handler shape from recharts
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleBarClick = (data: any) => {
@@ -137,10 +145,27 @@ export default function CashFlowPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <div>
-        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Cash Flow</h1>
-        <p className="text-[13px] text-ink-tertiary mt-0.5">Income vs expenses over time</p>
-      </div>
+      {/* PageHero */}
+      <PageHero
+        eyebrow={`Cash Flow · ${selectedPeriodLabel}`}
+        headline={
+          summary ? (
+            <span className={netCashFlow >= 0 ? "text-semantic-income" : "text-semantic-expense"}>
+              {netCashFlow >= 0 ? "+" : ""}{fmt(netCashFlow)}
+            </span>
+          ) : (
+            <span className="text-ink-secondary">—</span>
+          )
+        }
+        subtext="net cash flow this period"
+        glowColor="emerald"
+        statStrip={summary ? [
+          { label: "Income",       value: fmt(summary.income),    color: "green" },
+          { label: "Expenses",     value: fmt(summary.expenses),  color: "red" },
+          { label: "Savings Rate", value: `${savingsRate.toFixed(1)}%`, color: "amber" },
+          { label: "Net",          value: (netCashFlow >= 0 ? "+" : "") + fmt(netCashFlow), color: netCashFlow >= 0 ? "green" : "red" },
+        ] : undefined}
+      />
 
       {/* KPI row */}
       <div className="space-y-3">
@@ -176,10 +201,10 @@ export default function CashFlowPage() {
               { label: "Net Savings", value: fmt(summary.net_savings),  color: summary.net_savings >= 0 ? "text-semantic-income" : "text-semantic-expense" },
               { label: "Savings Rate", value: `${(summary.savings_rate_pct ?? 0).toFixed(1)}%`, color: (summary.savings_rate_pct ?? 0) >= 20 ? "text-semantic-income" : (summary.savings_rate_pct ?? 0) >= 10 ? "text-honey" : "text-semantic-expense" },
             ].map(({ label, value, color }) => (
-              <div key={label} className="hive-card p-4">
+              <GlassCard key={label} className="p-4">
                 <p className="hive-label mb-2">{label}</p>
                 <p className={cn("text-[20px] font-semibold font-mono tabular-nums", color)}>{value}</p>
-              </div>
+              </GlassCard>
             ))}
           </div>
         )}
@@ -187,7 +212,7 @@ export default function CashFlowPage() {
 
       {/* Flow chart */}
       {flowData && flowData.income > 0 && (
-        <div className="hive-card p-5">
+        <GlassCard className="p-5">
           <div className="mb-4">
             <p className="text-[13px] font-medium text-ink-primary">Income Flow</p>
             <p className="text-[11px] text-ink-tertiary mt-0.5">
@@ -195,11 +220,11 @@ export default function CashFlowPage() {
             </p>
           </div>
           <SankeyFlow data={flowData} />
-        </div>
+        </GlassCard>
       )}
 
       {/* Chart */}
-      <div className="hive-card p-5">
+      <GlassCard className="p-5">
         <div className="flex items-center justify-between mb-5">
           <div>
             <p className="text-[13px] font-medium text-ink-primary">12-Month Overview</p>
@@ -232,28 +257,34 @@ export default function CashFlowPage() {
               onClick={handleBarClick}
               style={{ cursor: "pointer" }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: "#6B6B73", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#6B6B73", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-              <Tooltip
-                contentStyle={{ background: "#1A1A1D", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px", color: "#F5F5F7", fontSize: 12 }}
-                formatter={(v: number, name: string) => [fmt(v), name === "income" ? "Income" : "Expenses"]}
-                cursor={{ fill: "rgba(255,255,255,0.03)" }}
-              />
-              <Bar dataKey="income" radius={[3, 3, 0, 0]}>
+              <defs>
+                <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#059669" />
+                  <stop offset="100%" stopColor="rgba(5,150,105,0.3)" />
+                </linearGradient>
+                <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#DC2626" />
+                  <stop offset="100%" stopColor="rgba(220,38,38,0.2)" />
+                </linearGradient>
+              </defs>
+              <CartesianGrid {...CHART_GRID_PROPS} vertical={false} />
+              <XAxis dataKey="month" {...CHART_AXIS_PROPS} />
+              <YAxis {...CHART_AXIS_PROPS} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+              <Bar dataKey="income" name="Income" radius={[3, 3, 0, 0]}>
                 {chartData.map((entry, i) => (
                   <Cell
                     key={i}
-                    fill="#32D583"
+                    fill="url(#incomeGrad)"
                     opacity={selectedMonth && selectedMonth !== entry.monthKey ? 0.35 : 1}
                   />
                 ))}
               </Bar>
-              <Bar dataKey="expenses" radius={[3, 3, 0, 0]}>
+              <Bar dataKey="expenses" name="Expenses" radius={[3, 3, 0, 0]}>
                 {chartData.map((entry, i) => (
                   <Cell
                     key={i}
-                    fill="#F97066"
+                    fill="url(#expenseGrad)"
                     opacity={selectedMonth && selectedMonth !== entry.monthKey ? 0.35 : 1}
                   />
                 ))}
@@ -266,20 +297,26 @@ export default function CashFlowPage() {
               onClick={handleBarClick}
               style={{ cursor: "pointer" }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: "#6B6B73", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#6B6B73", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+              <defs>
+                <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#059669" />
+                  <stop offset="100%" stopColor="rgba(5,150,105,0.3)" />
+                </linearGradient>
+                <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#DC2626" />
+                  <stop offset="100%" stopColor="rgba(220,38,38,0.2)" />
+                </linearGradient>
+              </defs>
+              <CartesianGrid {...CHART_GRID_PROPS} vertical={false} />
+              <XAxis dataKey="month" {...CHART_AXIS_PROPS} />
+              <YAxis {...CHART_AXIS_PROPS} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
               <ReferenceLine y={0} stroke="rgba(255,255,255,0.12)" />
-              <Tooltip
-                contentStyle={{ background: "#1A1A1D", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px", color: "#F5F5F7", fontSize: 12 }}
-                formatter={(v: number) => [fmt(v), "Net"]}
-                cursor={{ fill: "rgba(255,255,255,0.03)" }}
-              />
-              <Bar dataKey="net" radius={[3, 3, 0, 0]}>
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+              <Bar dataKey="net" name="Net" radius={[3, 3, 0, 0]}>
                 {chartData.map((entry, i) => (
                   <Cell
                     key={i}
-                    fill={entry.net >= 0 ? "#32D583" : "#F97066"}
+                    fill={entry.net >= 0 ? "url(#incomeGrad)" : "url(#expenseGrad)"}
                     opacity={selectedMonth && selectedMonth !== entry.monthKey ? 0.35 : 1}
                   />
                 ))}
@@ -287,11 +324,11 @@ export default function CashFlowPage() {
             </BarChart>
           )}
         </ResponsiveContainer>
-      </div>
+      </GlassCard>
 
       {/* Category drill-down panel */}
       {drillDown && (
-        <div className="hive-card overflow-hidden">
+        <GlassCard className="overflow-hidden">
           {/* Header */}
           <div className="hive-section-header">
             <div>
@@ -366,11 +403,11 @@ export default function CashFlowPage() {
               })}
             </div>
           )}
-        </div>
+        </GlassCard>
       )}
 
       {/* Monthly breakdown table */}
-      <div className="hive-card overflow-hidden">
+      <GlassCard className="overflow-hidden">
         <div className="px-5 py-3 border-b border-white/[0.04]">
           <p className="text-[13px] font-medium text-ink-primary">Monthly Breakdown</p>
         </div>
@@ -421,7 +458,7 @@ export default function CashFlowPage() {
             );
           })}
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 }
