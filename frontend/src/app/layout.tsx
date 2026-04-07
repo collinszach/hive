@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
+import { Toaster } from "@/components/Toast";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 export const metadata: Metadata = {
   title: "Hive — Personal Finance",
@@ -14,9 +16,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Sidebar />
         <main className="flex-1 overflow-y-auto min-h-screen p-7">
           <div className="max-w-7xl mx-auto">
-            {children}
+            <ErrorBoundary>{children}</ErrorBoundary>
           </div>
         </main>
+        <Toaster />
       </body>
     </html>
   );
