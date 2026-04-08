@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.celery_app import app
 from app.db import get_sync_db
 from app.ml.categorizer import categorize_transaction
-from app.ml.transfer_detector import is_transfer
+from app.ml.transfer_detector import classify_transfer_subcategory, is_transfer
 from app.models.account import Account
 from app.models.plaid_link import PlaidLink
 from app.models.transaction import Transaction
@@ -180,7 +180,7 @@ def recategorize_uncategorized(self) -> dict:
         for tx in rows:
             tx_is_transfer, tx_is_excluded = is_transfer(tx.raw_description)
             if tx_is_transfer:
-                cat, sub, source = "Transfers", "Payment", "rules"
+                cat, sub, source = "Transfers", classify_transfer_subcategory(tx.raw_description), "rules"
             else:
                 try:
                     cat, sub, source = categorize_transaction(tx.raw_description)
@@ -206,7 +206,8 @@ def recategorize_uncategorized(self) -> dict:
 def _run_categorizer(description: str, is_xfer: bool) -> dict:
     """Run categorization pipeline. Transfers get a fixed category; others go through pipeline."""
     if is_xfer:
-        return {"category": "Transfers", "subcategory": "P2P", "category_source": "rules"}
+        subcategory = classify_transfer_subcategory(description)
+        return {"category": "Transfers", "subcategory": subcategory, "category_source": "rules"}
     try:
         category, subcategory, source = categorize_transaction(description)
         return {"category": category, "subcategory": subcategory, "category_source": source}
@@ -215,7 +216,7 @@ def _run_categorizer(description: str, is_xfer: bool) -> dict:
         return {"category": "Uncategorized", "subcategory": "Uncategorized", "category_source": "uncategorized"}
 
 
-def _plaid_tx_to_dict(account_map: dict, tx) -> Optional[dict]:
+def _plaid_tx_to_dict(account_map: dict, tx, custom_rules: list) -> Optional[dict]:
     """Convert a Plaid transaction object to a dict for upsert."""
     account_id = account_map.get(tx["account_id"])
     if account_id is None:
@@ -250,6 +251,19 @@ def _plaid_tx_to_dict(account_map: dict, tx) -> Optional[dict]:
     if counterparty:
         logo_url = counterparty[0].get("logo_url")
 
+    # Custom DB rules take priority over the ML pipeline (but not over transfer detection).
+    # Rules are pre-sorted by priority (lower int = higher precedence).
+    categorization: dict
+    if not tx_is_transfer and custom_rules:
+        rule_result = _apply_custom_rules(raw_desc, custom_rules)
+        if rule_result:
+            cat, sub, source = rule_result
+            categorization = {"category": cat, "subcategory": sub or "", "category_source": source}
+        else:
+            categorization = _run_categorizer(raw_desc, tx_is_transfer)
+    else:
+        categorization = _run_categorizer(raw_desc, tx_is_transfer)
+
     return {
         "plaid_transaction_id": tx["transaction_id"],
         "account_id": account_id,
@@ -259,7 +273,7 @@ def _plaid_tx_to_dict(account_map: dict, tx) -> Optional[dict]:
         "currency": tx.get("iso_currency_code") or "USD",
         "merchant": tx.get("merchant_name"),
         "raw_description": raw_desc,
-        **_run_categorizer(raw_desc, tx_is_transfer),
+        **categorization,
         "plaid_category": plaid_cat if plaid_cat else None,
         "is_transfer": tx_is_transfer,
         "is_excluded": tx_is_excluded,
@@ -279,9 +293,18 @@ def _upsert_transactions(db, account_map: dict, transactions: list) -> int:
     if not transactions:
         return 0
 
+    # Load active custom rules once per batch so they run BEFORE the ML pipeline.
+    # Sorted by priority ascending (lower int = higher precedence).
+    from app.models.categorization_rule import CategorizationRule
+    custom_rules = db.execute(
+        select(CategorizationRule)
+        .where(CategorizationRule.is_active.is_(True))
+        .order_by(CategorizationRule.priority)
+    ).scalars().all()
+
     rows = []
     for tx in transactions:
-        row = _plaid_tx_to_dict(account_map, tx)
+        row = _plaid_tx_to_dict(account_map, tx, custom_rules)
         if row:
             rows.append(row)
 
