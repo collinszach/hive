@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { api, MonthlyCashFlow, CashFlowSummary, SpendByCategory, FlowData } from "@/lib/api";
-import { SankeyFlow } from "./_components/SankeyFlow";
+import { NodeFlow } from "./_components/NodeFlow";
 import { fmt, monthLabel } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { X, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -218,7 +218,7 @@ export default function CashFlowPage() {
               Where your {fmt(flowData.income)} went in {monthLabel(selectedKpiMonth)}
             </p>
           </div>
-          <SankeyFlow data={flowData} />
+          <NodeFlow data={flowData} month={monthLabel(selectedKpiMonth)} />
         </GlassCard>
       )}
 
