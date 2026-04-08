@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { api, Account, Budget, PointsSummary, Transaction } from "@/lib/api";
+import { api, Account, Budget, PointsSummary, Transaction, Insight } from "@/lib/api";
 import { fmt, previousMonth, monthLabel, fmtDate } from "@/lib/utils";
 import Link from "next/link";
 import {
@@ -17,10 +17,14 @@ import {
   ChevronRight,
   GripVertical,
   AlertTriangle,
+  DollarSign,
+  Hash,
+  RefreshCw,
 } from "lucide-react";
 import { PageHero } from "@/components/PageHero";
 import { AnimatedBar } from "@/components/AnimatedBar";
 import { GlassCard } from "@/components/GlassCard";
+import { AccountGraph } from "@/components/AccountGraph";
 
 // ── Category colors ──────────────────────────────────────────────────────────
 
@@ -110,12 +114,14 @@ function BudgetRow({
   budget,
   pct,
   index,
+  pctMonthElapsed,
 }: {
   category: string;
   actual: number;
   budget: number;
   pct: number;
   index: number;
+  pctMonthElapsed: number;
 }) {
   const over = pct > 100;
   const warn = pct > 80 && !over;
@@ -132,12 +138,32 @@ function BudgetRow({
     ? "text-semantic-warning"
     : "text-semantic-income";
 
+  // Pace badge: ratio of budget consumed vs fraction of month elapsed
+  const paceRatio = pctMonthElapsed > 0 ? (pct / 100) / pctMonthElapsed : 0;
+  const paceLabel =
+    paceRatio > 1.2
+      ? `⚠ ${Math.round((paceRatio - 1) * 100)}% over pace`
+      : paceRatio > 0.9
+      ? "On pace"
+      : "Good";
+  const paceBadgeClass =
+    paceRatio > 1.2
+      ? "bg-semantic-expense/10 text-semantic-expense border-semantic-expense/20"
+      : paceRatio > 0.9
+      ? "bg-semantic-warning/10 text-semantic-warning border-semantic-warning/20"
+      : "bg-semantic-income/10 text-semantic-income border-semantic-income/20";
+
   return (
     <div className="py-3">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${CAT_DOT[category] ?? "bg-ink-tertiary"}`} />
           <span className="text-[13px] text-ink-secondary font-medium truncate">{category}</span>
+          {pctMonthElapsed > 0 && (
+            <span className={`hidden sm:inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${paceBadgeClass}`}>
+              {paceLabel}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3 shrink-0 ml-3">
           <span className={`text-[11px] font-semibold font-mono ${pctColor}`}>{pct.toFixed(0)}%</span>
@@ -229,6 +255,105 @@ function AccountCard({
   );
 }
 
+// ── Today's Activity helpers ──────────────────────────────────────────────────
+
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function relativeTime(isoDate: string): string {
+  const then = new Date(isoDate);
+  const diffMs = Date.now() - then.getTime();
+  const diffMin = Math.round(diffMs / 60_000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  return `${Math.round(diffHr / 24)}d ago`;
+}
+
+interface TodayData {
+  spentToday: number;
+  countToday: number;
+  spentYesterday: number;
+  lastSyncedAt: string | null;
+}
+
+function TodayActivityStrip({ data, loading }: { data: TodayData | null; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="glass-card rounded-2xl overflow-hidden">
+        <div className="flex divide-x divide-white/[0.04]">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex-1 py-3 px-4 animate-pulse space-y-2">
+              <div className="h-2 bg-white/[0.06] rounded-full w-12 mx-auto" />
+              <div className="h-4 bg-white/[0.08] rounded-lg w-16 mx-auto" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const delta = data.spentToday - data.spentYesterday;
+  const absDelta = Math.abs(delta);
+  const deltaLabel = delta > 0
+    ? `↑ ${fmt(absDelta)} more than yesterday`
+    : delta < 0
+    ? `↓ ${fmt(absDelta)} less than yesterday`
+    : "Same as yesterday";
+  const deltaColor = delta > 0 ? "text-semantic-expense" : delta < 0 ? "text-semantic-income" : "text-ink-tertiary";
+
+  const tiles: { icon: React.ElementType; label: string; value: string; valueClass?: string }[] = [
+    {
+      icon: DollarSign,
+      label: "Spent today",
+      value: fmt(data.spentToday),
+    },
+    {
+      icon: Hash,
+      label: "Transactions",
+      value: `${data.countToday}`,
+    },
+    {
+      icon: data.spentToday >= data.spentYesterday ? TrendingUp : TrendingDown,
+      label: "vs. yesterday",
+      value: deltaLabel,
+      valueClass: deltaColor,
+    },
+    {
+      icon: RefreshCw,
+      label: "Last synced",
+      value: data.lastSyncedAt ? relativeTime(data.lastSyncedAt) : "—",
+    },
+  ];
+
+  return (
+    <div className="glass-card rounded-2xl overflow-hidden">
+      <div className="flex divide-x divide-white/[0.04]">
+        {tiles.map(({ icon: Icon, label, value, valueClass }) => (
+          <div key={label} className="flex-1 flex flex-col items-center justify-center py-3 px-4 min-w-0">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Icon className="w-3 h-3 text-ink-tertiary/60 shrink-0" strokeWidth={1.8} />
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-tertiary whitespace-nowrap">
+                {label}
+              </p>
+            </div>
+            <p className={`text-[14px] font-semibold font-mono text-ink-primary truncate max-w-full text-center ${valueClass ?? ""}`}>
+              {value}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 const ACCT_ORDER_KEY = "hive_acct_order";
@@ -259,8 +384,11 @@ export default function Dashboard() {
   const [pts, setPts]             = useState<PointsSummary | null>(null);
   const [recentTx, setRecentTx]   = useState<Transaction[]>([]);
   const [spendData, setSpendData] = useState<{ category: string; spend: number }[]>([]);
+  const [insights, setInsights]   = useState<Insight[]>([]);
   const [loading, setLoading]     = useState(true);
   const [criticalError, setCriticalError] = useState<string | null>(null);
+  const [todayData, setTodayData] = useState<TodayData | null>(null);
+  const [todayLoading, setTodayLoading] = useState(true);
   const dragSrc = useRef<string | null>(null);
 
   useEffect(() => {
@@ -271,18 +399,55 @@ export default function Dashboard() {
       api.points.summary(),
       api.transactions.list({ month, page_size: 6, include_pending: false }),
       api.transactions.spendByCategory(month),
-    ]).then(([accountsRes, budgetsRes, pointsRes, txRes, spendRes]) => {
+      api.insights.list(10),
+    ]).then(([accountsRes, budgetsRes, pointsRes, txRes, spendRes, insightsRes]) => {
       if (accountsRes.status === "fulfilled") setAccts(accountsRes.value);
       if (budgetsRes.status  === "fulfilled") setBdgts(budgetsRes.value);
       if (pointsRes.status   === "fulfilled") setPts(pointsRes.value);
       if (txRes.status       === "fulfilled") setRecentTx(txRes.value.items);
       if (spendRes.status    === "fulfilled") setSpendData(spendRes.value);
+      if (insightsRes.status === "fulfilled") {
+        const { insights: arr } = insightsRes.value;
+        setInsights(arr.filter((i) => !i.is_read && !i.is_dismissed).slice(0, 3));
+      }
       if (accountsRes.status === "rejected" || budgetsRes.status === "rejected") {
         setCriticalError("Some data failed to load. Check your connection or try refreshing.");
       }
       setLoading(false);
     });
   }, [month]);
+
+  // ── Today's Activity data ─────────────────────────────────────────────────
+  useEffect(() => {
+    const today = toLocalDateStr(new Date());
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterday = toLocalDateStr(yesterdayDate);
+
+    api.transactions
+      .list({ page_size: 50, include_pending: false })
+      .then((res) => {
+        const todayTxs = res.items.filter(
+          (tx) => tx.date === today && !tx.is_excluded
+        );
+        const yesterdayTxs = res.items.filter(
+          (tx) => tx.date === yesterday && !tx.is_excluded
+        );
+        const spentToday = todayTxs.reduce((s, tx) => s + tx.amount, 0);
+        const spentYesterday = yesterdayTxs.reduce((s, tx) => s + tx.amount, 0);
+
+        // Use the most recent transaction date as a proxy for last sync
+        const allDates = res.items.map((tx) => tx.date).sort().reverse();
+        const lastSyncedAt = allDates[0] ?? null;
+
+        setTodayData({ spentToday, countToday: todayTxs.length, spentYesterday, lastSyncedAt });
+      })
+      .catch(() => {
+        // Non-critical — silently suppress
+        setTodayData(null);
+      })
+      .finally(() => setTodayLoading(false));
+  }, []);
 
   const sortedAccts = applyOrder(accts, acctOrder);
   const creditCards   = sortedAccts.filter((a) => a.type === "credit");
@@ -311,6 +476,32 @@ export default function Dashboard() {
 
   const spendItems = spendData.slice(0, 7);
   const maxSpend   = Math.max(...spendItems.map((b) => b.spend), 1);
+
+  // How far through the current month are we? (0–1)
+  const pctMonthElapsed = (() => {
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return now.getDate() / daysInMonth;
+  })();
+
+  // Insights helpers
+  function insightIcon(type: string): string {
+    if (type.includes("anomal") || type.includes("warn") || type.includes("spike")) return "⚠️";
+    if (type.includes("tip") || type.includes("saving") || type.includes("suggest")) return "💡";
+    return "🔔";
+  }
+
+  function handleInsightClick(insight: Insight) {
+    if (!insight.is_read) {
+      api.insights.markRead(insight.id).catch(() => {/* best-effort */});
+      setInsights((prev) => prev.filter((i) => i.id !== insight.id));
+    }
+  }
+
+  function handleMarkAllRead() {
+    api.insights.markAllRead().catch(() => {/* best-effort */});
+    setInsights([]);
+  }
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -390,6 +581,11 @@ export default function Dashboard() {
         ]}
       />
 
+      {/* ── Today's Activity strip ──────────────────────────────────── */}
+      {!noAccounts && (
+        <TodayActivityStrip data={todayData} loading={todayLoading} />
+      )}
+
       {/* ── Empty state ─────────────────────────────────────────────── */}
       {noAccounts && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] animate-fade-in">
@@ -468,6 +664,57 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* ── AI Insights ─────────────────────────────────────────────── */}
+      {insights.length > 0 && (
+        <div className="hive-card overflow-hidden">
+          <div className="hive-section-header">
+            <div className="flex items-center gap-2">
+              <h2 className="hive-label">AI Insights</h2>
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-honey/[0.12] text-honey border border-honey/20">
+                {insights.length}
+              </span>
+            </div>
+            <button
+              onClick={handleMarkAllRead}
+              className="text-[12px] text-ink-tertiary hover:text-ink-secondary transition-colors"
+            >
+              Mark all read
+            </button>
+          </div>
+          <div className="flex gap-3 px-4 pb-4 overflow-x-auto scrollbar-hide">
+            {insights.map((insight) => (
+              <button
+                key={insight.id}
+                onClick={() => handleInsightClick(insight)}
+                className="flex-shrink-0 w-64 text-left rounded-[14px] p-4 border border-white/[0.06]
+                           bg-gradient-to-br from-honey/[0.04] via-transparent to-transparent
+                           hover:border-honey/20 hover:from-honey/[0.08]
+                           transition-all duration-200 group"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-lg leading-none mt-0.5 flex-shrink-0" aria-hidden>
+                    {insightIcon(insight.insight_type)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-semibold text-ink-primary leading-snug mb-1 group-hover:text-honey transition-colors">
+                      {insight.title}
+                    </p>
+                    <p className="text-[11px] text-ink-tertiary leading-relaxed line-clamp-3">
+                      {insight.body}
+                    </p>
+                    {insight.amount !== null && (
+                      <p className="mt-2 text-[11px] font-mono font-semibold text-semantic-expense">
+                        {fmt(insight.amount)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Accounts + Spending ─────────────────────────────────────── */}
       {loading && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -510,55 +757,8 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
 
           {/* Accounts — 2/3 */}
-          <div className="lg:col-span-2 hive-card overflow-hidden">
-            <div className="hive-section-header">
-              <h2 className="hive-label">Accounts</h2>
-              <Link href="/connect" className="flex items-center gap-1 text-[12px] text-honey/80 hover:text-honey transition-colors">
-                Manage <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
-
-            {/* Bank Accounts */}
-            {bankAccts.length > 0 && (
-              <div className="p-3 pb-0">
-                <div className="flex items-center gap-2 px-1 mb-2">
-                  <Landmark className="w-3 h-3 text-semantic-income/60" />
-                  <span className="text-[10px] font-semibold tracking-[0.10em] uppercase text-ink-tertiary">Accounts</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {bankAccts.map((a) => (
-                    <AccountCard
-                      key={a.id}
-                      account={a}
-                      isCredit={false}
-                      onDragStart={handleDragStart}
-                      onDrop={handleDrop}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Credit Cards */}
-            {creditCards.length > 0 && (
-              <div className="p-3">
-                <div className={`flex items-center gap-2 px-1 mb-2 ${bankAccts.length > 0 ? "mt-1" : ""}`}>
-                  <CreditCard className="w-3 h-3 text-honey/60" />
-                  <span className="text-[10px] font-semibold tracking-[0.10em] uppercase text-ink-tertiary">Credit Cards</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {creditCards.map((a) => (
-                    <AccountCard
-                      key={a.id}
-                      account={a}
-                      isCredit={true}
-                      onDragStart={handleDragStart}
-                      onDrop={handleDrop}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="lg:col-span-2">
+            <AccountGraph />
           </div>
 
           {/* Spending by Category — 1/3 */}
@@ -633,6 +833,7 @@ export default function Dashboard() {
                 budget={b.budget_amount}
                 pct={b.pct_used}
                 index={i}
+                pctMonthElapsed={pctMonthElapsed}
               />
             ))}
           </div>
