@@ -28,6 +28,9 @@ async def spending_by_category(
 
     acct_clause = "AND t.account_id = :account_id" if account_id else ""
 
+    params: dict = {"start": start, "end": end}
+    if account_id:
+        params["account_id"] = account_id
     result = await session.execute(
         text(f"""
             SELECT
@@ -49,7 +52,7 @@ async def spending_by_category(
             GROUP BY t.category, t.subcategory
             ORDER BY total DESC
         """),
-        {"start": start, "end": end, "account_id": account_id},
+        params,
     )
     return [
         {

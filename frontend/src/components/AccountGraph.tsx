@@ -356,8 +356,9 @@ export function AccountGraph() {
             width="100%"
             style={{ minWidth: 480, cursor: "default" }}
             onClick={(e) => {
-              // Click on background exits drill-down
-              if ((e.target as SVGElement).tagName === "svg") setView({ kind: "graph" });
+              if ((e.target as SVGElement).tagName !== "svg") return;
+              if (view.kind === "account") setView({ kind: "graph" });
+              else if (view.kind === "transactions") setView({ kind: "account", account: view.account, month: view.month });
             }}
           >
             <defs>
@@ -431,8 +432,8 @@ export function AccountGraph() {
                   const cx = 200, cy = SVG_H / 2;
                   return (
                     <g>
-                      <circle cx={cx} cy={cy} r={36} fill="#111118" stroke={acctColor(view.account, liabilities.indexOf(view.account))} strokeWidth={2} />
-                      <text x={cx} y={cy - 5} textAnchor="middle" fill={acctColor(view.account, liabilities.indexOf(view.account))} fontSize={10} fontWeight={600}>{abbrev(view.account.name)}</text>
+                      <circle cx={cx} cy={cy} r={36} fill="#111118" stroke={positioned.find((n) => n.account.id === view.account.id)?.color ?? DEPOSIT_COLOR} strokeWidth={2} />
+                      <text x={cx} y={cy - 5} textAnchor="middle" fill={positioned.find((n) => n.account.id === view.account.id)?.color ?? DEPOSIT_COLOR} fontSize={10} fontWeight={600}>{abbrev(view.account.name)}</text>
                       <text x={cx} y={cy + 10} textAnchor="middle" fill="#F5F5F7" fontSize={8} fontWeight={700}>{fmt(Math.abs(view.account.current_balance ?? 0))}</text>
                     </g>
                   );
@@ -465,8 +466,8 @@ export function AccountGraph() {
             {/* ── State 3: transaction view (graph just shows account + selected category) ── */}
             {view.kind === "transactions" && (
               <>
-                <circle cx={200} cy={SVG_H / 2} r={28} fill="#111118" stroke={acctColor(view.account, liabilities.indexOf(view.account))} strokeWidth={2} />
-                <text x={200} y={SVG_H / 2 - 4} textAnchor="middle" fill={acctColor(view.account, liabilities.indexOf(view.account))} fontSize={9} fontWeight={600}>{abbrev(view.account.name)}</text>
+                <circle cx={200} cy={SVG_H / 2} r={28} fill="#111118" stroke={positioned.find((n) => n.account.id === view.account.id)?.color ?? DEPOSIT_COLOR} strokeWidth={2} />
+                <text x={200} y={SVG_H / 2 - 4} textAnchor="middle" fill={positioned.find((n) => n.account.id === view.account.id)?.color ?? DEPOSIT_COLOR} fontSize={9} fontWeight={600}>{abbrev(view.account.name)}</text>
                 <text x={200} y={SVG_H / 2 + 8} textAnchor="middle" fill="#F5F5F7" fontSize={7}>
                   {view.category}
                 </text>
