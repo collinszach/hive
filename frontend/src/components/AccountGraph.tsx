@@ -81,13 +81,12 @@ interface Positioned {
 // ── SVG layout constants ─────────────────────────────────────────────────────
 
 const SVG_W   = 800;
-const SVG_H   = 300;
 const INC_X   = 52;   // income node center x
-const INC_Y   = 150;  // income node center y
 const INC_R   = 32;   // income node radius (fixed)
 const AST_X   = 210;  // asset column center x
 const DIV_X   = 390;  // divider x
 const LIA_X   = 560;  // liability column center x
+const ROW_H   = 72;   // vertical spacing between account nodes
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -174,21 +173,23 @@ export function AccountGraph() {
     return Math.max(...all, 1);
   }, [assets, liabilities]);
 
+  // Dynamic SVG height — grows to fit whichever column is taller
+  const svgH = Math.max(300, Math.max(assets.length, liabilities.length, 1) * ROW_H + 80);
+  const incY = svgH / 2;
+
   // Position nodes vertically centered in their column
   const positioned = useMemo<Positioned[]>(() => {
-    const ROW_H = 72;
-
     const astNodes: Positioned[] = assets.map((a, i) => {
       const r = nodeR(a.current_balance ?? 0, maxBalance);
       const totalH = assets.length * ROW_H;
-      const startY  = SVG_H / 2 - totalH / 2 + ROW_H / 2;
+      const startY  = svgH / 2 - totalH / 2 + ROW_H / 2;
       return { account: a, x: AST_X, y: startY + i * ROW_H, r, color: acctColor(a, 0) };
     });
 
     const liaNodes: Positioned[] = liabilities.map((a, i) => {
       const r = nodeR(a.current_balance ?? 0, maxBalance);
       const totalH = liabilities.length * ROW_H;
-      const startY  = SVG_H / 2 - totalH / 2 + ROW_H / 2;
+      const startY  = svgH / 2 - totalH / 2 + ROW_H / 2;
       return {
         account: a,
         x: LIA_X,
@@ -199,7 +200,7 @@ export function AccountGraph() {
     });
 
     return [...astNodes, ...liaNodes];
-  }, [assets, liabilities, maxBalance, creditColorMap]);
+  }, [assets, liabilities, maxBalance, creditColorMap, svgH]);
 
   // ── Graph edges ──────────────────────────────────────────────────────────
 
@@ -211,7 +212,7 @@ export function AccountGraph() {
     // Income → first asset (checking, or just first asset)
     const firstAsset = checking ?? positioned.find((p) => p.account.type !== "credit");
     if (firstAsset) {
-      result.push({ x1: INC_X + INC_R, y1: INC_Y, x2: firstAsset.x - firstAsset.r, y2: firstAsset.y, color: INCOME_COLOR, opacity: 0.4 });
+      result.push({ x1: INC_X + INC_R, y1: incY, x2: firstAsset.x - firstAsset.r, y2: firstAsset.y, color: INCOME_COLOR, opacity: 0.4 });
     }
 
     // Checking → Savings
@@ -235,15 +236,15 @@ export function AccountGraph() {
 
   const catPositions = useMemo(() => {
     const CENTER_X = 300;
-    const CENTER_Y = SVG_H / 2;
+    const CENTER_Y = svgH / 2;
     const CAT_X    = 490;
-    const ROW_H    = 54;
-    const startY   = CENTER_Y - (cats.length * ROW_H) / 2 + ROW_H / 2;
+    const CAT_ROW_H = 54;
+    const startY   = CENTER_Y - (cats.length * CAT_ROW_H) / 2 + CAT_ROW_H / 2;
     return cats.map((cat, i) => {
       const r = Math.max(14, Math.min(34, Math.sqrt(cat.total / catMaxAmt) * 34));
-      return { cat, x: CAT_X, y: startY + i * ROW_H, r, color: CAT_COLORS[i % CAT_COLORS.length] };
+      return { cat, x: CAT_X, y: startY + i * CAT_ROW_H, r, color: CAT_COLORS[i % CAT_COLORS.length] };
     });
-  }, [cats, catMaxAmt]);
+  }, [cats, catMaxAmt, svgH]);
 
   // ── Rendering ────────────────────────────────────────────────────────────
 
@@ -352,7 +353,7 @@ export function AccountGraph() {
         {/* SVG Graph */}
         <div className="w-full overflow-x-auto">
           <svg
-            viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+            viewBox={`0 0 ${SVG_W} ${svgH}`}
             width="100%"
             style={{ minWidth: 480, cursor: "default" }}
             onClick={(e) => {
@@ -378,7 +379,7 @@ export function AccountGraph() {
             {view.kind === "graph" && (
               <>
                 {/* Divider line */}
-                <line x1={DIV_X} y1={20} x2={DIV_X} y2={SVG_H - 20} stroke="rgba(255,255,255,0.05)" strokeWidth={1} strokeDasharray="4 4" />
+                <line x1={DIV_X} y1={20} x2={DIV_X} y2={svgH - 20} stroke="rgba(255,255,255,0.05)" strokeWidth={1} strokeDasharray="4 4" />
 
                 {/* Column labels */}
                 <text x={AST_X} y={14} textAnchor="middle" fill="#6B6B73" fontSize={9} fontWeight={600} letterSpacing={1}>ASSETS</text>
@@ -394,10 +395,10 @@ export function AccountGraph() {
                   style={{ cursor: "pointer" }}
                   onClick={(ev) => { ev.stopPropagation(); openAccount(assets[0] ?? accounts[0], currentMonth()); }}
                 >
-                  <circle cx={INC_X} cy={INC_Y} r={INC_R + 14} fill="url(#glow-income)" />
-                  <circle cx={INC_X} cy={INC_Y} r={INC_R} fill="#111820" stroke={INCOME_COLOR} strokeWidth={1.5} />
-                  <text x={INC_X} y={INC_Y - 6} textAnchor="middle" fill={INCOME_COLOR} fontSize={16} fontWeight={700}>$</text>
-                  <text x={INC_X} y={INC_Y + 9} textAnchor="middle" fill="#6B6B73" fontSize={7.5}>Income</text>
+                  <circle cx={INC_X} cy={incY} r={INC_R + 14} fill="url(#glow-income)" />
+                  <circle cx={INC_X} cy={incY} r={INC_R} fill="#111820" stroke={INCOME_COLOR} strokeWidth={1.5} />
+                  <text x={INC_X} y={incY - 6} textAnchor="middle" fill={INCOME_COLOR} fontSize={16} fontWeight={700}>$</text>
+                  <text x={INC_X} y={incY + 9} textAnchor="middle" fill="#6B6B73" fontSize={7.5}>Income</text>
                 </g>
 
                 {/* Account nodes */}
@@ -429,7 +430,7 @@ export function AccountGraph() {
                 {(() => {
                   const p = positioned.find((n) => n.account.id === view.account.id);
                   if (!p) return null;
-                  const cx = 200, cy = SVG_H / 2;
+                  const cx = 200, cy = svgH / 2;
                   return (
                     <g>
                       <circle cx={cx} cy={cy} r={36} fill="#111118" stroke={positioned.find((n) => n.account.id === view.account.id)?.color ?? DEPOSIT_COLOR} strokeWidth={2} />
@@ -440,18 +441,18 @@ export function AccountGraph() {
                 })()}
 
                 {catLoading && (
-                  <text x={SVG_W / 2} y={SVG_H / 2} textAnchor="middle" fill="#6B6B73" fontSize={12}>Loading…</text>
+                  <text x={SVG_W / 2} y={svgH / 2} textAnchor="middle" fill="#6B6B73" fontSize={12}>Loading…</text>
                 )}
 
                 {!catLoading && cats.length === 0 && (
-                  <text x={SVG_W / 2} y={SVG_H / 2} textAnchor="middle" fill="#6B6B73" fontSize={12}>No spend this month</text>
+                  <text x={SVG_W / 2} y={svgH / 2} textAnchor="middle" fill="#6B6B73" fontSize={12}>No spend this month</text>
                 )}
 
                 {/* Category nodes + wires */}
                 {!catLoading && catPositions.map((cp) => (
                   <g key={cp.cat.category} style={{ cursor: "pointer" }} onClick={(ev) => { ev.stopPropagation(); openCategory(view.account, cp.cat.category, view.month); }}>
                     {/* Wire from account node to category */}
-                    <line x1={200 + 36} y1={SVG_H / 2} x2={cp.x - cp.r} y2={cp.y} stroke={cp.color} strokeWidth={Math.max(1, Math.round((cp.cat.total / catMaxAmt) * 8))} opacity={0.4} />
+                    <line x1={200 + 36} y1={svgH / 2} x2={cp.x - cp.r} y2={cp.y} stroke={cp.color} strokeWidth={Math.max(1, Math.round((cp.cat.total / catMaxAmt) * 8))} opacity={0.4} />
                     {/* Glow */}
                     <circle cx={cp.x} cy={cp.y} r={cp.r + 10} fill={cp.color} opacity={0.08} />
                     {/* Node */}
@@ -466,12 +467,12 @@ export function AccountGraph() {
             {/* ── State 3: transaction view (graph just shows account + selected category) ── */}
             {view.kind === "transactions" && (
               <>
-                <circle cx={200} cy={SVG_H / 2} r={28} fill="#111118" stroke={positioned.find((n) => n.account.id === view.account.id)?.color ?? DEPOSIT_COLOR} strokeWidth={2} />
-                <text x={200} y={SVG_H / 2 - 4} textAnchor="middle" fill={positioned.find((n) => n.account.id === view.account.id)?.color ?? DEPOSIT_COLOR} fontSize={9} fontWeight={600}>{abbrev(view.account.name)}</text>
-                <text x={200} y={SVG_H / 2 + 8} textAnchor="middle" fill="#F5F5F7" fontSize={7}>
+                <circle cx={200} cy={svgH / 2} r={28} fill="#111118" stroke={positioned.find((n) => n.account.id === view.account.id)?.color ?? DEPOSIT_COLOR} strokeWidth={2} />
+                <text x={200} y={svgH / 2 - 4} textAnchor="middle" fill={positioned.find((n) => n.account.id === view.account.id)?.color ?? DEPOSIT_COLOR} fontSize={9} fontWeight={600}>{abbrev(view.account.name)}</text>
+                <text x={200} y={svgH / 2 + 8} textAnchor="middle" fill="#F5F5F7" fontSize={7}>
                   {view.category}
                 </text>
-                <text x={SVG_W / 2} y={SVG_H / 2} textAnchor="middle" fill="#6B6B73" fontSize={11}>
+                <text x={SVG_W / 2} y={svgH / 2} textAnchor="middle" fill="#6B6B73" fontSize={11}>
                   {txLoading ? "Loading transactions…" : `${txTotal} transactions`}
                 </text>
               </>

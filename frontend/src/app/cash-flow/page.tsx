@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { api, MonthlyCashFlow, CashFlowSummary, SpendByCategory, FlowData } from "@/lib/api";
 import { NodeFlow } from "./_components/NodeFlow";
 import { fmt, monthLabel } from "@/lib/utils";
@@ -72,6 +73,7 @@ interface DrillDownState {
 }
 
 export default function CashFlowPage() {
+  const router = useRouter();
   const [monthly, setMonthly]               = useState<MonthlyCashFlow[]>([]);
   const [summary, setSummary]               = useState<CashFlowSummary | null>(null);
   const [flowData, setFlowData]             = useState<FlowData | null>(null);
@@ -218,7 +220,13 @@ export default function CashFlowPage() {
               Where your {fmt(flowData.income)} went in {monthLabel(selectedKpiMonth)}
             </p>
           </div>
-          <NodeFlow data={flowData} month={monthLabel(selectedKpiMonth)} />
+          <NodeFlow
+            data={flowData}
+            month={monthLabel(selectedKpiMonth)}
+            onCategoryClick={(category) =>
+              router.push(`/transactions?category=${encodeURIComponent(category)}&month=${selectedKpiMonth}`)
+            }
+          />
         </GlassCard>
       )}
 

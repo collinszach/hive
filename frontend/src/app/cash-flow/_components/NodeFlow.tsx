@@ -27,6 +27,7 @@ const PORT_R = 5;
 interface NodeFlowProps {
   data: FlowData;
   month?: string;
+  onCategoryClick?: (category: string) => void;
 }
 
 interface FlowItem {
@@ -36,7 +37,7 @@ interface FlowItem {
   color: string;
 }
 
-export function NodeFlow({ data, month }: NodeFlowProps) {
+export function NodeFlow({ data, month, onCategoryClick }: NodeFlowProps) {
   const items = useMemo<FlowItem[]>(() => {
     const cats: FlowItem[] = data.categories.map((c, i) => ({
       label: c.category,
@@ -128,7 +129,11 @@ export function NodeFlow({ data, month }: NodeFlowProps) {
           const barW = DST_W - 22;
           const fillW = Math.round(Math.min(item.pct / 100, 1) * barW);
           return (
-            <g key={`node-${item.label}`}>
+            <g
+              key={`node-${item.label}`}
+              style={{ cursor: onCategoryClick ? "pointer" : "default" }}
+              onClick={() => onCategoryClick?.(item.label)}
+            >
               <rect x={DST_X} y={dstY} width={DST_W} height={dstH} rx={8} fill="#111118" stroke={item.color} strokeWidth={1.2} />
               <rect x={DST_X} y={dstY} width={5} height={dstH} rx={4} fill={item.color} />
               {/* Input port */}

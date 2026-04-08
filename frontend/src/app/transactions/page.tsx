@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { api, Transaction } from "@/lib/api";
 import { fmt, fmtDate, currentMonth } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -149,24 +150,19 @@ function MerchantCell({
 
 // ── Page ──────────────────────────────────────────────────────────────────
 
-export default function TransactionsPage() {
-  const [month, setMonth] = useState(currentMonth());
+function TransactionsPageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [month, setMonth] = useState(() => searchParams.get("month") ?? currentMonth());
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState(() => searchParams.get("category") ?? "");
+  const [accountId, setAccountId] = useState<string | null>(() => searchParams.get("account_id"));
   const [page, setPage] = useState(1);
   const [includePending, setIncludePending] = useState(false);
   const [includeExcluded, setIncludeExcluded] = useState(false);
   const [data, setData] = useState<{ items: Transaction[]; total: number; pages: number } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [txCategories, setTxCategories] = useState<string[]>([]);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-
-  // Load category list for autocomplete + filter
-  useEffect(() => {
-    api.transactions.categories()
-      .then((cats) => setTxCategories(cats.map((c) => c.category)))
-      .catch(() => {});
-  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -175,6 +171,7 @@ export default function TransactionsPage() {
         month,
         search: search || undefined,
         category: category || undefined,
+        account_id: accountId || undefined,
         include_pending: includePending,
         include_excluded: includeExcluded,
         page,
@@ -184,7 +181,7 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [month, search, category, page, includePending, includeExcluded]);
+  }, [month, search, category, accountId, page, includePending, includeExcluded]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -226,6 +223,20 @@ export default function TransactionsPage() {
           </p>
         )}
       </div>
+
+      {/* ── Account filter badge ──────────────────────────────────────── */}
+      {accountId && (
+        <div className="flex items-center gap-2">
+          <span className="text-[12px] text-ink-tertiary">Filtered by account</span>
+          <button
+            onClick={() => { setAccountId(null); router.replace("/transactions"); setPage(1); }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium
+                       bg-honey/[0.10] border border-honey/20 text-honey hover:bg-honey/[0.18] transition-colors"
+          >
+            <X className="w-2.5 h-2.5" /> Clear
+          </button>
+        </div>
+      )}
 
       {/* ── FilterPills ───────────────────────────────────────────────── */}
       <FilterPills
@@ -395,5 +406,13 @@ export default function TransactionsPage() {
         onCategoryChange={handleCategoryChanged}
       />
     </div>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense>
+      <TransactionsPageInner />
+    </Suspense>
   );
 }
