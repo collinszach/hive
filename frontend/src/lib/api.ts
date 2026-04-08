@@ -5,6 +5,12 @@ function authHeader(): Record<string, string> {
   return {};
 }
 
+function handleUnauthorized(status: number): void {
+  if (status === 401 && typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+    window.location.href = "/login";
+  }
+}
+
 async function get<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
   const searchStr = params
     ? "?" + new URLSearchParams(
@@ -17,7 +23,7 @@ async function get<T>(path: string, params?: Record<string, string | number | bo
     : "";
   const url = IS_SERVER ? `${SERVER_BASE}${path}${searchStr}` : `${path}${searchStr}`;
   const res = await fetch(url, { cache: "no-store", headers: authHeader(), credentials: "include" });
-  if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
+  if (!res.ok) { handleUnauthorized(res.status); throw new Error(`GET ${path} → ${res.status}`); }
   return res.json();
 }
 
@@ -30,7 +36,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     cache: "no-store",
     credentials: "include",
   });
-  if (!res.ok) throw new Error(`POST ${path} → ${res.status}`);
+  if (!res.ok) { handleUnauthorized(res.status); throw new Error(`POST ${path} → ${res.status}`); }
   return res.json();
 }
 
@@ -51,7 +57,7 @@ async function del<T>(path: string, params?: Record<string, string | boolean | u
     cache: "no-store",
     credentials: "include",
   });
-  if (!res.ok) throw new Error(`DELETE ${path} → ${res.status}`);
+  if (!res.ok) { handleUnauthorized(res.status); throw new Error(`DELETE ${path} → ${res.status}`); }
   // 204 No Content has no body — don't attempt to parse JSON
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -66,7 +72,7 @@ async function patch<T>(path: string, body: unknown): Promise<T> {
     cache: "no-store",
     credentials: "include",
   });
-  if (!res.ok) throw new Error(`PATCH ${path} → ${res.status}`);
+  if (!res.ok) { handleUnauthorized(res.status); throw new Error(`PATCH ${path} → ${res.status}`); }
   return res.json();
 }
 
@@ -79,7 +85,7 @@ async function put<T>(path: string, body: unknown): Promise<T> {
     cache: "no-store",
     credentials: "include",
   });
-  if (!res.ok) throw new Error(`PUT ${path} → ${res.status}`);
+  if (!res.ok) { handleUnauthorized(res.status); throw new Error(`PUT ${path} → ${res.status}`); }
   return res.json();
 }
 
@@ -594,7 +600,7 @@ export const api = {
   },
   insights: {
     list: (limit?: number, include_dismissed?: boolean) =>
-      get<Insight[]>("/api/insights", { limit, include_dismissed } as Record<string, number | boolean | undefined>),
+      get<{ insights: Insight[]; unread_count: number }>("/api/insights", { limit, include_dismissed } as Record<string, number | boolean | undefined>),
     markRead: (id: string) => post<{ id: string; is_read: boolean }>(`/api/insights/${id}/read`, {}),
     dismiss: (id: string) => post<{ id: string; is_dismissed: boolean }>(`/api/insights/${id}/dismiss`, {}),
     markAllRead: () => post<{ ok: boolean }>("/api/insights/mark-all-read", {}),
@@ -660,8 +666,8 @@ export const api = {
     status: (taskId: string) => get<TaskStatus>(`/api/merchants/tasks/${taskId}/status`),
   },
   reports: {
-    spendingByCategory: (start_date?: string, end_date?: string) =>
-      get<SpendByCategory[]>("/api/reports/spending-by-category", { start_date, end_date } as Record<string, string | undefined>),
+    spendingByCategory: (start_date?: string, end_date?: string, account_id?: string) =>
+      get<SpendByCategory[]>("/api/reports/spending-by-category", { start_date, end_date, account_id } as Record<string, string | undefined>),
     monthlySummary: (year?: number) =>
       get<{ month: string; expenses: number; income: number; net: number; expense_count: number }[]>("/api/reports/monthly-summary", year ? { year } : undefined),
     taxExport: (year?: number) =>
