@@ -24,7 +24,6 @@ import {
 import { PageHero } from "@/components/PageHero";
 import { AnimatedBar } from "@/components/AnimatedBar";
 import { GlassCard } from "@/components/GlassCard";
-import { AccountGraph } from "@/components/AccountGraph";
 
 // ── Category colors ──────────────────────────────────────────────────────────
 
@@ -397,7 +396,7 @@ export default function Dashboard() {
       api.accounts.list(),
       api.budgets.list(month),
       api.points.summary(),
-      api.transactions.list({ month, page_size: 6, include_pending: false }),
+      api.transactions.list({ month, page_size: 10, include_pending: false }),
       api.transactions.spendByCategory(month),
       api.insights.list(10),
     ]).then(([accountsRes, budgetsRes, pointsRes, txRes, spendRes, insightsRes]) => {
@@ -619,51 +618,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── KPI Tiles ───────────────────────────────────────────────── */}
-      {loading && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="glass-card p-5 space-y-3 animate-pulse">
-              <div className="h-2 bg-white/[0.06] rounded-full w-16" />
-              <div className="h-7 bg-white/[0.08] rounded-lg w-24" />
-              <div className="h-2 bg-white/[0.04] rounded-full w-20" />
-            </div>
-          ))}
-        </div>
-      )}
-      {!noAccounts && !loading && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiTile
-            label="Net Cash"
-            value={fmt(netCash)}
-            sub={netCash >= 0 ? "assets minus liabilities" : "net negative"}
-            icon={netCash >= 0 ? TrendingUp : TrendingDown}
-            tint={netCash >= 0 ? "income" : "expense"}
-          />
-          <KpiTile
-            label="Total Assets"
-            value={fmt(totalAssets)}
-            sub={`${bankAccts.length} bank account${bankAccts.length !== 1 ? "s" : ""}`}
-            icon={Landmark}
-            tint="income"
-          />
-          <KpiTile
-            label="Credit Balances"
-            value={fmt(totalDebt)}
-            sub={`across ${creditCards.length} card${creditCards.length !== 1 ? "s" : ""}`}
-            icon={CreditCard}
-            tint="expense"
-          />
-          <KpiTile
-            label="Points Value"
-            value={pts ? fmt(pointsValue) : "—"}
-            sub="estimated · 90-day earned"
-            icon={Gem}
-            tint="amber"
-          />
-        </div>
-      )}
-
       {/* ── AI Insights ─────────────────────────────────────────────── */}
       {insights.length > 0 && (
         <div className="hive-card overflow-hidden">
@@ -715,100 +669,146 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Accounts + Spending ─────────────────────────────────────── */}
+      {/* ── Assets + Liabilities ────────────────────────────────────── */}
       {loading && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <div className="lg:col-span-2 hive-card overflow-hidden">
-            <div className="hive-section-header">
-              <h2 className="hive-label">Accounts</h2>
-            </div>
-            <div className="p-3 space-y-2">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="glass-card p-4 flex items-center gap-3 animate-pulse">
-                  <div className="w-9 h-9 rounded-full bg-white/[0.06] flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-2.5 bg-white/[0.08] rounded w-32" />
-                    <div className="h-2 bg-white/[0.04] rounded w-20" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="hive-card overflow-hidden">
+              <div className="hive-section-header animate-pulse">
+                <div className="h-2.5 bg-white/[0.06] rounded w-16" />
+                <div className="h-4 bg-white/[0.08] rounded w-20" />
+              </div>
+              <div className="p-3 grid grid-cols-2 gap-2">
+                {[...Array(4)].map((_, j) => (
+                  <div key={j} className="glass-card p-4 space-y-2 animate-pulse">
+                    <div className="h-2 bg-white/[0.06] rounded w-20" />
+                    <div className="h-4 bg-white/[0.08] rounded w-24" />
+                    <div className="h-2 bg-white/[0.04] rounded w-14" />
                   </div>
-                  <div className="h-4 bg-white/[0.06] rounded w-16" />
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="hive-card overflow-hidden">
-            <div className="hive-section-header">
-              <h2 className="hive-label">Spend by Category</h2>
-            </div>
-            <div className="px-5 py-4 space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="space-y-1.5 animate-pulse">
-                  <div className="flex justify-between">
-                    <div className="h-2.5 bg-white/[0.06] rounded w-24" />
-                    <div className="h-2.5 bg-white/[0.04] rounded w-12" />
-                  </div>
-                  <div className="h-[2px] bg-white/[0.04] rounded-full" />
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
       )}
       {!noAccounts && !loading && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-          {/* Accounts — 2/3 */}
-          <div className="lg:col-span-2">
-            <AccountGraph />
-          </div>
-
-          {/* Spending by Category — 1/3 */}
-          <div className="hive-card overflow-hidden flex flex-col">
+          {/* Assets */}
+          <div className="hive-card overflow-hidden">
             <div className="hive-section-header">
-              <h2 className="hive-label">Spend by Category</h2>
-              <span className="text-[11px] font-mono text-ink-tertiary">
-                {monthLabel(month).split(" ")[0]}
+              <div>
+                <h2 className="hive-label">Assets</h2>
+                <p className="text-[11px] text-ink-tertiary mt-0.5">
+                  {bankAccts.length} account{bankAccts.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <span className="text-[16px] font-semibold font-mono text-semantic-income tabular-nums">
+                {fmt(totalAssets)}
               </span>
             </div>
-            <div className="flex-1 px-5 py-4 space-y-2.5">
-              {spendItems.length === 0 ? (
-                <p className="text-[12px] text-ink-tertiary text-center py-6">
-                  No spend data for {monthLabel(month)}
+            {bankAccts.length === 0 ? (
+              <p className="px-5 py-8 text-[12px] text-ink-tertiary text-center">No bank accounts linked</p>
+            ) : (
+              <div className="p-3 grid grid-cols-2 gap-2">
+                {bankAccts.map((a) => (
+                  <AccountCard key={a.id} account={a} isCredit={false} onDragStart={handleDragStart} onDrop={handleDrop} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Liabilities */}
+          <div className="hive-card overflow-hidden">
+            <div className="hive-section-header">
+              <div>
+                <h2 className="hive-label">Liabilities</h2>
+                <p className="text-[11px] text-ink-tertiary mt-0.5">
+                  {creditCards.length} card{creditCards.length !== 1 ? "s" : ""}
                 </p>
-              ) : (
-                spendItems.map((b) => (
-                  <div key={b.category}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[12px] text-ink-secondary truncate pr-2">{b.category}</span>
-                      <span className="text-[11px] font-mono text-ink-tertiary shrink-0">{fmt(b.spend)}</span>
-                    </div>
-                    <div className="h-[2px] bg-white/[0.04] rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${CAT_BAR[b.category] ?? "bg-ink-tertiary"}`}
-                        style={{ width: `${(b.spend / maxSpend) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))
-              )}
+              </div>
+              <span className="text-[16px] font-semibold font-mono text-semantic-expense tabular-nums">
+                {fmt(totalDebt)}
+              </span>
             </div>
-            <div className="px-4 pb-4">
-              <Link
-                href="/transactions"
-                className="hive-btn-secondary w-full text-[12px] py-2"
-              >
-                All transactions
+            {creditCards.length === 0 ? (
+              <p className="px-5 py-8 text-[12px] text-ink-tertiary text-center">No credit cards linked</p>
+            ) : (
+              <div className="p-3 grid grid-cols-2 gap-2">
+                {creditCards.map((a) => (
+                  <AccountCard key={a.id} account={a} isCredit={true} onDragStart={handleDragStart} onDrop={handleDrop} />
+                ))}
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Recent Transactions ─────────────────────────────────────── */}
+      {!noAccounts && (
+        <div className="hive-card overflow-hidden">
+          <div className="hive-section-header">
+            <h2 className="hive-label">Transactions</h2>
+            <Link href="/transactions" className="flex items-center gap-1 text-[12px] text-honey/80 hover:text-honey transition-colors">
+              All <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="divide-y divide-white/[0.04]">
+            {loading ? (
+              [...Array(5)].map((_, i) => (
+                <div key={i} className="px-5 py-3 flex items-center gap-3 animate-pulse">
+                  <div className="w-8 h-8 rounded-[9px] bg-white/[0.06] shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-2.5 bg-white/[0.08] rounded w-40" />
+                    <div className="h-2 bg-white/[0.04] rounded w-20" />
+                  </div>
+                  <div className="h-3.5 bg-white/[0.06] rounded w-16" />
+                </div>
+              ))
+            ) : recentTx.length === 0 ? (
+              <p className="px-5 py-10 text-[12px] text-ink-tertiary text-center">
+                No transactions for {monthLabel(month)}
+              </p>
+            ) : (
+              recentTx.map((tx) => (
+                <Link
+                  key={tx.id}
+                  href={`/transactions?account_id=${tx.account_id}`}
+                  className="px-5 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0 bg-elevated">
+                    <span className="text-[10px]">{tx.category?.charAt(0) ?? "?"}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] text-ink-primary font-medium truncate">
+                      {tx.merchant ?? tx.raw_description}
+                    </p>
+                    <p className="text-[11px] text-ink-tertiary font-mono">{fmtDate(tx.date)}</p>
+                  </div>
+                  <p className={`text-[13px] font-mono font-medium shrink-0 tabular-nums ${
+                    tx.amount < 0 ? "text-semantic-income" : "text-ink-primary"
+                  }`}>
+                    {tx.amount < 0 ? "+" : ""}{fmt(Math.abs(tx.amount))}
+                  </p>
+                </Link>
+              ))
+            )}
+          </div>
+          {!loading && recentTx.length > 0 && (
+            <div className="px-4 py-3 hive-divider">
+              <Link href="/transactions" className="hive-btn-secondary w-full text-[12px] py-2">
+                View all transactions <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
-          </div>
+          )}
         </div>
       )}
 
       {/* ── Budgets ─────────────────────────────────────────────────── */}
       <div className="hive-card overflow-hidden">
         <div className="hive-section-header">
-          <div>
-            <h2 className="hive-label">Budgets</h2>
-          </div>
+          <h2 className="hive-label">Budgets</h2>
           <Link href="/budgets" className="flex items-center gap-1 text-[12px] text-honey/80 hover:text-honey transition-colors">
             Manage <ChevronRight className="w-3 h-3" />
           </Link>
@@ -840,105 +840,50 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── Recent Transactions + Points ────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-
-        {/* Recent Transactions */}
-        <div className="hive-card overflow-hidden">
-          <div className="hive-section-header">
-            <h2 className="hive-label">Recent Transactions</h2>
-            <Link href="/transactions" className="flex items-center gap-1 text-[12px] text-honey/80 hover:text-honey transition-colors">
-              All <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
+      {/* ── Points Programs ──────────────────────────────────────────── */}
+      <div className="hive-card overflow-hidden">
+        <div className="hive-section-header">
+          <h2 className="hive-label">Points Programs</h2>
+          <Link href="/points" className="flex items-center gap-1 text-[12px] text-honey/80 hover:text-honey transition-colors">
+            Details <ChevronRight className="w-3 h-3" />
+          </Link>
+        </div>
+        {!pts || pts.programs.length === 0 ? (
+          <p className="px-5 py-10 text-[12px] text-ink-tertiary text-center">No points data available</p>
+        ) : (
           <div className="divide-y divide-white/[0.04]">
-            {recentTx.length === 0 ? (
-              <p className="px-5 py-10 text-[12px] text-ink-tertiary text-center">
-                No transactions for {monthLabel(month)}
-              </p>
-            ) : (
-              recentTx.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="px-5 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors"
-                >
-                  <div className={`w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0 bg-elevated`}>
-                    <span className="text-[10px]">
-                      {tx.category?.charAt(0) ?? "?"}
-                    </span>
+            {pts.programs.map((p) => (
+              <div key={p.program} className="px-5 py-3 flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-[13px] text-ink-primary font-medium">{p.program}</p>
+                    {p.above_threshold && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-honey/[0.12] text-honey border border-honey/20">
+                        REDEEM
+                      </span>
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] text-ink-primary font-medium truncate">
-                      {tx.merchant ?? tx.raw_description}
-                    </p>
-                    <p className="text-[11px] text-ink-tertiary font-mono">{fmtDate(tx.date)}</p>
-                  </div>
-                  <p className={`text-[13px] font-mono font-medium shrink-0 tabular-nums ${
-                    tx.amount < 0 ? "text-semantic-income" : "text-ink-primary"
-                  }`}>
-                    {tx.amount < 0 ? "+" : ""}
-                    {fmt(Math.abs(tx.amount))}
+                  <p className="text-[11px] text-ink-tertiary font-mono mt-0.5">
+                    {Math.round(p.points_earned_90d).toLocaleString()} pts · 90-day
                   </p>
                 </div>
-              ))
-            )}
-          </div>
-          {recentTx.length > 0 && (
-            <div className="px-4 py-3 hive-divider">
-              <Link href="/transactions" className="hive-btn-secondary w-full text-[12px] py-2">
-                View all <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* Points Programs */}
-        <div className="hive-card overflow-hidden">
-          <div className="hive-section-header">
-            <h2 className="hive-label">Points Programs</h2>
-            <Link href="/points" className="flex items-center gap-1 text-[12px] text-honey/80 hover:text-honey transition-colors">
-              Details <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
-          {!pts || pts.programs.length === 0 ? (
-            <p className="px-5 py-10 text-[12px] text-ink-tertiary text-center">
-              No points data available
-            </p>
-          ) : (
-            <div className="divide-y divide-white/[0.04]">
-              {pts.programs.map((p) => (
-                <div key={p.program} className="px-5 py-3 flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-[13px] text-ink-primary font-medium">{p.program}</p>
-                      {p.above_threshold && (
-                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-honey/[0.12] text-honey border border-honey/20">
-                          REDEEM
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-ink-tertiary font-mono mt-0.5">
-                      {Math.round(p.points_earned_90d).toLocaleString()} pts · 90-day
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[13px] font-mono font-semibold text-semantic-income tabular-nums">
-                      ≈ {fmt(p.estimated_value_dollars)}
-                    </p>
-                  </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[13px] font-mono font-semibold text-semantic-income tabular-nums">
+                    ≈ {fmt(p.estimated_value_dollars)}
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
-          <div className="px-4 py-3 hive-divider">
-            <Link href="/optimize" className="hive-btn-primary w-full text-[12px] py-2.5">
-              <Zap className="w-3.5 h-3.5" />
-              Card optimizer
-            </Link>
+              </div>
+            ))}
           </div>
+        )}
+        <div className="px-4 py-3 hive-divider">
+          <Link href="/optimize" className="hive-btn-primary w-full text-[12px] py-2.5">
+            <Zap className="w-3.5 h-3.5" />
+            Card optimizer
+          </Link>
         </div>
-
       </div>
+
     </div>
   );
 }
