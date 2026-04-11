@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "tailwind-merge": "^3.5.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.2"
+  }
+}
