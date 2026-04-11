@@ -1,4 +1,5 @@
 {
+  "name": "hive",
   "dependencies": {
     "tailwind-merge": "^3.5.0"
   },
