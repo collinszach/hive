@@ -25,22 +25,23 @@ const PAGES = [
   { route: "/chat",          file: "chat.png",           label: "AI Chat"          },
 ];
 
-async function installRoutes(page) {
-  await page.route("**/api/**", async (route) => {
-    const url = new URL(route.request().url());
-    const fixture = getFixture(url.pathname, url.searchParams);
-
-    if (fixture !== null) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(fixture),
-      });
-    } else {
-      // Non-API or unmatched — fulfill with empty 200 to avoid errors
-      await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
-    }
+async function handleApiRoute(route) {
+  const url = new URL(route.request().url());
+  const fixture = getFixture(url.pathname, url.searchParams);
+  await route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify(fixture ?? {}),
   });
+}
+
+async function installRoutes(page) {
+  // Intercept API calls regardless of whether they go through the Next.js dev
+  // server, nginx, or directly to the FastAPI backend — this ensures no real
+  // personal data leaks into the screenshots.
+  await page.route("**/api/**", handleApiRoute);
+  await page.route("http://127.0.0.1:8000/**", handleApiRoute);
+  await page.route("http://localhost:8000/**", handleApiRoute);
 }
 
 async function screenshotPage(page, route, file, label) {
