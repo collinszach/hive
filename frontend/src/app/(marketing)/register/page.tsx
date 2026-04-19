@@ -89,7 +89,7 @@ export default function RegisterPage() {
   const [error, setError]               = useState("");
 
   useEffect(() => {
-    if (getToken()) { router.replace("/"); return; }
+    if (getToken()) { router.replace("/dashboard"); return; }
     fetch("/api/auth/setup-required")
       .then((r) => r.json())
       .then((d) => {

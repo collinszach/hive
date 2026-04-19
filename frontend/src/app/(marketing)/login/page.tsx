@@ -23,7 +23,7 @@ export default function LoginPage() {
       .catch(() => {});
 
     fetch("/api/auth/me", { credentials: "include" })
-      .then((r) => { if (r.ok) router.replace("/"); })
+      .then((r) => { if (r.ok) router.replace("/dashboard"); })
       .catch(() => {});
   }, [router]);
 
@@ -41,7 +41,7 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail ?? "Login failed");
       if (data.totp_required) { setStep("totp"); return; }
-      router.replace("/");
+      router.replace("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -62,7 +62,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail ?? "Invalid MFA code");
-      router.replace("/");
+      router.replace("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Invalid MFA code");
       setTotpCode("");
