@@ -65,7 +65,7 @@ _RAW_RULES = [
     (r"tesla supercharger|blink charging|chargepoint|evgo|electrify america|volta charging", "Transportation", "EV Charging"),
 
     # Transit
-    (r"mta|cta|bart|wmata|metro(?:card)?|clipper card|transit(?! delivery)|septa|mbta|marta|link light rail|trimet", "Transportation", "Transit"),
+    (r"mta|cta|bart|wmata|metro(?:card)?(?! pcs)|clipper card|transit(?! delivery)|septa|mbta|marta|link light rail|trimet", "Transportation", "Transit"),
 
     # Parking
     (r"spothero|parkwhiz|parking meter|parkmobile|sp\+ parking|impark|laz parking", "Transportation", "Parking"),
@@ -88,8 +88,17 @@ _RAW_RULES = [
     # Pharmacy / Medical (broader)
     (r"urgent care|patient first|kaiser|labcorp|quest diagnostics|aetna|cigna payment|anthem", "Health", "Medical"),
 
-    # Dental / Vision
-    (r"dental|orthodont|aspen dental|smile direct|americas best|lenscrafters|visionworks", "Health", "Dental"),
+    # Dental
+    (r"dental|orthodont|aspen dental|smile direct|smile generation", "Health", "Dental"),
+
+    # Vision
+    (r"lenscrafters|visionworks|warby parker|americas best.*vision|clearly contacts|eyeglass world|pearle vision", "Health", "Vision"),
+
+    # Car Rental — completely absent from Stage 1
+    (r"hertz|enterprise rent|avis budget|budget car|national car|alamo rent|sixt rent|thrifty car|dollar rent", "Travel", "Car Rental"),
+
+    # Auto Service — in taxonomy but no rule
+    (r"jiffy lube|oil change|midas auto|maaco|pep boys|autozone|o.reilly auto|napa auto|advance auto|firestone|discount tire|goodyear tire|valvoline|grease monkey", "Transportation", "Auto Service"),
 
     # Streaming gaming / subscriptions
     (r"xbox game pass|playstation plus|nintendo eshop|steam purchase|epic games", "Entertainment", "Gaming"),
@@ -126,10 +135,10 @@ _RAW_RULES = [
     (r"wayfair|ikea|crate and barrel|pottery barn|west elm|restoration hardware|overstock", "Home", "Furniture"),
 
     # Restaurants (broad catch-all — after fast food, delivery, coffee)
-    (r"restaurant|bistro|grill|kitchen|cafe|eatery|dining|sushi|ramen|thai|indian|italian|mexican|mediterranean|tavern|pub |brewery|pizza|taqueria|barbeque|bbq|steakhouse|diner", "Food & Drink", "Restaurant"),
+    (r"restaurant|bistro|grill|kitchen|cafe|eatery|dining|sushi|ramen|thai|indian|italian|mexican|mediterranean|tavern|\bpub\b|brewery|pizza|taqueria|barbeque|bbq|steakhouse|diner", "Food & Drink", "Restaurant"),
 
     # Bars
-    (r"bar |nightclub|lounge |cocktail|wine bar|taproom", "Food & Drink", "Bar"),
+    (r"\bbar\b|nightclub|\blounge\b|cocktail|wine bar|taproom|speakeasy", "Food & Drink", "Bar"),
 
     # General bank / wire transfers
     (r"online transfer|ach transfer|wire transfer|bank transfer|transfer to |transfer from |deposit transfer|external transfer|internal transfer|zelle payment", "Transfers", "Payment"),
@@ -171,15 +180,37 @@ Business → Office, Software, Advertising
 Uncategorized → (fallback only)
 """.strip()
 
-_OLLAMA_PROMPT_TEMPLATE = """You are a financial transaction categorizer. Categorize this transaction.
+_OLLAMA_PROMPT_TEMPLATE = """You are a financial transaction categorizer for a personal finance app. Assign EXACTLY one category and subcategory from the list below.
 
-Categories:
+RULES:
+- Only output valid category/subcategory pairs from this list. Never invent new ones.
+- If uncertain, use "Uncategorized" rather than guessing wrong.
+- Ignore payment processor prefixes like "SQ *", "TST*", "SP *", "PP.", "AMZN MKTP".
+- "TRANSFER", "PAYMENT", "ACH" in the description → Transfers / Payment.
+
+CATEGORIES (Category → allowed Subcategories):
 {categories}
 
+EXAMPLES:
+Transaction: "SQ *BLUE BOTTLE COFFEE" → {{"category": "Food & Drink", "subcategory": "Coffee"}}
+Transaction: "DOORDASH*CHIPOTLE" → {{"category": "Food & Drink", "subcategory": "Delivery"}}
+Transaction: "WHOLEFDS #00512" → {{"category": "Groceries", "subcategory": "In-Store"}}
+Transaction: "NETFLIX.COM" → {{"category": "Entertainment", "subcategory": "Streaming"}}
+Transaction: "HERTZ #00123 SAN FRANCISCO" → {{"category": "Travel", "subcategory": "Car Rental"}}
+Transaction: "JIFFY LUBE #1234" → {{"category": "Transportation", "subcategory": "Auto Service"}}
+Transaction: "UNKNOWN MERCHANT XYZ" → {{"category": "Uncategorized", "subcategory": "Uncategorized"}}
+
+Now categorize:
 Transaction: "{description}"
 
 Reply with ONLY a JSON object like: {{"category": "Food & Drink", "subcategory": "Restaurant"}}
-No explanation. No markdown. Just JSON."""
+No explanation. No markdown. Just the JSON object."""
+
+_CLAUDE_SYSTEM_PROMPT = (
+    "You are a financial transaction categorizer. "
+    "Reply with ONLY a JSON object {\"category\": \"...\", \"subcategory\": \"...\"}. "
+    "Use only the taxonomy provided. If uncertain, return Uncategorized/Uncategorized."
+)
 
 
 def _categorize_with_ollama(description: str) -> Optional[tuple[str, str]]:
@@ -221,14 +252,16 @@ def _categorize_with_claude(description: str) -> Optional[tuple[str, str]]:
         import anthropic
 
         client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        prompt = _OLLAMA_PROMPT_TEMPLATE.format(
-            categories=_CATEGORIES,
-            description=description,
+        user_content = (
+            f"Categories:\n{_CATEGORIES}\n\n"
+            f"Transaction: \"{description}\"\n\n"
+            "Reply with ONLY a JSON object."
         )
         response = client.messages.create(
-            model="claude-haiku-4-5",
-            max_tokens=128,
-            messages=[{"role": "user", "content": prompt}],
+            model="claude-haiku-4-5-20251001",
+            max_tokens=64,
+            system=_CLAUDE_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_content}],
         )
         raw = response.content[0].text.strip()
         if raw.startswith("```"):

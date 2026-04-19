@@ -354,7 +354,8 @@ async def chat(body: ChatRequest, db: AsyncSession = Depends(get_db)) -> ChatRes
     if body.conversation_history:
         for msg in body.conversation_history[-10:]:
             if msg.get("role") in ("user", "assistant") and msg.get("content"):
-                messages.append({"role": msg["role"], "content": msg["content"]})
+                content = str(msg["content"])[:4000]  # cap per-message length
+                messages.append({"role": msg["role"], "content": content})
     messages.append({"role": "user", "content": body.message})
 
     if body.use_claude:

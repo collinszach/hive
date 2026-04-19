@@ -158,7 +158,7 @@ async def register(body: RegisterRequest, request: Request, response: Response, 
         path="/",
         max_age=60 * 60 * 12,  # 12 hours — matches ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    return LoginResponse(access_token=token, totp_required=False, username=user.username, role=user.role)
+    return LoginResponse(access_token="", totp_required=False, username=user.username, role=user.role)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -200,7 +200,7 @@ async def login(body: LoginRequest, request: Request, response: Response, db: As
         path="/",
         max_age=60 * 60 * 12,  # 12 hours — matches ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    return LoginResponse(access_token=token, totp_required=False, username=user.username, role=user.role)
+    return LoginResponse(access_token="", totp_required=False, username=user.username, role=user.role)
 
 
 @router.post("/logout")

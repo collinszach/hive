@@ -37,6 +37,18 @@ _AUTOPAY_PATTERNS = re.compile(
 )
 
 
+def classify_transfer_subcategory(description: str) -> str:
+    """
+    Determine the subcategory for a transaction already identified as a transfer.
+    Returns one of: 'P2P', 'Payment', 'Refund'.
+    """
+    if _P2P_PATTERNS.search(description):
+        return "P2P"
+    if _AUTOPAY_PATTERNS.search(description):
+        return "Payment"
+    return "Payment"
+
+
 def is_transfer(description: str) -> tuple[bool, bool]:
     """
     Check if a transaction is a transfer that should be excluded from analytics.

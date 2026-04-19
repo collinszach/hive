@@ -54,11 +54,14 @@ async def plaid_webhook(
       TRANSACTIONS / TRANSACTIONS_REMOVED → transactions removed
       ITEM / ERROR                       → item needs re-linking
     """
-    # Verify webhook secret if configured
-    if settings.plaid_webhook_secret:
-        if token != settings.plaid_webhook_secret:
-            logger.warning("Webhook request with invalid or missing token")
-            raise HTTPException(status_code=401, detail="Unauthorized")
+    # Verify webhook secret — fail closed: if no secret is configured, reject all requests.
+    # TODO: implement full Plaid-Verification JWT header verification using Plaid's JWKS endpoint.
+    if not settings.plaid_webhook_secret:
+        logger.error("PLAID_WEBHOOK_SECRET is not set — rejecting webhook to prevent unauthenticated access")
+        raise HTTPException(status_code=503, detail="Webhook not configured")
+    if token != settings.plaid_webhook_secret:
+        logger.warning("Webhook request with invalid or missing token")
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
     body = await request.body()
 
