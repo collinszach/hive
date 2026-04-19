@@ -110,31 +110,6 @@ services:
         max-size: "20m"
         max-file: "5"
 
-  frontend:
-    build: ./frontend
-    network_mode: host
-    env_file: .env
-    environment:
-      NEXT_PUBLIC_API_URL: "http://127.0.0.1:8005"
-      BACKEND_URL: "http://127.0.0.1:8005"
-      PORT: "3001"
-      HOSTNAME: "127.0.0.1"
-    depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O/dev/null http://127.0.0.1:3001 || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-
   nginx:
     image: nginx:alpine
     network_mode: host
@@ -143,7 +118,6 @@ services:
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - backend
-      - frontend
     restart: unless-stopped
     logging:
       driver: "json-file"
