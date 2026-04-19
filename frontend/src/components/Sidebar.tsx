@@ -33,7 +33,7 @@ const NAV_GROUPS = [
     id: "home",
     label: null,
     items: [
-      { href: "/",            label: "Dashboard",     icon: LayoutDashboard, exact: true  },
+      { href: "/dashboard",    label: "Dashboard",     icon: LayoutDashboard, exact: true  },
     ],
   },
   {
@@ -165,7 +165,7 @@ export function Sidebar() {
         className="relative px-4 pt-5 pb-4"
         style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
       >
-        <Link href="/" className="flex items-center gap-3 group">
+        <Link href="/dashboard" className="flex items-center gap-3 group">
           {/* Honeycomb hex mark */}
           <div
             className="relative w-9 h-9 shrink-0 flex items-center justify-center rounded-[10px]"
