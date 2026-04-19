@@ -41,7 +41,7 @@ export const toast = {
 
 const TYPE_CONFIG: Record<
   ToastType,
-  { color: string; Icon: React.ComponentType<{ size?: number; color?: string }> }
+  { color: string; Icon: React.ComponentType<{ size?: number | string; color?: string }> }
 > = {
   success: { color: "#34D399", Icon: CheckCircle2 },
   error:   { color: "#F87171", Icon: XCircle },
