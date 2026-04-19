@@ -5,13 +5,14 @@ from typing import Optional
 
 import anthropic
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.db import get_db
+from app.gates import _get_request_user
 from app.models.account import Account
 from app.models.anomaly import Anomaly
 from app.models.budget import Budget
@@ -335,12 +336,28 @@ async def _chat_with_claude(
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(body: ChatRequest, db: AsyncSession = Depends(get_db)) -> ChatResponse:
+async def chat(
+    body: ChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> ChatResponse:
     """
     AI financial Q&A. Routes to Ollama (local) by default; Claude Sonnet when use_claude=True.
+    Claude requires the Pro plan (or admin role); otherwise returns 402.
     """
     if not body.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    # Gate Claude behind Pro plan
+    if body.use_claude:
+        from app.models.user import PlanTier, UserRole
+        user = await _get_request_user(request, db)
+        if user.role != UserRole.admin and user.plan != PlanTier.pro:
+            raise HTTPException(
+                status_code=402,
+                detail="Claude AI requires the Pro plan.",
+                headers={"X-Gate": "claude"},
+            )
 
     try:
         financial_context = await _build_financial_context(db)

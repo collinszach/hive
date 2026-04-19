@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <!-- Rounded square background: dark #09090E -->
+  <rect width="180" height="180" rx="40" ry="40" fill="#09090E"/>
+  <!-- Outer honeycomb hex: honey amber #F5B942 -->
+  <polygon
+    points="90,28 134,52 134,100 90,124 46,100 46,52"
+    fill="#F5B942"
+  />
+  <!-- Inner hex: darker amber #C9920E -->
+  <polygon
+    points="90,44 120,62 120,98 90,116 60,98 60,62"
+    fill="#C9920E"
+  />
+  <!-- Center dot: white -->
+  <circle cx="90" cy="80" r="14" fill="#FFFFFF"/>
+</svg>

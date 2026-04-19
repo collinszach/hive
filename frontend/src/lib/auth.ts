@@ -28,5 +28,17 @@ export async function authedFetch(path: string, init: RequestInit = {}): Promise
   if (res.status === 401) {
     window.location.href = "/login";
   }
+  if (res.status === 402) {
+    // Clone so the caller can still read the body if needed
+    const cloned = res.clone();
+    try {
+      const body = await cloned.json() as { gate?: string };
+      const gate = body.gate ?? "plaid";
+      window.dispatchEvent(new CustomEvent("upgrade-required", { detail: { gate } }));
+    } catch {
+      window.dispatchEvent(new CustomEvent("upgrade-required", { detail: { gate: "plaid" } }));
+    }
+    // Return as-is so callers can check res.status / res.ok
+  }
   return res;
 }

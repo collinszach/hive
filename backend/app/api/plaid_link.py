@@ -3,14 +3,16 @@ import logging
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
+from app.gates import check_plaid_limit, require_plaid
 from app.models.account import Account
 from app.models.plaid_link import PlaidLink
+from app.models.user import User
 from app.plaid.connector import plaid_connector
 
 logger = logging.getLogger(__name__)
@@ -34,7 +36,11 @@ class ExchangeTokenResponse(BaseModel):
 
 
 @router.post("/link-token", response_model=LinkTokenResponse)
-async def create_link_token(db: AsyncSession = Depends(get_db)) -> LinkTokenResponse:
+async def create_link_token(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_plaid),
+) -> LinkTokenResponse:
     """Create a Plaid Link token to initialize the Link flow in the frontend."""
     try:
         # Use a fixed user_id for single-user self-hosted setup
@@ -72,12 +78,16 @@ async def trigger_apply_rules() -> dict:
 @router.post("/exchange-token", response_model=ExchangeTokenResponse)
 async def exchange_token(
     body: ExchangeTokenRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_plaid),
 ) -> ExchangeTokenResponse:
     """
     Exchange a public token from Plaid Link for an access token.
     Creates PlaidLink record and Account records for all linked accounts.
     """
+    await check_plaid_limit(user, db)
+
     try:
         access_token, item_id = plaid_connector.exchange_public_token(body.public_token)
     except Exception as exc:

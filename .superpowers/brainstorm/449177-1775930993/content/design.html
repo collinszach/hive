@@ -1,0 +1,77 @@
+<h2>Screenshot Script Design</h2>
+<p class="subtitle">Option A — Playwright with network interception</p>
+
+<div class="section">
+  <h3>Output</h3>
+  <p>12 PNG screenshots saved to <code>screenshots/</code> at the project root, at <strong>1440×900</strong> viewport (standard laptop). Each page is fully rendered before capture.</p>
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem">
+    <span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:0.82rem;font-family:monospace">dashboard.png</span>
+    <span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:0.82rem;font-family:monospace">transactions.png</span>
+    <span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:0.82rem;font-family:monospace">cash-flow.png</span>
+    <span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:0.82rem;font-family:monospace">points.png</span>
+    <span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:0.82rem;font-family:monospace">optimize.png</span>
+    <span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:0.82rem;font-family:monospace">net-worth.png</span>
+    <span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:0.82rem;font-family:monospace">anomalies.png</span>
+    <span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:0.82rem;font-family:monospace">subscriptions.png</span>
+    <span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:0.82rem;font-family:monospace">goals.png</span>
+    <span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:0.82rem;font-family:monospace">reports.png</span>
+    <span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:0.82rem;font-family:monospace">merchants.png</span>
+    <span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:0.82rem;font-family:monospace">chat.png</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Two files</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.5rem">
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:1rem">
+      <div style="font-family:monospace;font-size:0.85rem;color:#f5b942;margin-bottom:0.5rem">scripts/demo-fixtures.js</div>
+      <p style="font-size:0.85rem;margin:0">All mock API responses — realistic fake data for every endpoint the app calls. Named "Alex Rivera", plausible amounts, no real info.</p>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:1rem">
+      <div style="font-family:monospace;font-size:0.85rem;color:#f5b942;margin-bottom:0.5rem">scripts/take-screenshots.js</div>
+      <p style="font-size:0.85rem;margin:0">Playwright script. Launches browser, installs route interceptors, navigates each page, waits for render, saves PNG.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Demo persona — "Alex Rivera"</h3>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-top:0.5rem">
+    <div style="background:rgba(50,213,131,0.06);border:1px solid rgba(50,213,131,0.15);border-radius:8px;padding:0.75rem;text-align:center">
+      <div style="font-size:1.3rem;font-weight:700;color:#34d399">$8,500</div>
+      <div style="font-size:0.78rem;color:#888">Monthly income</div>
+    </div>
+    <div style="background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.15);border-radius:8px;padding:0.75rem;text-align:center">
+      <div style="font-size:1.3rem;font-weight:700;color:#f87171">$3,240</div>
+      <div style="font-size:0.78rem;color:#888">Monthly spend</div>
+    </div>
+    <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.15);border-radius:8px;padding:0.75rem;text-align:center">
+      <div style="font-size:1.3rem;font-weight:700;color:#38bdf8">38%</div>
+      <div style="font-size:0.78rem;color:#888">Savings rate</div>
+    </div>
+    <div style="background:rgba(245,185,66,0.06);border:1px solid rgba(245,185,66,0.15);border-radius:8px;padding:0.75rem;text-align:center">
+      <div style="font-size:1.3rem;font-weight:700;color:#f5b942">$182,400</div>
+      <div style="font-size:0.78rem;color:#888">Net worth</div>
+    </div>
+    <div style="background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.15);border-radius:8px;padding:0.75rem;text-align:center">
+      <div style="font-size:1.3rem;font-weight:700;color:#a78bfa">4 cards</div>
+      <div style="font-size:0.78rem;color:#888">Linked (Amex, Chase, C1, Bilt)</div>
+    </div>
+    <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15);border-radius:8px;padding:0.75rem;text-align:center">
+      <div style="font-size:1.3rem;font-weight:700;color:#34d399">127k pts</div>
+      <div style="font-size:0.78rem;color:#888">Total points (~$2,400 value)</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>How it works</h3>
+  <ol style="padding-left:1.25rem;line-height:2">
+    <li>Script intercepts <code>/api/auth/me</code> → returns fake user, bypassing login redirect</li>
+    <li>All <code>/api/*</code> calls are routed to fixture data (no real backend traffic)</li>
+    <li>For each page: navigate → wait for network idle → wait 500ms for animations → screenshot</li>
+    <li>Screenshots saved to <code>screenshots/</code> with descriptive filenames</li>
+  </ol>
+</div>
+
+<p class="subtitle">Does this look right? Let me know in the terminal.</p>

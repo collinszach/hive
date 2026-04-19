@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     ntfy_url: str = ""
     ntfy_topic: str = "finance-alerts"
 
+    # Stripe (get from dashboard.stripe.com)
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_starter_price_id: str = ""
+    stripe_pro_price_id: str = ""
+
     @computed_field
     @property
     def database_url(self) -> str:

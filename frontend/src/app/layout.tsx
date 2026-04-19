@@ -3,6 +3,7 @@ import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 import { Toaster } from "@/components/Toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { UpgradeModalProvider } from "@/components/UpgradeModalProvider";
 
 export const metadata: Metadata = {
   title: "Hive — Personal Finance",
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </main>
         <Toaster />
+        <UpgradeModalProvider />
       </body>
     </html>
   );

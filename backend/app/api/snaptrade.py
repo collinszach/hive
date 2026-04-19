@@ -2,12 +2,13 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
+from app.gates import require_snaptrade
 from app.models.account import Account
 from app.models.user import User
 from app.snaptrade.connector import get_connector
@@ -34,7 +35,11 @@ class CallbackResponse(BaseModel):
 
 
 @router.post("/connect", response_model=ConnectResponse)
-async def snaptrade_connect(db: AsyncSession = Depends(get_db)) -> ConnectResponse:
+async def snaptrade_connect(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_snaptrade),
+) -> ConnectResponse:
     """
     Register this user with SnapTrade (if needed) and return an OAuth redirect URL.
     The frontend redirects the browser to this URL so the user can connect their brokerage.

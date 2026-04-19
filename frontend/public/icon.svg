@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Dark background square (for maskable safe zone) -->
+  <rect width="512" height="512" fill="#09090E"/>
+  <!-- Outer honeycomb hex: honey amber #F5B942 -->
+  <polygon
+    points="256,80 384,152 384,296 256,368 128,296 128,152"
+    fill="#F5B942"
+  />
+  <!-- Inner hex: darker amber #C9920E -->
+  <polygon
+    points="256,128 352,181.6 352,288.4 256,342 160,288.4 160,181.6"
+    fill="#C9920E"
+  />
+  <!-- Center dot: white -->
+  <circle cx="256" cy="235" r="38" fill="#FFFFFF"/>
+</svg>

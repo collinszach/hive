@@ -17,6 +17,12 @@ class UserRole(str, enum.Enum):
     viewer = "viewer"
 
 
+class PlanTier(str, enum.Enum):
+    free = "free"
+    starter = "starter"
+    pro = "pro"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -38,3 +44,15 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+    # Billing / plan fields
+    plan: Mapped[str] = mapped_column(
+        Enum(PlanTier, name="plan_tier", create_type=True),
+        nullable=False,
+        default=PlanTier.free,
+        server_default="free",
+    )
+    stripe_customer_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stripe_status: Mapped[str | None] = mapped_column(Text, nullable=True)
+    plan_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

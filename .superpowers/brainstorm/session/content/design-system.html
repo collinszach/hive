@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HIVE Design System — Section 1</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0C0A09;
+  color: #F2EDE8;
+  font-family: -apple-system, system-ui, sans-serif;
+  padding: 28px 24px 80px;
+  min-height: 100vh;
+}
+h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 4px; }
+.subtitle { font-size: 12px; color: #5E5850; margin-bottom: 24px; }
+.section { margin-bottom: 32px; }
+.section-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #F5B942; margin-bottom: 12px; padding-bottom: 6px;
+  border-bottom: 1px solid rgba(245,185,66,0.10);
+}
+
+/* ── Glass card variants ── */
+.card-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+.card-base {
+  border-radius: 14px; padding: 14px; position: relative; overflow: hidden;
+}
+.card-surface {
+  background: #100E0D;
+  border: 1px solid rgba(245,185,66,0.07);
+  background-image: linear-gradient(145deg, rgba(245,185,66,0.022) 0%, transparent 55%);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.7), 0 0 0 1px rgba(245,185,66,0.04);
+}
+.card-glass {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(20px);
+  background-image: linear-gradient(145deg, rgba(245,185,66,0.04) 0%, transparent 55%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.card-glass-income {
+  background: rgba(61,214,140,0.04);
+  border: 1px solid rgba(61,214,140,0.12);
+  backdrop-filter: blur(20px);
+  background-image: linear-gradient(145deg, rgba(61,214,140,0.06) 0%, transparent 55%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(61,214,140,0.06);
+}
+.card-glass-amber {
+  background: rgba(245,185,66,0.05);
+  border: 1px solid rgba(245,185,66,0.16);
+  backdrop-filter: blur(20px);
+  background-image: linear-gradient(145deg, rgba(245,185,66,0.08) 0%, transparent 55%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 20px rgba(245,185,66,0.08);
+}
+.card-glass-expense {
+  background: rgba(248,113,113,0.04);
+  border: 1px solid rgba(248,113,113,0.12);
+  backdrop-filter: blur(20px);
+  background-image: linear-gradient(145deg, rgba(248,113,113,0.06) 0%, transparent 55%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(248,113,113,0.06);
+}
+.card-lbl { font-size: 9px; color: #5E5850; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+.card-val { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; color: #F2EDE8; }
+.card-val-green { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; color: #3DD68C; }
+.card-val-amber { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; color: #F5B942; }
+.card-val-red { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; color: #F87171; }
+.card-sub { font-size: 10px; color: #5E5850; margin-top: 4px; }
+.card-tag {
+  position: absolute; top: 8px; right: 10px;
+  font-size: 8px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 4px;
+}
+.tag-before { background: rgba(245,185,66,0.08); color: #5E5850; border: 1px solid rgba(245,185,66,0.10); }
+.tag-new { background: rgba(245,185,66,0.14); color: #F5B942; border: 1px solid rgba(245,185,66,0.24); }
+.tag-tinted { background: rgba(61,214,140,0.10); color: #3DD68C; border: 1px solid rgba(61,214,140,0.18); }
+
+/* ── Ambient glow system ── */
+.glow-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.glow-swatch {
+  border-radius: 12px; padding: 14px 12px; text-align: center; position: relative; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: #100E0D;
+  min-height: 90px;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+}
+.glow-swatch::before {
+  content: '';
+  position: absolute;
+  top: -20px; left: 50%; transform: translateX(-50%);
+  width: 120%; height: 80px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.glow-dashboard::before { background: radial-gradient(ellipse, rgba(245,185,66,0.30) 0%, transparent 70%); }
+.glow-cashflow::before { background: radial-gradient(ellipse, rgba(61,214,140,0.28) 0%, transparent 70%); }
+.glow-expense::before { background: radial-gradient(ellipse, rgba(248,113,113,0.28) 0%, transparent 70%); }
+.glow-points::before { background: radial-gradient(ellipse, rgba(245,185,66,0.35) 0%, transparent 70%); }
+.glow-networth::before { background: radial-gradient(ellipse, rgba(56,189,248,0.28) 0%, transparent 70%); }
+.glow-name { font-size: 10px; color: #7A7268; margin-top: 8px; position: relative; }
+.glow-page { font-size: 8px; color: #4A4640; margin-top: 2px; position: relative; }
+
+/* ── Hero section pattern ── */
+.hero-demo {
+  border-radius: 14px; overflow: hidden;
+  border: 1px solid rgba(245,185,66,0.10);
+  position: relative;
+}
+.hero-band {
+  padding: 20px 20px 16px;
+  background: linear-gradient(180deg, rgba(245,185,66,0.07) 0%, transparent 100%);
+  position: relative;
+  border-bottom: 1px solid rgba(245,185,66,0.07);
+}
+.hero-band::before {
+  content: ''; position: absolute;
+  top: -50px; left: -30px;
+  width: 200px; height: 140px;
+  background: radial-gradient(ellipse, rgba(245,185,66,0.20) 0%, transparent 65%);
+  pointer-events: none;
+}
+.hero-eyebrow { font-size: 9px; color: #F5B942; text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 8px; position: relative; }
+.hero-number { font-size: 40px; font-weight: 800; letter-spacing: -0.04em; color: #F2EDE8; line-height: 1; position: relative; }
+.hero-number em { color: #F5B942; font-style: normal; }
+.hero-desc { font-size: 11px; color: #5E5850; margin-top: 6px; position: relative; }
+.hero-stats { display: grid; grid-template-columns: repeat(4, 1fr); }
+.h-stat { padding: 12px 16px; border-right: 1px solid rgba(245,185,66,0.06); }
+.h-stat:last-child { border-right: none; }
+.h-stat-lbl { font-size: 9px; color: #3A3630; text-transform: uppercase; letter-spacing: 0.08em; }
+.h-stat-val { font-size: 14px; font-weight: 600; color: #F2EDE8; margin-top: 3px; }
+
+/* ── Motion catalogue ── */
+.motion-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.motion-item {
+  background: #100E0D; border: 1px solid rgba(245,185,66,0.07); border-radius: 12px;
+  padding: 14px; text-align: center;
+}
+.motion-demo { height: 44px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+.motion-name { font-size: 10px; color: #7A7268; font-weight: 600; }
+.motion-desc { font-size: 9px; color: #3A3630; margin-top: 3px; line-height: 1.4; }
+/* live demos */
+@keyframes countUp { from { opacity:0; transform:translateY(8px) scale(0.95); } to { opacity:1; transform:none; } }
+@keyframes barGrow { from { width: 0; } to { width: var(--w); } }
+@keyframes glowPulse { 0%,100% { box-shadow:0 0 8px rgba(245,185,66,0.12); } 50% { box-shadow:0 0 24px rgba(245,185,66,0.38); } }
+@keyframes slideInRow { from { opacity:0; transform:translateX(-12px); } to { opacity:1; transform:none; } }
+@keyframes chartDraw {
+  0%   { stroke-dashoffset: 300; }
+  100% { stroke-dashoffset: 0; }
+}
+.demo-num {
+  font-size: 26px; font-weight: 700; color: #3DD68C; font-variant-numeric: tabular-nums;
+  animation: countUp 0.8s cubic-bezier(0.22,1,0.36,1) both;
+}
+.demo-num:hover { animation: countUp 0.8s cubic-bezier(0.22,1,0.36,1) both; }
+.demo-bar-wrap { width: 80%; }
+.demo-bar-track { height: 6px; background: rgba(245,185,66,0.08); border-radius: 9px; overflow: hidden; }
+.demo-bar-fill {
+  --w: 72%;
+  height: 100%; border-radius: 9px;
+  background: linear-gradient(90deg, #F5B942, #FFD166);
+  animation: barGrow 1.2s cubic-bezier(0.16,1,0.3,1) both;
+  animation-delay: 0.2s;
+}
+.demo-glow-box {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: rgba(245,185,66,0.10);
+  border: 1px solid rgba(245,185,66,0.20);
+  animation: glowPulse 2.4s ease-in-out infinite;
+}
+.demo-chart { width: 80px; height: 40px; }
+.demo-chart-line {
+  fill: none; stroke: #3DD68C; stroke-width: 2;
+  stroke-dasharray: 300;
+  animation: chartDraw 1.8s cubic-bezier(0.4,0,0.2,1) both;
+  animation-delay: 0.3s;
+}
+
+/* bottom bar */
+.bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(9,8,7,0.95); border-top: 1px solid rgba(245,185,66,0.10);
+  padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
+  backdrop-filter: blur(10px);
+}
+.bottom-hint { font-size: 12px; color: #5E5850; }
+.confirm-btn {
+  background: #F5B942; color: #090807; font-weight: 700; font-size: 12px;
+  border: none; border-radius: 8px; padding: 8px 18px; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(245,185,66,0.25);
+  transition: all 150ms ease;
+}
+.confirm-btn:hover { background: #FFD166; transform: translateY(-1px); }
+</style>
+</head>
+<body>
+
+<h2>Design System — Section 1 of 2</h2>
+<p class="subtitle">Core upgrades: glass cards · ambient glow · editorial heroes · motion catalogue</p>
+
+<!-- ── Card Variants ── -->
+<div class="section">
+  <div class="section-title">1.1 · Card Variants (Surface → Glass → Tinted Glass)</div>
+  <div class="card-row">
+
+    <div class="card-base card-surface">
+      <span class="card-tag tag-before">Current</span>
+      <div class="card-lbl">Net Cash</div>
+      <div class="card-val">$4,820</div>
+      <div class="card-sub">assets minus liabilities</div>
+    </div>
+
+    <div class="card-base card-glass">
+      <span class="card-tag tag-new">New · Glass</span>
+      <div class="card-lbl">Net Cash</div>
+      <div class="card-val">$4,820</div>
+      <div class="card-sub">assets minus liabilities</div>
+    </div>
+
+    <div class="card-base card-glass-income">
+      <span class="card-tag tag-tinted">Tinted · Income</span>
+      <div class="card-lbl">Net Cash</div>
+      <div class="card-val-green">$4,820</div>
+      <div class="card-sub">assets minus liabilities</div>
+    </div>
+
+    <div class="card-base card-glass-amber">
+      <div class="card-lbl">Points Value</div>
+      <div class="card-val-amber">$1,240</div>
+      <div class="card-sub">across 6 programs</div>
+    </div>
+
+    <div class="card-base card-glass-expense">
+      <div class="card-lbl">Credit Balances</div>
+      <div class="card-val-red">$2,840</div>
+      <div class="card-sub">across 6 cards</div>
+    </div>
+
+    <div class="card-base card-glass" style="border-color:rgba(56,189,248,0.12); background:rgba(56,189,248,0.03); box-shadow:0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(56,189,248,0.06);">
+      <div class="card-lbl">Net Worth</div>
+      <div class="card-val" style="color:#38BDF8">$124,000</div>
+      <div class="card-sub">↑ $2,340 this month</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Ambient Glow ── -->
+<div class="section">
+  <div class="section-title">1.2 · Per-Page Ambient Glow — Each page has a characteristic light source</div>
+  <div class="glow-grid">
+    <div class="glow-swatch glow-dashboard">
+      <div class="glow-name">Honey</div>
+      <div class="glow-page">Dashboard · Points · Optimizer</div>
+    </div>
+    <div class="glow-swatch glow-cashflow">
+      <div class="glow-name">Emerald</div>
+      <div class="glow-page">Cash Flow · Budgets · Goals</div>
+    </div>
+    <div class="glow-swatch glow-expense">
+      <div class="glow-name">Coral</div>
+      <div class="glow-page">Anomalies · Subscriptions</div>
+    </div>
+    <div class="glow-swatch glow-networth">
+      <div class="glow-name">Sky</div>
+      <div class="glow-page">Net Worth · Reports · Merchants</div>
+    </div>
+    <div class="glow-swatch" style="border-color:rgba(192,132,252,0.14);">
+      <div style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);width:120%;height:80px;border-radius:50%;background:radial-gradient(ellipse, rgba(192,132,252,0.28) 0%, transparent 70%);pointer-events:none;"></div>
+      <div class="glow-name">Violet</div>
+      <div class="glow-page">Chat · AI Insights</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Editorial Hero ── -->
+<div class="section">
+  <div class="section-title">1.3 · B-Style Editorial Hero Band (used on Dashboard, Cash Flow, Net Worth, Points)</div>
+  <div class="hero-demo">
+    <div class="hero-band">
+      <div class="hero-eyebrow">Dashboard · April 2026</div>
+      <div class="hero-number">$<em>847</em> <span style="font-size:18px;font-weight:400;color:#5E5850">safe to spend</span></div>
+      <div class="hero-desc">$2,340 remaining after bills · on track this month</div>
+    </div>
+    <div class="hero-stats" style="background:#100E0D;">
+      <div class="h-stat">
+        <div class="h-stat-lbl">Net Cash</div>
+        <div class="h-stat-val" style="color:#3DD68C">$4,820</div>
+      </div>
+      <div class="h-stat">
+        <div class="h-stat-lbl">Monthly Spend</div>
+        <div class="h-stat-val">$3,180</div>
+      </div>
+      <div class="h-stat">
+        <div class="h-stat-lbl">Points Value</div>
+        <div class="h-stat-val" style="color:#F5B942">$1,240</div>
+      </div>
+      <div class="h-stat">
+        <div class="h-stat-lbl">Savings Rate</div>
+        <div class="h-stat-val">38%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Motion Catalogue ── -->
+<div class="section">
+  <div class="section-title">1.4 · Motion Catalogue — All animations use spring easing, not linear</div>
+  <div class="motion-grid">
+    <div class="motion-item">
+      <div class="motion-demo"><div class="demo-num">$4,820</div></div>
+      <div class="motion-name">Count-Up</div>
+      <div class="motion-desc">KPI numbers animate in on page load. Hover to replay.</div>
+    </div>
+    <div class="motion-item">
+      <div class="motion-demo" style="flex-direction:column;gap:6px;width:100%;padding:0 10px;">
+        <div class="demo-bar-wrap"><div class="demo-bar-track"><div class="demo-bar-fill"></div></div></div>
+        <div class="demo-bar-wrap" style="--w:54%"><div class="demo-bar-track"><div class="demo-bar-fill" style="--w:54%;background:linear-gradient(90deg,#3DD68C,#26b57a);animation-delay:0.4s"></div></div></div>
+        <div class="demo-bar-wrap" style="--w:32%"><div class="demo-bar-track"><div class="demo-bar-fill" style="--w:32%;background:linear-gradient(90deg,#38BDF8,#0ea5e9);animation-delay:0.6s"></div></div></div>
+      </div>
+      <div class="motion-name">Bar Grow</div>
+      <div class="motion-desc">Progress bars and category bars grow in with stagger.</div>
+    </div>
+    <div class="motion-item">
+      <div class="motion-demo"><div class="demo-glow-box"></div></div>
+      <div class="motion-name">Glow Pulse</div>
+      <div class="motion-desc">Active/alert elements breathe with ambient glow.</div>
+    </div>
+    <div class="motion-item">
+      <div class="motion-demo">
+        <svg class="demo-chart" viewBox="0 0 80 40">
+          <polyline class="demo-chart-line"
+            points="0,35 12,28 24,30 36,18 48,20 60,10 72,14 80,8"/>
+        </svg>
+      </div>
+      <div class="motion-name">Chart Draw</div>
+      <div class="motion-desc">Line charts animate path drawing. Bars rise from baseline.</div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <span class="bottom-hint">Section 1 of 2 · Does this system look right?</span>
+  <button class="confirm-btn" onclick="confirm()">Looks good →</button>
+</div>
+
+<script>
+function confirm() {
+  fetch('/events', {method:'POST', body: JSON.stringify({type:'click',choice:'confirm-section1',text:'Section 1 approved',timestamp:Date.now()})});
+  document.querySelector('.confirm-btn').textContent = '✓ Approved';
+  document.querySelector('.confirm-btn').style.background = '#3DD68C';
+}
+</script>
+
+</body>
+</html>

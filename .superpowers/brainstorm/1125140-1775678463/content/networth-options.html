@@ -1,0 +1,121 @@
+<h2>Net Worth in the Graph — How should it appear?</h2>
+<p class="subtitle">Pick the approach that matches what you had in mind.</p>
+
+<div class="options">
+
+  <div class="option" data-choice="ring" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Summary ring on the graph</h3>
+      <p>A static "Net Worth" ring node lives in the graph alongside accounts. Shows total + assets vs liabilities breakdown as a donut. Clicking it expands to show each account's contribution.</p>
+      <div style="margin-top: 10px; background: #0a0a0c; border-radius: 8px; padding: 12px;">
+        <svg viewBox="0 0 220 100" width="100%" style="display:block;">
+          <!-- accounts -->
+          <circle cx="40" cy="50" r="16" fill="#0f1f2a" stroke="#38BDF8" stroke-width="1.2"/>
+          <text x="40" y="47" text-anchor="middle" fill="#38BDF8" font-size="6">CHK</text>
+          <text x="40" y="56" text-anchor="middle" fill="#38BDF8" font-size="6.5" font-weight="700">$4.2k</text>
+          <circle cx="85" cy="30" r="12" fill="#0f201a" stroke="#32D583" stroke-width="1"/>
+          <text x="85" y="27" text-anchor="middle" fill="#32D583" font-size="5.5">SAV</text>
+          <text x="85" y="36" text-anchor="middle" fill="#32D583" font-size="6" font-weight="700">$12.8k</text>
+          <circle cx="85" cy="72" r="10" fill="#130f25" stroke="#7C6AFA" stroke-width="1"/>
+          <text x="85" y="76" text-anchor="middle" fill="#7C6AFA" font-size="6" font-weight="700">AMEX</text>
+          <!-- net worth donut ring node -->
+          <circle cx="160" cy="50" r="32" fill="#111118" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+          <!-- donut segments (assets green, liabilities red) -->
+          <circle cx="160" cy="50" r="20" fill="none" stroke="#32D583" stroke-width="8" stroke-dasharray="90 36" stroke-dashoffset="0" opacity="0.7"/>
+          <circle cx="160" cy="50" r="20" fill="none" stroke="#F97066" stroke-width="8" stroke-dasharray="36 90" stroke-dashoffset="-90" opacity="0.6"/>
+          <text x="160" y="47" text-anchor="middle" fill="#F5F5F7" font-size="7.5" font-weight="700">NET</text>
+          <text x="160" y="57" text-anchor="middle" fill="#F5F5F7" font-size="7" font-weight="700">$61k</text>
+          <!-- edges -->
+          <line x1="56" y1="50" x2="128" y2="50" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <line x1="56" y1="44" x2="97" y2="32" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+          <line x1="56" y1="56" x2="75" y2="68" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="sidebar" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Graph + sidebar breakdown</h3>
+      <p>The graph shows accounts as nodes. A fixed panel to the right of the graph shows assets / liabilities / net worth with a bar breakdown. The two stay in sync — clicking an account node highlights it in both.</p>
+      <div style="margin-top: 10px; background: #0a0a0c; border-radius: 8px; padding: 12px; display: flex; gap: 10px;">
+        <svg viewBox="0 0 120 90" width="120" style="display:block; flex-shrink: 0;">
+          <circle cx="35" cy="45" r="18" fill="#0f1f2a" stroke="#38BDF8" stroke-width="1.5"/>
+          <text x="35" y="42" text-anchor="middle" fill="#38BDF8" font-size="6">CHK</text>
+          <text x="35" y="51" text-anchor="middle" fill="#38BDF8" font-size="7" font-weight="700">$4.2k</text>
+          <circle cx="80" cy="22" r="13" fill="#0f201a" stroke="#32D583" stroke-width="1"/>
+          <text x="80" y="25" text-anchor="middle" fill="#32D583" font-size="6.5" font-weight="700">SAV</text>
+          <circle cx="85" cy="62" r="10" fill="#130f25" stroke="#7C6AFA" stroke-width="1"/>
+          <text x="85" y="65" text-anchor="middle" fill="#7C6AFA" font-size="6" font-weight="700">AMEX</text>
+          <line x1="53" y1="38" x2="67" y2="26" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <line x1="53" y1="52" x2="75" y2="60" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        </svg>
+        <div style="flex: 1; font-size: 8px; color: #6b6b73; line-height: 1.8;">
+          <div style="color: #9999a8; font-weight: 600; margin-bottom: 4px; font-size: 8px;">NET WORTH · $61,200</div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+            <span style="color: #32D583;">▲ Assets</span>
+            <div style="flex:1; height:4px; background:rgba(255,255,255,0.06); border-radius:2px;"><div style="width:76%; height:100%; background:#32D583; border-radius:2px; opacity:0.7;"></div></div>
+            <span style="color: #32D583;">$64k</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="color: #F97066;">▼ Debt</span>
+            <div style="flex:1; height:4px; background:rgba(255,255,255,0.06); border-radius:2px;"><div style="width:4%; height:100%; background:#F97066; border-radius:2px; opacity:0.7;"></div></div>
+            <span style="color: #F97066;">$2.8k</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="layers" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Layered graph — assets left, liabilities right</h3>
+      <p>Graph is organized left-to-right: income → deposits/savings (assets column) → credit cards (liabilities column). Net worth shown as a floating label at the top. Visual layout makes the balance sheet immediately obvious.</p>
+      <div style="margin-top: 10px; background: #0a0a0c; border-radius: 8px; padding: 12px;">
+        <svg viewBox="0 0 220 95" width="100%" style="display:block;">
+          <!-- net worth label at top -->
+          <text x="110" y="12" text-anchor="middle" fill="#F5F5F7" font-size="7.5" font-weight="700">Net Worth $61,200</text>
+          <text x="75" y="12" text-anchor="middle" fill="#32D583" font-size="7" opacity="0.7">ASSETS</text>
+          <text x="160" y="12" text-anchor="middle" fill="#F97066" font-size="7" opacity="0.7">LIABILITIES</text>
+
+          <!-- divider -->
+          <line x1="110" y1="16" x2="110" y2="95" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="3 3"/>
+
+          <!-- assets column -->
+          <circle cx="30" cy="55" r="14" fill="#111820" stroke="#32D583" stroke-width="1.2"/>
+          <text x="30" y="52" text-anchor="middle" fill="#32D583" font-size="5.5">INC</text>
+          <text x="30" y="61" text-anchor="middle" fill="#32D583" font-size="6" font-weight="700">+$8.4k</text>
+
+          <circle cx="80" cy="40" r="13" fill="#0f1f2a" stroke="#38BDF8" stroke-width="1.2"/>
+          <text x="80" y="37" text-anchor="middle" fill="#38BDF8" font-size="5.5">CHK</text>
+          <text x="80" y="46" text-anchor="middle" fill="#38BDF8" font-size="6.5" font-weight="700">$4.2k</text>
+
+          <circle cx="80" cy="72" r="11" fill="#0f201a" stroke="#32D583" stroke-width="1"/>
+          <text x="80" y="69" text-anchor="middle" fill="#32D583" font-size="5.5">SAV</text>
+          <text x="80" y="78" text-anchor="middle" fill="#32D583" font-size="6.5" font-weight="700">$12.8k</text>
+
+          <!-- liabilities column -->
+          <circle cx="145" cy="38" r="11" fill="#1a160a" stroke="#FBBF24" stroke-width="1"/>
+          <text x="145" y="41" text-anchor="middle" fill="#FBBF24" font-size="6" font-weight="700">AMEX</text>
+
+          <circle cx="170" cy="58" r="10" fill="#0a0f1a" stroke="#7C6AFA" stroke-width="1"/>
+          <text x="170" y="61" text-anchor="middle" fill="#7C6AFA" font-size="6" font-weight="700">CSP</text>
+
+          <circle cx="155" cy="78" r="9" fill="#140a1a" stroke="#C084FC" stroke-width="1"/>
+          <text x="155" y="81" text-anchor="middle" fill="#C084FC" font-size="5.5" font-weight="700">VX</text>
+
+          <!-- edges -->
+          <line x1="44" y1="52" x2="67" y2="43" stroke="#32D583" stroke-width="1.2" opacity="0.4"/>
+          <line x1="44" y1="58" x2="69" y2="68" stroke="#32D583" stroke-width="1" opacity="0.3"/>
+          <line x1="93" y1="43" x2="134" y2="40" stroke="#F97066" stroke-width="1" opacity="0.2"/>
+          <line x1="93" y1="47" x2="160" y2="56" stroke="#F97066" stroke-width="1" opacity="0.2"/>
+          <line x1="93" y1="50" x2="146" y2="73" stroke="#F97066" stroke-width="0.8" opacity="0.15"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+</div>

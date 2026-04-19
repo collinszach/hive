@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent } from "react";
-import { Shield, Key, Clock, User, CheckCircle, AlertCircle, Eye, EyeOff, QrCode, LogOut } from "lucide-react";
+import { Shield, Key, Clock, User, CheckCircle, AlertCircle, Eye, EyeOff, QrCode, LogOut, Users, ChevronDown } from "lucide-react";
 import { authedFetch, clearToken } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/GlassCard";
@@ -22,6 +22,17 @@ interface AuditEntry {
   created_at: string;
 }
 
+interface AdminUser {
+  id: string;
+  username: string;
+  role: "admin" | "viewer";
+  plan: "free" | "starter" | "pro";
+  stripe_status: string | null;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+}
+
 export default function AccountPage() {
   const router = useRouter();
   const [me, setMe] = useState<MeResponse | null>(null);
@@ -39,6 +50,10 @@ export default function AccountPage() {
   const [newPw, setNewPw] = useState("");
   const [showPw, setShowPw] = useState(false);
 
+  // Admin state
+  const [adminUsers, setAdminUsers] = useState<AdminUser[] | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
+
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -50,7 +65,17 @@ export default function AccountPage() {
   useEffect(() => {
     authedFetch("/api/auth/me")
       .then((r) => r.ok ? r.json() : Promise.reject())
-      .then(setMe)
+      .then((data: MeResponse) => {
+        setMe(data);
+        // Fetch admin users if role is admin
+        if (data.role === "admin") {
+          setAdminLoading(true);
+          authedFetch("/api/admin/users")
+            .then((r) => r.ok ? r.json() : [])
+            .then((users: AdminUser[]) => { setAdminUsers(users); setAdminLoading(false); })
+            .catch(() => { setAdminLoading(false); });
+        }
+      })
       .catch(() => router.push("/login"));
 
     authedFetch("/api/auth/audit-log?limit=50")
@@ -134,6 +159,17 @@ export default function AccountPage() {
   function handleLogout() {
     clearToken();
     router.push("/login");
+  }
+
+  async function patchUser(id: string, patch: Partial<{ role: "admin" | "viewer"; plan: "free" | "starter" | "pro"; is_active: boolean }>) {
+    const res = await authedFetch(`/api/admin/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) return;
+    const updated = await res.json() as AdminUser;
+    setAdminUsers((prev) => prev ? prev.map((u) => u.id === id ? updated : u) : prev);
   }
 
   const eventLabel: Record<string, string> = {
@@ -394,6 +430,135 @@ export default function AccountPage() {
           </div>
         )}
       </GlassCard>
+
+      {/* Admin: User Management — only visible to admins */}
+      {me?.role === "admin" && (
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-2.5 mb-4">
+            <Users className="w-4 h-4 text-ink-tertiary" />
+            <h2 className="text-[13px] font-semibold text-ink-primary">User Management</h2>
+            {adminUsers && (
+              <span className="ml-auto text-[11px] text-ink-tertiary">{adminUsers.length} users</span>
+            )}
+          </div>
+
+          {adminLoading ? (
+            <div className="space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-10 bg-white/[0.04] rounded-lg animate-pulse" />
+              ))}
+            </div>
+          ) : !adminUsers || adminUsers.length === 0 ? (
+            <p className="text-[13px] text-ink-tertiary">No users found.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="border-b border-white/[0.06]">
+                    <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider pr-4">User</th>
+                    <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider pr-4">Role</th>
+                    <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider pr-4">Plan</th>
+                    <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider pr-4">Status</th>
+                    <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider pr-4">Last Login</th>
+                    <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {adminUsers.map((user) => (
+                    <tr key={user.id} className="group">
+                      {/* Username */}
+                      <td className="py-2.5 pr-4">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-ink-primary">{user.username}</span>
+                          {user.stripe_status === "past_due" && (
+                            <span
+                              className="px-1.5 py-0.5 rounded text-[9px] font-bold"
+                              style={{ background: "rgba(248,113,113,0.12)", color: "#F87171", border: "1px solid rgba(248,113,113,0.2)" }}
+                            >
+                              PAST DUE
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Role dropdown */}
+                      <td className="py-2.5 pr-4">
+                        <div className="relative inline-flex items-center">
+                          <select
+                            value={user.role}
+                            onChange={(e) => patchUser(user.id, { role: e.target.value as "admin" | "viewer" })}
+                            className="appearance-none text-[11px] text-ink-secondary bg-transparent
+                                       border border-white/[0.08] rounded-lg px-2 py-1 pr-5
+                                       hover:border-white/[0.15] focus:outline-none cursor-pointer
+                                       focus:border-honey/30 transition-colors"
+                          >
+                            <option value="admin">Admin</option>
+                            <option value="viewer">Viewer</option>
+                          </select>
+                          <ChevronDown className="absolute right-1.5 w-2.5 h-2.5 text-ink-tertiary pointer-events-none" />
+                        </div>
+                      </td>
+
+                      {/* Plan dropdown */}
+                      <td className="py-2.5 pr-4">
+                        <div className="relative inline-flex items-center">
+                          <select
+                            value={user.plan}
+                            onChange={(e) => patchUser(user.id, { plan: e.target.value as "free" | "starter" | "pro" })}
+                            className="appearance-none text-[11px] text-ink-secondary bg-transparent
+                                       border border-white/[0.08] rounded-lg px-2 py-1 pr-5
+                                       hover:border-white/[0.15] focus:outline-none cursor-pointer
+                                       focus:border-honey/30 transition-colors"
+                          >
+                            <option value="free">Free</option>
+                            <option value="starter">Starter</option>
+                            <option value="pro">Pro</option>
+                          </select>
+                          <ChevronDown className="absolute right-1.5 w-2.5 h-2.5 text-ink-tertiary pointer-events-none" />
+                        </div>
+                      </td>
+
+                      {/* Active status */}
+                      <td className="py-2.5 pr-4">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                            user.is_active
+                              ? "bg-semantic-income/10 text-semantic-income border border-semantic-income/20"
+                              : "bg-ink-ghost/10 text-ink-tertiary border border-white/[0.06]"
+                          }`}
+                        >
+                          {user.is_active ? "Active" : "Disabled"}
+                        </span>
+                      </td>
+
+                      {/* Last login */}
+                      <td className="py-2.5 pr-4 font-mono text-ink-tertiary tabular-nums">
+                        {user.last_login_at
+                          ? new Date(user.last_login_at).toLocaleDateString()
+                          : "—"}
+                      </td>
+
+                      {/* Disable/Enable toggle */}
+                      <td className="py-2.5">
+                        <button
+                          onClick={() => patchUser(user.id, { is_active: !user.is_active })}
+                          className={`text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors ${
+                            user.is_active
+                              ? "text-semantic-expense hover:bg-semantic-expense/10 border border-semantic-expense/20"
+                              : "text-semantic-income hover:bg-semantic-income/10 border border-semantic-income/20"
+                          }`}
+                        >
+                          {user.is_active ? "Disable" : "Enable"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </GlassCard>
+      )}
     </div>
   );
 }

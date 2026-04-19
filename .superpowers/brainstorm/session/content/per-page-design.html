@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HIVE — Per-Page Design Assignments</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0A0C10;
+  color: #F0F0F4;
+  font-family: -apple-system, system-ui, "Inter", sans-serif;
+  padding: 28px 24px 80px;
+  min-height: 100vh;
+}
+h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 4px; }
+.subtitle { font-size: 12px; color: #4B5063; margin-bottom: 28px; }
+
+.page-group { margin-bottom: 36px; }
+.group-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex; align-items: center; gap: 10px;
+}
+.group-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Page grid */
+.page-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.page-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.page-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+.page-card {
+  border-radius: 14px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.05);
+  background: #111318;
+}
+.page-mini { height: 170px; position: relative; overflow: hidden; }
+.page-footer {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.page-name { font-size: 12px; font-weight: 600; color: #E0E0E8; }
+.page-desc { font-size: 10px; color: #4B5063; margin-top: 2px; line-height: 1.4; }
+
+/* treatment badges */
+.badge {
+  display: inline-block; font-size: 8px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-right: 4px; margin-top: 4px;
+}
+.badge-hero   { background: rgba(245,185,66,0.12); color: #F5B942; border: 1px solid rgba(245,185,66,0.20); }
+.badge-glass  { background: rgba(255,255,255,0.05); color: #9CA3AF; border: 1px solid rgba(255,255,255,0.08); }
+.badge-chart  { background: rgba(96,165,250,0.10); color: #60A5FA; border: 1px solid rgba(96,165,250,0.18); }
+.badge-motion { background: rgba(52,211,153,0.10); color: #34D399; border: 1px solid rgba(52,211,153,0.18); }
+.badge-table  { background: rgba(167,139,250,0.10); color: #A78BFA; border: 1px solid rgba(167,139,250,0.18); }
+.badge-drawer { background: rgba(251,146,60,0.10); color: #FB923C; border: 1px solid rgba(251,146,60,0.18); }
+
+/* ── reusable mini layout pieces ── */
+.mini-hero {
+  padding: 12px 12px 8px;
+  position: relative; overflow: hidden;
+}
+.mini-hero-eyebrow { font-size: 8px; text-transform: uppercase; letter-spacing: 0.12em; position: relative; margin-bottom: 4px; }
+.mini-hero-num { font-size: 28px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; position: relative; }
+.mini-hero-sub { font-size: 9px; color: #4B5063; position: relative; margin-top: 3px; }
+.mini-glow { position: absolute; top: -40px; left: -20px; width: 160px; height: 100px; border-radius: 50%; pointer-events: none; }
+.mini-stat-strip { display: flex; gap: 1px; background: rgba(255,255,255,0.04); }
+.mini-stat { flex: 1; padding: 7px 9px; background: #0F1117; }
+.mini-stat-lbl { font-size: 7px; text-transform: uppercase; letter-spacing: 0.08em; color: #374151; }
+.mini-stat-val { font-size: 11px; font-weight: 600; margin-top: 1px; }
+
+/* mini card grid inside page minis */
+.mini-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 7px; }
+.mini-card {
+  background: #161921; border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px; padding: 7px 9px;
+}
+.mini-card-lbl { font-size: 7px; color: #374151; text-transform: uppercase; letter-spacing: 0.07em; }
+.mini-card-val { font-size: 12px; font-weight: 600; color: #E0E0E8; margin-top: 2px; }
+.mini-bar-track { height: 2px; background: rgba(255,255,255,0.05); border-radius: 9px; margin-top: 4px; overflow: hidden; }
+.mini-bar-fill { height: 100%; border-radius: 9px; }
+
+/* mini chart */
+.mini-chart-area { padding: 8px 10px; flex: 1; }
+.mini-bars { display: flex; align-items: flex-end; gap: 3px; height: 52px; }
+.mini-bar-col { flex: 1; border-radius: 3px 3px 0 0; opacity: 0.85; }
+
+/* mini transaction rows */
+.mini-tx-rows { padding: 0 8px; }
+.mini-tx-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.mini-tx-icon { width: 22px; height: 22px; border-radius: 7px; background: #1C2030; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+.mini-tx-name { font-size: 10px; color: #9CA3AF; flex: 1; }
+.mini-tx-amt { font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* mini net worth line */
+.mini-nw-line { padding: 6px 10px; }
+.mini-sparkline { width: 100%; height: 44px; }
+
+/* mini chat */
+.mini-chat { padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+.chat-bubble {
+  max-width: 75%; padding: 6px 9px; border-radius: 10px; font-size: 9px; line-height: 1.4;
+}
+.chat-user { background: rgba(245,185,66,0.12); border: 1px solid rgba(245,185,66,0.18); color: #D4A820; align-self: flex-end; border-radius: 10px 10px 3px 10px; }
+.chat-ai { background: #161921; border: 1px solid rgba(255,255,255,0.06); color: #9CA3AF; align-self: flex-start; border-radius: 10px 10px 10px 3px; }
+.chat-ai-icon { width: 18px; height: 18px; border-radius: 6px; background: rgba(167,139,250,0.15); border: 1px solid rgba(167,139,250,0.25); display: flex; align-items: center; justify-content: center; font-size: 8px; }
+
+/* mini subscription rows */
+.mini-sub-rows { padding: 0 8px; }
+.mini-sub-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.mini-sub-icon { width: 22px; height: 22px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; font-weight: 700; color: #fff; }
+.mini-sub-name { font-size: 10px; color: #9CA3AF; flex: 1; }
+.mini-sub-amt { font-size: 10px; font-weight: 600; color: #F0F0F4; }
+.mini-sub-freq { font-size: 8px; color: #374151; }
+
+/* mini goals */
+.mini-goal-rows { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.mini-goal {
+  background: #161921; border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px; padding: 8px 10px;
+}
+.mini-goal-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.mini-goal-name { font-size: 10px; color: #9CA3AF; }
+.mini-goal-pct { font-size: 9px; font-weight: 600; }
+.mini-goal-bar-track { height: 3px; background: rgba(255,255,255,0.05); border-radius: 9px; overflow: hidden; }
+.mini-goal-bar-fill { height: 100%; border-radius: 9px; }
+
+/* anomaly alert */
+.mini-anomaly-row {
+  margin: 6px 8px;
+  background: rgba(248,113,113,0.06); border: 1px solid rgba(248,113,113,0.14);
+  border-radius: 8px; padding: 7px 10px;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.anomaly-dot { width: 7px; height: 7px; background: #F87171; border-radius: 50%; margin-top: 2px; flex-shrink: 0; }
+.anomaly-text { font-size: 9px; color: #F87171; line-height: 1.4; }
+
+/* bottom bar */
+.bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(10,12,16,0.96); border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
+  backdrop-filter: blur(10px);
+}
+.bottom-hint { font-size: 12px; color: #4B5063; }
+.confirm-btn {
+  background: #F5B942; color: #0A0C10; font-weight: 700; font-size: 12px;
+  border: none; border-radius: 8px; padding: 8px 20px; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(245,185,66,0.25); transition: all 150ms ease;
+}
+.confirm-btn:hover { background: #FCD34D; transform: translateY(-1px); }
+.confirm-btn.done { background: #34D399; color: #0A0C10; }
+</style>
+</head>
+<body>
+
+<h2>Per-Page Design Assignments — Section 2 of 2</h2>
+<p class="subtitle">Every page gets a role, a glow color, and a defined treatment. Nothing is generic.</p>
+
+<!-- ═══ GROUP 1: COMMAND CENTER ═══ -->
+<div class="page-group">
+  <div class="group-label">
+    <div class="group-dot" style="background:#F5B942"></div>
+    <span style="color:#F5B942">Command Center</span>
+    <span style="color:#374151">Honey glow · Editorial hero · Glass KPI cards</span>
+  </div>
+  <div class="page-grid" style="grid-template-columns:2fr 1fr 1fr">
+
+    <!-- Dashboard (full width-ish) -->
+    <div class="page-card">
+      <div class="page-mini" style="background:#0F1117;">
+        <div class="mini-hero" style="border-bottom:1px solid rgba(255,255,255,0.05); background:linear-gradient(160deg,rgba(245,185,66,0.07) 0%,transparent 60%);">
+          <div class="mini-glow" style="background:radial-gradient(ellipse,rgba(245,185,66,0.22) 0%,transparent 70%)"></div>
+          <div class="mini-hero-eyebrow" style="color:#F5B942">Dashboard · April 2026</div>
+          <div class="mini-hero-num" style="color:#F0F0F4">$<span style="color:#F5B942">847</span></div>
+          <div class="mini-hero-sub">safe to spend</div>
+        </div>
+        <div class="mini-stat-strip">
+          <div class="mini-stat"><div class="mini-stat-lbl">Net Cash</div><div class="mini-stat-val" style="color:#34D399">$4.8k</div></div>
+          <div class="mini-stat"><div class="mini-stat-lbl">Spent</div><div class="mini-stat-val">$3.1k</div></div>
+          <div class="mini-stat"><div class="mini-stat-lbl">Points</div><div class="mini-stat-val" style="color:#F5B942">$1.2k</div></div>
+        </div>
+        <div class="mini-card-grid">
+          <div class="mini-card"><div class="mini-card-lbl">Food &amp; Drink</div><div class="mini-card-val">$342</div><div class="mini-bar-track"><div class="mini-bar-fill" style="width:85%;background:linear-gradient(90deg,#F5B942,#FCD34D)"></div></div></div>
+          <div class="mini-card"><div class="mini-card-lbl">Groceries</div><div class="mini-card-val">$216</div><div class="mini-bar-track"><div class="mini-bar-fill" style="width:54%;background:linear-gradient(90deg,#059669,#34D399)"></div></div></div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="page-name">Dashboard</div>
+        <div><span class="badge badge-hero">Hero Band</span><span class="badge badge-glass">Glass KPIs</span><span class="badge badge-motion">Count-up</span></div>
+        <div class="page-desc">Safe-to-spend hero · stat strip · glass budget cards · recent tx</div>
+      </div>
+    </div>
+
+    <!-- Budgets -->
+    <div class="page-card">
+      <div class="page-mini" style="background:#0F1117;">
+        <div class="mini-hero" style="padding:10px 10px 6px; border-bottom:1px solid rgba(255,255,255,0.05); background:linear-gradient(160deg,rgba(52,211,153,0.07) 0%,transparent 60%);">
+          <div class="mini-glow" style="background:radial-gradient(ellipse,rgba(52,211,153,0.20) 0%,transparent 70%)"></div>
+          <div class="mini-hero-eyebrow" style="color:#34D399">Budgets · April</div>
+          <div class="mini-hero-num" style="font-size:22px;color:#F0F0F4">72% <span style="font-size:12px;font-weight:400;color:#4B5063">used</span></div>
+        </div>
+        <div style="padding:8px 8px 0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;padding:0 2px"><span style="font-size:9px;color:#6B7280">Food &amp; Drink</span><span style="font-size:9px;color:#F5B942;font-weight:600">85%</span></div>
+          <div class="mini-bar-track"><div class="mini-bar-fill" style="width:85%;background:linear-gradient(90deg,#F5B942,#FCD34D)"></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin:5px 0 4px;padding:0 2px"><span style="font-size:9px;color:#6B7280">Groceries</span><span style="font-size:9px;color:#34D399;font-weight:600">54%</span></div>
+          <div class="mini-bar-track"><div class="mini-bar-fill" style="width:54%;background:linear-gradient(90deg,#059669,#34D399)"></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin:5px 0 4px;padding:0 2px"><span style="font-size:9px;color:#6B7280">Travel</span><span style="font-size:9px;color:#F87171;font-weight:600">108%</span></div>
+          <div class="mini-bar-track"><div class="mini-bar-fill" style="width:100%;background:linear-gradient(90deg,#DC2626,#F87171)"></div></div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="page-name">Budgets</div>
+        <div><span class="badge badge-motion">Bar grow</span><span class="badge badge-glass">Glass rows</span></div>
+        <div class="page-desc">Emerald hero · animated thick bars · over-budget turns red</div>
+      </div>
+    </div>
+
+    <!-- Optimizer -->
+    <div class="page-card">
+      <div class="page-mini" style="background:#0F1117; padding:10px;">
+        <div style="background:rgba(245,185,66,0.06);border:1px solid rgba(245,185,66,0.14);border-radius:10px;padding:9px 10px;margin-bottom:7px;">
+          <div style="font-size:8px;color:#F5B942;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px">Best Card For…</div>
+          <div style="font-size:11px;color:#9CA3AF">Whole Foods · Groceries</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="background:#161921;border:1px solid rgba(52,211,153,0.18);border-radius:8px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:10px;color:#E0E0E8">Amex Gold</span>
+            <span style="font-size:10px;font-weight:700;color:#34D399">4× pts</span>
+          </div>
+          <div style="background:#161921;border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:10px;color:#6B7280">Chase Sapphire</span>
+            <span style="font-size:10px;color:#6B7280">1× pts</span>
+          </div>
+          <div style="background:#161921;border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:10px;color:#6B7280">Venture X</span>
+            <span style="font-size:10px;color:#6B7280">2× pts</span>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="page-name">Card Optimizer</div>
+        <div><span class="badge badge-glass">Ranked list</span><span class="badge badge-motion">Highlight best</span></div>
+        <div class="page-desc">Best card glows green · others are muted · instant results</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ GROUP 2: TRANSACTIONS ═══ -->
+<div class="page-group">
+  <div class="group-label">
+    <div class="group-dot" style="background:#A78BFA"></div>
+    <span style="color:#A78BFA">Transactions</span>
+    <span style="color:#374151">Neutral glow · Table rows · Slide-in drawer</span>
+  </div>
+  <div class="page-grid-2">
+
+    <!-- Transactions list -->
+    <div class="page-card">
+      <div class="page-mini" style="background:#0F1117;">
+        <div style="padding:8px 8px 4px; border-bottom:1px solid rgba(255,255,255,0.04);">
+          <div style="display:flex;gap:5px;">
+            <div style="background:#161921;border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:3px 8px;font-size:9px;color:#9CA3AF">All</div>
+            <div style="background:rgba(245,185,66,0.10);border:1px solid rgba(245,185,66,0.20);border-radius:6px;padding:3px 8px;font-size:9px;color:#F5B942">Food</div>
+            <div style="background:#161921;border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:3px 8px;font-size:9px;color:#9CA3AF">Travel</div>
+          </div>
+        </div>
+        <div class="mini-tx-rows">
+          <div class="mini-tx-row">
+            <div class="mini-tx-icon">🛒</div>
+            <div class="mini-tx-name">Whole Foods</div>
+            <div class="mini-tx-amt" style="color:#F87171">−$84</div>
+          </div>
+          <div class="mini-tx-row" style="background:rgba(245,185,66,0.03);border-radius:6px;">
+            <div class="mini-tx-icon">✈️</div>
+            <div class="mini-tx-name">Southwest Airlines</div>
+            <div class="mini-tx-amt" style="color:#F87171">−$340</div>
+          </div>
+          <div class="mini-tx-row">
+            <div class="mini-tx-icon">💵</div>
+            <div class="mini-tx-name">Payroll Direct Dep.</div>
+            <div class="mini-tx-amt" style="color:#34D399">+$2,600</div>
+          </div>
+          <div class="mini-tx-row">
+            <div class="mini-tx-icon">🍔</div>
+            <div class="mini-tx-name">Chipotle</div>
+            <div class="mini-tx-amt" style="color:#F87171">−$14</div>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="page-name">Transactions</div>
+        <div><span class="badge badge-table">Clean rows</span><span class="badge badge-drawer">Side drawer</span><span class="badge badge-glass">Filter pills</span></div>
+        <div class="page-desc">Monarch-style row density · tap to open detail drawer · filter pills</div>
+      </div>
+    </div>
+
+    <!-- Transaction drawer preview -->
+    <div class="page-card">
+      <div class="page-mini" style="background:#0F1117; display:flex;">
+        <!-- dim bg list -->
+        <div style="flex:1; opacity:0.35; padding:8px; display:flex;flex-direction:column;gap:5px;">
+          <div style="height:26px;background:#161921;border-radius:6px;"></div>
+          <div style="height:26px;background:#161921;border-radius:6px;"></div>
+          <div style="height:26px;background:#161921;border-radius:6px;"></div>
+          <div style="height:26px;background:#161921;border-radius:6px;"></div>
+        </div>
+        <!-- drawer -->
+        <div style="width:58%;background:#161921;border-left:1px solid rgba(255,255,255,0.07);padding:10px 11px;display:flex;flex-direction:column;gap:6px;">
+          <div style="font-size:16px;text-align:center;margin-bottom:2px;">✈️</div>
+          <div style="font-size:12px;font-weight:700;color:#F0F0F4;text-align:center">Southwest Airlines</div>
+          <div style="font-size:18px;font-weight:800;color:#F87171;text-align:center;letter-spacing:-0.02em">−$340.00</div>
+          <div style="background:#0F1117;border:1px solid rgba(255,255,255,0.05);border-radius:7px;padding:7px 9px;">
+            <div style="font-size:8px;color:#374151;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">Category</div>
+            <div style="font-size:10px;color:#F5B942">Travel · SW Flights</div>
+          </div>
+          <div style="background:rgba(245,185,66,0.07);border:1px solid rgba(245,185,66,0.14);border-radius:7px;padding:5px 9px;text-align:center;">
+            <div style="font-size:9px;color:#F5B942;font-weight:600">3× SW Rapid Rewards</div>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="page-name">Transaction Drawer</div>
+        <div><span class="badge badge-drawer">Slide-in</span><span class="badge badge-glass">Rich detail</span></div>
+        <div class="page-desc">Merchant icon · category editor · points earned · similar txns</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ GROUP 3: INTELLIGENCE ═══ -->
+<div class="page-group">
+  <div class="group-label">
+    <div class="group-dot" style="background:#34D399"></div>
+    <span style="color:#34D399">Intelligence</span>
+    <span style="color:#374151">Emerald / Sky glow · Chart-first · Editorial hero</span>
+  </div>
+  <div class="page-grid">
+
+    <!-- Cash Flow -->
+    <div class="page-card">
+      <div class="page-mini" style="background:#0F1117;">
+        <div class="mini-hero" style="padding:10px 10px 6px; border-bottom:1px solid rgba(255,255,255,0.05); background:linear-gradient(160deg,rgba(52,211,153,0.07) 0%,transparent 60%);">
+          <div class="mini-glow" style="background:radial-gradient(ellipse,rgba(52,211,153,0.20) 0%,transparent 70%)"></div>
+          <div class="mini-hero-eyebrow" style="color:#34D399">Cash Flow · 6 months</div>
+          <div class="mini-hero-num" style="font-size:22px;color:#34D399">+$8,240 <span style="font-size:12px;font-weight:400;color:#4B5063">net</span></div>
+        </div>
+        <div class="mini-chart-area">
+          <div class="mini-bars">
+            <div class="mini-bar-col" style="height:72%;background:linear-gradient(180deg,#059669,rgba(5,150,105,0.3))"></div>
+            <div class="mini-bar-col" style="height:60%;background:linear-gradient(180deg,rgba(248,113,113,0.8),rgba(248,113,113,0.2));margin-top:auto"></div>
+            <div class="mini-bar-col" style="height:82%;background:linear-gradient(180deg,#059669,rgba(5,150,105,0.3))"></div>
+            <div class="mini-bar-col" style="height:55%;background:linear-gradient(180deg,rgba(248,113,113,0.8),rgba(248,113,113,0.2))"></div>
+            <div class="mini-bar-col" style="height:90%;background:linear-gradient(180deg,#059669,rgba(5,150,105,0.3))"></div>
+            <div class="mini-bar-col" style="height:65%;background:linear-gradient(180deg,rgba(248,113,113,0.8),rgba(248,113,113,0.2))"></div>
+          </div>
+          <div style="display:flex;justify-content:space-around;margin-top:4px;">
+            <span style="font-size:7px;color:#374151">Nov</span>
+            <span style="font-size:7px;color:#374151">Dec</span>
+            <span style="font-size:7px;color:#374151">Jan</span>
+            <span style="font-size:7px;color:#374151">Feb</span>
+            <span style="font-size:7px;color:#374151">Mar</span>
+            <span style="font-size:7px;color:#374151">Apr</span>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="page-name">Cash Flow</div>
+        <div><span class="badge badge-hero">Hero</span><span class="badge badge-chart">Gradient bars</span><span class="badge badge-motion">Animated</span></div>
+        <div class="page-desc">Emerald hero · income/expense bars with gradient fill · drill-down</div>
+      </div>
+    </div>
+
+    <!-- Net Worth -->
+    <div class="page-card">
+      <div class="page-mini" style="background:#0F1117;">
+        <div class="mini-hero" style="padding:10px 10px 6px; border-bottom:1px solid rgba(255,255,255,0.05); background:linear-gradient(160deg,rgba(56,189,248,0.07) 0%,transparent 60%);">
+          <div class="mini-glow" style="background:radial-gradient(ellipse,rgba(56,189,248,0.20) 0%,transparent 70%)"></div>
+          <div class="mini-hero-eyebrow" style="color:#38BDF8">Net Worth · 90 days</div>
+          <div class="mini-hero-num" style="font-size:22px;color:#38BDF8">$124,000</div>
+          <div class="mini-hero-sub" style="color:#34D399">↑ $2,340 this month</div>
+        </div>
+        <div class="mini-nw-line">
+          <svg class="mini-sparkline" viewBox="0 0 160 44" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="nwGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#38BDF8" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path d="M0,40 C20,38 30,34 45,28 C60,22 70,26 85,20 C100,14 115,16 130,10 C145,4 155,6 160,4 L160,44 L0,44 Z" fill="url(#nwGrad)"/>
+            <path d="M0,40 C20,38 30,34 45,28 C60,22 70,26 85,20 C100,14 115,16 130,10 C145,4 155,6 160,4" fill="none" stroke="#38BDF8" stroke-width="1.5"/>
+          </svg>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="page-name">Net Worth</div>
+        <div><span class="badge badge-hero">Hero</span><span class="badge badge-chart">Area chart</span></div>
+        <div class="page-desc">Sky hero · gradient area chart · assets vs liabilities breakdown</div>
+      </div>
+    </div>
+
+    <!-- Points -->
+    <div class="page-card">
+      <div class="page-mini" style="background:#0F1117;">
+        <div class="mini-hero" style="padding:10px 10px 6px; border-bottom:1px solid rgba(255,255,255,0.05); background:linear-gradient(160deg,rgba(245,185,66,0.08) 0%,transparent 60%);">
+          <div class="mini-glow" style="background:radial-gradient(ellipse,rgba(245,185,66,0.25) 0%,transparent 70%)"></div>
+          <div class="mini-hero-eyebrow" style="color:#F5B942">Points Value · 90 days</div>
+          <div class="mini-hero-num" style="font-size:22px;color:#F5B942">$1,240</div>
+          <div class="mini-hero-sub">across 6 programs</div>
+        </div>
+        <div style="padding:6px 8px; display:flex;flex-direction:column;gap:3px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;background:#161921;border-radius:7px;padding:5px 9px;">
+            <span style="font-size:10px;color:#9CA3AF">Amex MR</span>
+            <span style="font-size:10px;font-weight:600;color:#F5B942">$420</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:#161921;border-radius:7px;padding:5px 9px;">
+            <span style="font-size:10px;color:#9CA3AF">Chase UR</span>
+            <span style="font-size:10px;font-weight:600;color:#F5B942">$380</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(245,185,66,0.07);border:1px solid rgba(245,185,66,0.18);border-radius:7px;padding:5px 9px;">
+            <span style="font-size:10px;color:#F5B942;font-weight:600">Bilt Points</span>
+            <span style="font-size:9px;color:#F5B942">REDEEM NOW</span>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="page-name">Points</div>
+        <div><span class="badge badge-hero">Hero</span><span class="badge badge-glass">Program cards</span></div>
+        <div class="page-desc">Amber hero · program list · redemption nudge glows honey</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ GROUP 4: UTILITY PAGES ═══ -->
+<div class="page-group">
+  <div class="group-label">
+    <div class="group-dot" style="background:#F87171"></div>
+    <span style="color:#F87171">Alerts + Utility</span>
+    <span style="color:#374151">Coral / Violet glow · Card-based · Contextual color</span>
+  </div>
+  <div class="page-grid-4">
+
+    <!-- Anomalies -->
+    <div class="page-card">
+      <div class="page-mini" style="background:#0F1117;">
+        <div class="mini-hero" style="padding:10px 10px 6px; border-bottom:1px solid rgba(248,113,113,0.10); background:linear-gradient(160deg,rgba(248,113,113,0.07) 0%,transparent 60%);">
+          <div class="mini-glow" style="background:radial-gradient(ellipse,rgba(248,113,113,0.20) 0%,transparent 70%)"></div>
+          <div class="mini-hero-eyebrow" style="color:#F87171">3 Anomalies</div>
+          <div class="mini-hero-num" style="font-size:20px;color:#F87171">Review</div>
+        </div>
+        <div class="mini-anomaly-row">
+          <div class="anomaly-dot"></div>
+          <div class="anomaly-text">Best Buy $340 — 3× your average</div>
+        </div>
+        <div class="mini-anomaly-row" style="margin-top:0">
+          <div class="anomaly-dot" style="background:#FBBF24"></div>
+          <div class="anomaly-text" style="color:#FBBF24">Amazon $189 — unusual timing</div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="page-name">Anomalies</div>
+        <div><span class="badge" style="background:rgba(248,113,113,0.10);color:#F87171;border:1px solid rgba(248,113,113,0.20)">Coral glow</span></div>
+        <div class="page-desc">Coral ambient · alert cards with severity color</div>
+      </div>
+    </div>
+
+    <!-- Subscriptions -->
+    <div class="page-card">
+      <div class="page-mini" style="background:#0F1117; padding:8px 0;">
+        <div class="mini-sub-rows">
+          <div class="mini-sub-row">
+            <div class="mini-sub-icon" style="background:#E50914">N</div>
+            <div><div class="mini-sub-name">Netflix</div><div class="mini-sub-freq">monthly</div></div>
+            <div class="mini-sub-amt">$15.49</div>
+          </div>
+          <div class="mini-sub-row">
+            <div class="mini-sub-icon" style="background:#1DB954">S</div>
+            <div><div class="mini-sub-name">Spotify</div><div class="mini-sub-freq">monthly</div></div>
+            <div class="mini-sub-amt">$10.99</div>
+          </div>
+          <div class="mini-sub-row" style="background:rgba(248,113,113,0.05);border-radius:6px;">
+            <div class="mini-sub-icon" style="background:#FF0000">Y</div>
+            <div><div class="mini-sub-name">YouTube Premium</div><div class="mini-sub-freq" style="color:#F87171">↑ price change</div></div>
+            <div class="mini-sub-amt" style="color:#F87171">$13.99</div>
+          </div>
+          <div class="mini-sub-row">
+            <div class="mini-sub-icon" style="background:#0061FF">D</div>
+            <div><div class="mini-sub-name">Dropbox</div><div class="mini-sub-freq">annual</div></div>
+            <div class="mini-sub-amt">$99/yr</div>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="page-name">Subscriptions</div>
+        <div><span class="badge badge-table">List view</span><span class="badge" style="background:rgba(248,113,113,0.10);color:#F87171;border:1px solid rgba(248,113,113,0.18)">Price alerts</span></div>
+        <div class="page-desc">Auto-detected · price changes flag red · annual cost shown</div>
+      </div>
+    </div>
+
+    <!-- Goals -->
+    <div class="page-card">
+      <div class="page-mini" style="background:#0F1117;">
+        <div class="mini-goal-rows">
+          <div class="mini-goal">
+            <div class="mini-goal-top">
+              <span class="mini-goal-name">Emergency Fund</span>
+              <span class="mini-goal-pct" style="color:#34D399">56%</span>
+            </div>
+            <div class="mini-goal-bar-track"><div class="mini-goal-bar-fill" style="width:56%;background:linear-gradient(90deg,#059669,#34D399)"></div></div>
+          </div>
+          <div class="mini-goal">
+            <div class="mini-goal-top">
+              <span class="mini-goal-name">Vacation · Japan</span>
+              <span class="mini-goal-pct" style="color:#F5B942">28%</span>
+            </div>
+            <div class="mini-goal-bar-track"><div class="mini-goal-bar-fill" style="width:28%;background:linear-gradient(90deg,#B45309,#F5B942)"></div></div>
+          </div>
+          <div class="mini-goal">
+            <div class="mini-goal-top">
+              <span class="mini-goal-name">Pay off Chase Card</span>
+              <span class="mini-goal-pct" style="color:#60A5FA">81%</span>
+            </div>
+            <div class="mini-goal-bar-track"><div class="mini-goal-bar-fill" style="width:81%;background:linear-gradient(90deg,#1D4ED8,#60A5FA)"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="page-name">Goals</div>
+        <div><span class="badge badge-glass">Progress cards</span><span class="badge badge-motion">Bar grow</span></div>
+        <div class="page-desc">Goal-colored progress bars · on-track indicator · projection</div>
+      </div>
+    </div>
+
+    <!-- Chat / AI -->
+    <div class="page-card">
+      <div class="page-mini" style="background:#0F1117;">
+        <div style="height:30px; background:linear-gradient(180deg,rgba(167,139,250,0.10) 0%,transparent 100%); position:relative;">
+          <div style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);width:140px;height:60px;background:radial-gradient(ellipse,rgba(167,139,250,0.20) 0%,transparent 70%);pointer-events:none;"></div>
+        </div>
+        <div class="mini-chat">
+          <div class="chat-bubble chat-user">What's my best card for groceries?</div>
+          <div style="display:flex;align-items:flex-start;gap:5px">
+            <div class="chat-ai-icon">✦</div>
+            <div class="chat-bubble chat-ai">Amex Gold earns 4× at grocery stores…</div>
+          </div>
+          <div class="chat-bubble chat-user">How much did I spend last month?</div>
+          <div style="display:flex;align-items:flex-start;gap:5px">
+            <div class="chat-ai-icon">✦</div>
+            <div class="chat-bubble chat-ai">You spent $3,182 in March…</div>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="page-name">AI Chat</div>
+        <div><span class="badge" style="background:rgba(167,139,250,0.10);color:#A78BFA;border:1px solid rgba(167,139,250,0.18)">Violet glow</span><span class="badge badge-glass">Clean bubbles</span></div>
+        <div class="page-desc">Violet ambient · clean chat UI · suggested prompts</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <span class="bottom-hint">Section 2 of 2 · Does this per-page assignment look right?</span>
+  <button class="confirm-btn" id="cfm" onclick="confirm()">Approve design →</button>
+</div>
+
+<script>
+function confirm() {
+  fetch('/events', {method:'POST', body: JSON.stringify({type:'click',choice:'approve-full-design',text:'Full design approved',timestamp:Date.now()})});
+  const b = document.getElementById('cfm');
+  b.textContent = '✓ Design approved'; b.classList.add('done');
+}
+</script>
+
+</body>
+</html>

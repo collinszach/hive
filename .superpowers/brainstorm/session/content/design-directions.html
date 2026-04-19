@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HIVE Redesign — Design Directions</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0C0A09;
+  color: #F2EDE8;
+  font-family: -apple-system, system-ui, sans-serif;
+  min-height: 100vh;
+  padding: 32px 24px 48px;
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #F2EDE8;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+.subtitle {
+  font-size: 13px;
+  color: #5E5850;
+  margin-bottom: 28px;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.option {
+  border: 1.5px solid rgba(245,185,66,0.10);
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 200ms ease;
+  background: #100E0D;
+}
+.option:hover { border-color: rgba(245,185,66,0.30); transform: translateY(-2px); }
+.option.selected { border-color: #F5B942; box-shadow: 0 0 0 3px rgba(245,185,66,0.15), 0 8px 32px rgba(245,185,66,0.12); }
+
+.option-preview {
+  height: 220px;
+  position: relative;
+  overflow: hidden;
+}
+
+.option-label {
+  padding: 16px;
+  border-top: 1px solid rgba(245,185,66,0.07);
+}
+.option-label h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #F2EDE8;
+  margin-bottom: 4px;
+}
+.option-label p {
+  font-size: 12px;
+  color: #7A7268;
+  line-height: 1.5;
+}
+
+/* ── Option A: Spatial Depth / Glass ── */
+.preview-a {
+  background: linear-gradient(135deg, #0C0A09 0%, #141210 100%);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.glass-card {
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  position: relative;
+  overflow: hidden;
+}
+.glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(245,185,66,0.06) 0%, transparent 60%);
+}
+.glass-hero {
+  background: rgba(245,185,66,0.08);
+  border: 1px solid rgba(245,185,66,0.18);
+  border-radius: 12px;
+  padding: 14px 12px;
+  position: relative;
+  overflow: hidden;
+}
+.glass-hero::after {
+  content: '';
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,185,66,0.25) 0%, transparent 70%);
+}
+.a-page-glow {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 80px;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(61,214,140,0.18) 0%, transparent 100%);
+  pointer-events: none;
+}
+.mini-label { font-size: 9px; color: #5E5850; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+.mini-val { font-size: 18px; font-weight: 700; color: #3DD68C; font-variant-numeric: tabular-nums; }
+.mini-val-amber { font-size: 18px; font-weight: 700; color: #F5B942; }
+.mini-val-sm { font-size: 13px; font-weight: 600; color: #F2EDE8; }
+.mini-row { display: flex; gap: 6px; }
+.mini-bar { height: 3px; background: rgba(255,255,255,0.05); border-radius: 9px; overflow: hidden; margin-top: 6px; }
+.mini-bar-fill { height: 100%; border-radius: 9px; background: linear-gradient(90deg, #F5B942, #FFD166); width: 68%; }
+.mini-stat-row { display: flex; justify-content: space-between; align-items: center; }
+
+/* ── Option B: Editorial Bold ── */
+.preview-b {
+  background: #0C0A09;
+  display: flex;
+  flex-direction: column;
+}
+.editorial-hero {
+  padding: 18px 16px 14px;
+  background: linear-gradient(180deg, rgba(245,185,66,0.07) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(245,185,66,0.06);
+  position: relative;
+}
+.editorial-hero::before {
+  content: '';
+  position: absolute;
+  top: -40px; left: -40px;
+  width: 160px; height: 120px;
+  background: radial-gradient(ellipse, rgba(245,185,66,0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-eyebrow { font-size: 9px; color: #F5B942; text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 6px; }
+.hero-big-num { font-size: 36px; font-weight: 800; color: #F2EDE8; letter-spacing: -0.03em; line-height: 1; }
+.hero-big-num span { color: #F5B942; }
+.hero-sub { font-size: 11px; color: #5E5850; margin-top: 4px; }
+.editorial-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: rgba(245,185,66,0.06); flex: 1; }
+.editorial-cell { background: #100E0D; padding: 12px 14px; }
+.cell-label { font-size: 9px; color: #3A3630; text-transform: uppercase; letter-spacing: 0.1em; }
+.cell-val { font-size: 15px; font-weight: 600; color: #F2EDE8; margin-top: 3px; }
+.cell-val-green { font-size: 15px; font-weight: 600; color: #3DD68C; margin-top: 3px; }
+.cell-val-red { font-size: 15px; font-weight: 600; color: #F87171; margin-top: 3px; }
+
+/* ── Option C: Data Terminal ── */
+.preview-c {
+  background: #090807;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.terminal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: rgba(245,185,66,0.04);
+  border: 1px solid rgba(245,185,66,0.08);
+  border-radius: 8px;
+}
+.terminal-tag { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: #F5B942; text-transform: uppercase; }
+.terminal-time { font-size: 9px; color: #3A3630; font-variant-numeric: tabular-nums; }
+.terminal-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px;
+  background: #100E0D;
+  border: 1px solid rgba(245,185,66,0.06);
+  border-radius: 8px;
+}
+.t-merchant { font-size: 11px; color: #A09888; flex: 1; }
+.t-cat { font-size: 9px; color: #4A4640; }
+.t-amt { font-size: 11px; font-weight: 600; color: #F87171; font-variant-numeric: tabular-nums; }
+.t-amt-in { font-size: 11px; font-weight: 600; color: #3DD68C; font-variant-numeric: tabular-nums; }
+.t-pts { font-size: 9px; color: #F5B942; background: rgba(245,185,66,0.08); border-radius: 4px; padding: 1px 4px; }
+/* animated bars */
+.anim-bar-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; background: #100E0D; border: 1px solid rgba(245,185,66,0.06); border-radius: 8px; }
+.anim-cat { font-size: 10px; color: #7A7268; width: 72px; flex-shrink: 0; }
+.anim-track { flex: 1; height: 3px; background: rgba(255,255,255,0.04); border-radius: 9px; overflow: hidden; }
+.anim-fill { height: 100%; border-radius: 9px; }
+.anim-val { font-size: 10px; color: #5E5850; width: 36px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+/* Selected check */
+.check-badge {
+  display: none;
+  position: absolute;
+  top: 10px; right: 10px;
+  width: 22px; height: 22px;
+  background: #F5B942;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #090807;
+  font-weight: 700;
+}
+.option.selected .check-badge { display: flex; }
+
+/* Bottom bar */
+.bottom-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(9,8,7,0.95);
+  border-top: 1px solid rgba(245,185,66,0.10);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(10px);
+}
+.bottom-hint { font-size: 12px; color: #5E5850; }
+.selection-tag { font-size: 12px; color: #F5B942; font-weight: 600; display: none; }
+.selection-tag.visible { display: block; }
+</style>
+</head>
+<body>
+
+<h2>Which design direction for HIVE?</h2>
+<p class="subtitle">The obsidian + honey brand stays. The question is how we add depth, personality, and motion.</p>
+
+<div class="options">
+
+  <!-- Option A: Spatial Depth -->
+  <div class="option" data-choice="a" onclick="pick(this)">
+    <div class="option-preview preview-a">
+      <div class="check-badge">✓</div>
+      <div class="a-page-glow"></div>
+
+      <div class="glass-hero">
+        <div class="mini-label">Net Cash · This Month</div>
+        <div class="mini-val">$4,820</div>
+        <div class="mini-stat-row" style="margin-top:4px">
+          <span style="font-size:10px;color:#3DD68C">↑ $340 vs last month</span>
+        </div>
+      </div>
+
+      <div class="mini-row">
+        <div class="glass-card" style="flex:1">
+          <div class="mini-label">Assets</div>
+          <div class="mini-val-amber">$18.4k</div>
+          <div class="mini-bar"><div class="mini-bar-fill" style="background:linear-gradient(90deg,#3DD68C,#26b57a);width:72%"></div></div>
+        </div>
+        <div class="glass-card" style="flex:1">
+          <div class="mini-label">Points</div>
+          <div class="mini-val-amber">$1,240</div>
+          <div class="mini-bar"><div class="mini-bar-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="mini-stat-row">
+          <span style="font-size:10px;color:#7A7268">Food &amp; Drink</span>
+          <span style="font-size:10px;color:#F5B942;font-weight:600">$342 / $400</span>
+        </div>
+        <div class="mini-bar"><div class="mini-bar-fill" style="width:85%;background:linear-gradient(90deg,#F5B942,#FFD166)"></div></div>
+      </div>
+    </div>
+    <div class="option-label">
+      <h3>A · Spatial Depth</h3>
+      <p>Glass morphism cards with per-page ambient glow. Each page has a characteristic light source — income pages glow green, expense red, points amber.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Editorial Bold -->
+  <div class="option" data-choice="b" onclick="pick(this)">
+    <div class="option-preview preview-b">
+      <div class="check-badge">✓</div>
+
+      <div class="editorial-hero">
+        <div class="hero-eyebrow">Safe to Spend · April</div>
+        <div class="hero-big-num">$<span>847</span></div>
+        <div class="hero-sub">$2,340 left after bills + goals</div>
+      </div>
+
+      <div class="editorial-grid">
+        <div class="editorial-cell">
+          <div class="cell-label">Income</div>
+          <div class="cell-val-green">$5,200</div>
+        </div>
+        <div class="editorial-cell">
+          <div class="cell-label">Spent</div>
+          <div class="cell-val-red">$3,180</div>
+        </div>
+        <div class="editorial-cell">
+          <div class="cell-label">Savings Rate</div>
+          <div class="cell-val">38%</div>
+        </div>
+        <div class="editorial-cell">
+          <div class="cell-label">Points Value</div>
+          <div class="cell-val" style="color:#F5B942">$1,240</div>
+        </div>
+      </div>
+    </div>
+    <div class="option-label">
+      <h3>B · Editorial Bold</h3>
+      <p>Each page gets a dramatic hero section with oversized typography. Data is the headline. More breathing room, strong visual hierarchy, cinematic chart entrances.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Data Terminal -->
+  <div class="option" data-choice="c" onclick="pick(this)">
+    <div class="option-preview preview-c">
+      <div class="check-badge">✓</div>
+
+      <div class="terminal-header">
+        <span class="terminal-tag">● Transactions · Live</span>
+        <span class="terminal-time">Apr 06 · 9:41am</span>
+      </div>
+
+      <div class="terminal-row">
+        <div>
+          <div class="t-merchant">Whole Foods</div>
+          <div class="t-cat">Groceries · In-Store</div>
+        </div>
+        <div class="t-pts">4×</div>
+        <div class="t-amt">-$84.20</div>
+      </div>
+
+      <div class="terminal-row">
+        <div>
+          <div class="t-merchant">Payroll Direct Dep.</div>
+          <div class="t-cat">Income</div>
+        </div>
+        <div></div>
+        <div class="t-amt-in">+$2,600</div>
+      </div>
+
+      <div class="anim-bar-row">
+        <div class="anim-cat">Food &amp; Drink</div>
+        <div class="anim-track"><div class="anim-fill" style="width:85%;background:#F5B942"></div></div>
+        <div class="anim-val">$342</div>
+      </div>
+      <div class="anim-bar-row">
+        <div class="anim-cat">Groceries</div>
+        <div class="anim-track"><div class="anim-fill" style="width:54%;background:#3DD68C"></div></div>
+        <div class="anim-val">$216</div>
+      </div>
+      <div class="anim-bar-row">
+        <div class="anim-cat">Travel</div>
+        <div class="anim-track"><div class="anim-fill" style="width:32%;background:#38BDF8"></div></div>
+        <div class="anim-val">$128</div>
+      </div>
+    </div>
+    <div class="option-label">
+      <h3>C · Data Terminal</h3>
+      <p>Keep the density but add sophisticated motion. Every number counts up on load. Charts animate in. Row hover glows. The app feels alive and real-time.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="bottom-bar">
+  <span class="bottom-hint">Click a direction to select it, then tell me in the chat</span>
+  <span class="selection-tag" id="sel-tag"></span>
+</div>
+
+<script>
+function pick(el) {
+  document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  const choice = el.dataset.choice.toUpperCase();
+  const label = el.querySelector('h3').textContent;
+  document.getElementById('sel-tag').textContent = '✓ ' + label + ' selected';
+  document.getElementById('sel-tag').classList.add('visible');
+  // Post to server
+  fetch('/events', {method:'POST', body: JSON.stringify({type:'click',choice:el.dataset.choice,text:label,timestamp:Date.now()})});
+}
+</script>
+</body>
+</html>

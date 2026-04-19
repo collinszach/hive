@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HIVE — Monarch / Origin Style</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0A0B0E;
+  color: #F0F0F4;
+  font-family: -apple-system, system-ui, "Inter", sans-serif;
+  padding: 28px 24px 80px;
+  min-height: 100vh;
+}
+h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 4px; color: #F0F0F4; }
+.subtitle { font-size: 12px; color: #4B5063; margin-bottom: 24px; }
+.section-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #6B7280; margin-bottom: 14px;
+}
+
+/* 3-column options */
+.options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.option {
+  border: 1.5px solid rgba(255,255,255,0.06);
+  border-radius: 16px; overflow: hidden; cursor: pointer;
+  transition: all 200ms ease;
+}
+.option:hover { border-color: rgba(255,255,255,0.14); transform: translateY(-2px); }
+.option.selected { border-color: #F5B942; box-shadow: 0 0 0 3px rgba(245,185,66,0.12), 0 8px 32px rgba(0,0,0,0.4); }
+.option-preview { height: 260px; position: relative; overflow: hidden; }
+.option-label {
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  background: #111318;
+}
+.option-label h3 { font-size: 13px; font-weight: 600; color: #F0F0F4; margin-bottom: 4px; }
+.option-label p { font-size: 11px; color: #4B5063; line-height: 1.5; }
+.check-badge {
+  display: none; position: absolute; top: 10px; right: 10px;
+  width: 22px; height: 22px; background: #F5B942; border-radius: 50%;
+  align-items: center; justify-content: center; font-size: 12px;
+  color: #0A0B0E; font-weight: 700;
+}
+.option.selected .check-badge { display: flex; }
+.rec-badge {
+  display: inline-block; margin-left: 8px;
+  background: rgba(245,185,66,0.14); color: #F5B942;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+  padding: 2px 6px; border-radius: 4px; text-transform: uppercase; vertical-align: middle;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   OPTION A — HIVE × Monarch: keep honey, adopt Monarch quality
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.preview-a {
+  background: #0F1117;
+  display: flex; flex-direction: column;
+}
+.a-hero {
+  padding: 16px 16px 12px;
+  background: linear-gradient(160deg, rgba(245,185,66,0.08) 0%, transparent 60%);
+  position: relative; overflow: hidden;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.a-hero::before {
+  content: ''; position: absolute;
+  top: -60px; left: -30px;
+  width: 180px; height: 140px;
+  background: radial-gradient(ellipse, rgba(245,185,66,0.18) 0%, transparent 70%);
+}
+.a-eyebrow { font-size: 9px; color: #F5B942; letter-spacing: 0.12em; text-transform: uppercase; position: relative; }
+.a-big { font-size: 32px; font-weight: 800; letter-spacing: -0.04em; color: #F0F0F4; line-height: 1; position: relative; margin: 5px 0 3px; }
+.a-big em { color: #F5B942; font-style: normal; }
+.a-sub { font-size: 10px; color: #4B5063; position: relative; }
+.a-kpi-row { display: flex; gap: 1px; background: rgba(255,255,255,0.04); }
+.a-kpi { flex: 1; padding: 10px 12px; background: #0F1117; }
+.a-kpi-lbl { font-size: 8px; color: #374151; text-transform: uppercase; letter-spacing: 0.08em; }
+.a-kpi-val { font-size: 13px; font-weight: 600; color: #F0F0F4; margin-top: 2px; }
+.a-kpi-val.green { color: #34D399; }
+.a-kpi-val.amber { color: #F5B942; }
+.a-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; flex: 1; }
+.a-card {
+  background: #161921; border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px; padding: 10px 11px;
+}
+.a-card-lbl { font-size: 8px; color: #374151; text-transform: uppercase; letter-spacing: 0.08em; }
+.a-card-val { font-size: 14px; font-weight: 600; color: #F0F0F4; margin-top: 2px; }
+.a-bar-track { height: 3px; background: rgba(255,255,255,0.05); border-radius: 9px; margin-top: 5px; overflow: hidden; }
+.a-bar-fill { height: 100%; border-radius: 9px; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   OPTION B — Full Monarch Clone: violet accent, charcoal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.preview-b {
+  background: #0E0E13;
+  display: flex; flex-direction: column;
+}
+.b-hero {
+  padding: 16px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  background: linear-gradient(160deg, rgba(124,58,237,0.08) 0%, transparent 60%);
+  position: relative; overflow: hidden;
+}
+.b-hero::before {
+  content: ''; position: absolute;
+  top: -60px; left: -30px;
+  width: 180px; height: 140px;
+  background: radial-gradient(ellipse, rgba(124,58,237,0.22) 0%, transparent 70%);
+}
+.b-eyebrow { font-size: 9px; color: #8B5CF6; letter-spacing: 0.12em; text-transform: uppercase; position: relative; }
+.b-big { font-size: 32px; font-weight: 800; letter-spacing: -0.04em; color: #F0F0F4; line-height: 1; position: relative; margin: 5px 0 3px; }
+.b-big em { color: #8B5CF6; font-style: normal; }
+.b-sub { font-size: 10px; color: #4B5063; position: relative; }
+.b-kpi-row { display: flex; gap: 1px; background: rgba(255,255,255,0.04); }
+.b-kpi { flex: 1; padding: 10px 12px; background: #0E0E13; }
+.b-kpi-lbl { font-size: 8px; color: #374151; text-transform: uppercase; letter-spacing: 0.08em; }
+.b-kpi-val { font-size: 13px; font-weight: 600; color: #F0F0F4; margin-top: 2px; }
+.b-kpi-val.purple { color: #8B5CF6; }
+.b-kpi-val.green { color: #34D399; }
+.b-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; flex: 1; }
+.b-card {
+  background: #141419; border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px; padding: 10px 11px;
+}
+.b-card-lbl { font-size: 8px; color: #374151; text-transform: uppercase; letter-spacing: 0.08em; }
+.b-card-val { font-size: 14px; font-weight: 600; color: #F0F0F4; margin-top: 2px; }
+.b-bar-track { height: 3px; background: rgba(255,255,255,0.05); border-radius: 9px; margin-top: 5px; overflow: hidden; }
+.b-bar-fill-purple { height: 100%; border-radius: 9px; background: linear-gradient(90deg,#7C3AED,#8B5CF6); }
+.b-bar-fill-green  { height: 100%; border-radius: 9px; background: linear-gradient(90deg,#059669,#34D399); }
+.b-bar-fill-red    { height: 100%; border-radius: 9px; background: linear-gradient(90deg,#DC2626,#F87171); }
+.b-bar-fill-blue   { height: 100%; border-radius: 9px; background: linear-gradient(90deg,#1D4ED8,#60A5FA); }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   OPTION C — Origin: deep navy + electric blue/teal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.preview-c {
+  background: #080E1A;
+  display: flex; flex-direction: column;
+}
+.c-hero {
+  padding: 16px 16px 10px;
+  border-bottom: 1px solid rgba(0,120,200,0.10);
+  background: linear-gradient(160deg, rgba(14,165,233,0.08) 0%, transparent 60%);
+  position: relative; overflow: hidden;
+}
+.c-hero::before {
+  content: ''; position: absolute;
+  top: -60px; left: -30px;
+  width: 180px; height: 140px;
+  background: radial-gradient(ellipse, rgba(14,165,233,0.22) 0%, transparent 70%);
+}
+.c-eyebrow { font-size: 9px; color: #0EA5E9; letter-spacing: 0.12em; text-transform: uppercase; position: relative; }
+.c-big { font-size: 32px; font-weight: 800; letter-spacing: -0.04em; color: #E8F4FF; line-height: 1; position: relative; margin: 5px 0 3px; }
+.c-big em { color: #38BDF8; font-style: normal; }
+.c-sub { font-size: 10px; color: #2D4A6B; position: relative; }
+.c-kpi-row { display: flex; gap: 1px; background: rgba(14,165,233,0.08); }
+.c-kpi { flex: 1; padding: 10px 12px; background: #080E1A; }
+.c-kpi-lbl { font-size: 8px; color: #1E3A5F; text-transform: uppercase; letter-spacing: 0.08em; }
+.c-kpi-val { font-size: 13px; font-weight: 600; color: #E8F4FF; margin-top: 2px; }
+.c-kpi-val.teal { color: #2DD4BF; }
+.c-kpi-val.blue { color: #38BDF8; }
+.c-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; flex: 1; }
+.c-card {
+  background: #0C1424; border: 1px solid rgba(14,165,233,0.08);
+  border-radius: 10px; padding: 10px 11px;
+}
+.c-card-lbl { font-size: 8px; color: #1E3A5F; text-transform: uppercase; letter-spacing: 0.08em; }
+.c-card-val { font-size: 14px; font-weight: 600; color: #E8F4FF; margin-top: 2px; }
+.c-bar-track { height: 3px; background: rgba(14,165,233,0.08); border-radius: 9px; margin-top: 5px; overflow: hidden; }
+.c-bar-fill { height: 100%; border-radius: 9px; background: linear-gradient(90deg,#0EA5E9,#38BDF8); }
+.c-bar-fill-teal { height: 100%; border-radius: 9px; background: linear-gradient(90deg,#0D9488,#2DD4BF); }
+
+/* ── bottom bar ── */
+.bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(10,11,14,0.96); border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
+  backdrop-filter: blur(10px);
+}
+.bottom-hint { font-size: 12px; color: #4B5063; }
+.sel-label { font-size: 12px; color: #F5B942; font-weight: 600; display: none; }
+.sel-label.vis { display: block; }
+</style>
+</head>
+<body>
+
+<h2>Monarch / Origin aesthetic — pick your flavor</h2>
+<p class="subtitle">All three are cool-dark, spacious, and clean. The difference is the accent color and brand identity.</p>
+
+<div class="options">
+
+  <!-- OPTION A -->
+  <div class="option" data-choice="a" onclick="pick(this)">
+    <div class="option-preview preview-a">
+      <div class="check-badge">✓</div>
+      <div class="a-hero">
+        <div class="a-eyebrow">Dashboard · April 2026</div>
+        <div class="a-big">$<em>847</em></div>
+        <div class="a-sub">safe to spend this week</div>
+      </div>
+      <div class="a-kpi-row">
+        <div class="a-kpi"><div class="a-kpi-lbl">Net Cash</div><div class="a-kpi-val green">$4,820</div></div>
+        <div class="a-kpi"><div class="a-kpi-lbl">Spent</div><div class="a-kpi-val">$3,180</div></div>
+        <div class="a-kpi"><div class="a-kpi-lbl">Points</div><div class="a-kpi-val amber">$1,240</div></div>
+      </div>
+      <div class="a-cards">
+        <div class="a-card">
+          <div class="a-card-lbl">Food &amp; Drink</div>
+          <div class="a-card-val">$342</div>
+          <div class="a-bar-track"><div class="a-bar-fill" style="width:85%;background:linear-gradient(90deg,#F5B942,#FCD34D)"></div></div>
+        </div>
+        <div class="a-card">
+          <div class="a-card-lbl">Groceries</div>
+          <div class="a-card-val">$216</div>
+          <div class="a-bar-track"><div class="a-bar-fill" style="width:54%;background:linear-gradient(90deg,#059669,#34D399)"></div></div>
+        </div>
+        <div class="a-card">
+          <div class="a-card-lbl">Travel</div>
+          <div class="a-card-val">$540</div>
+          <div class="a-bar-track"><div class="a-bar-fill" style="width:100%;background:linear-gradient(90deg,#DC2626,#F87171)"></div></div>
+        </div>
+        <div class="a-card">
+          <div class="a-card-lbl">Utilities</div>
+          <div class="a-card-val">$128</div>
+          <div class="a-bar-track"><div class="a-bar-fill" style="width:32%;background:linear-gradient(90deg,#2563EB,#60A5FA)"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="option-label">
+      <h3>A · HIVE × Monarch <span class="rec-badge">Recommended</span></h3>
+      <p>Cool-dark background, Monarch's spacious card layout. Keeps honey amber as the HIVE brand accent. Best of both worlds.</p>
+    </div>
+  </div>
+
+  <!-- OPTION B -->
+  <div class="option" data-choice="b" onclick="pick(this)">
+    <div class="option-preview preview-b">
+      <div class="check-badge">✓</div>
+      <div class="b-hero">
+        <div class="b-eyebrow">Dashboard · April 2026</div>
+        <div class="b-big">$<em>847</em></div>
+        <div class="b-sub">safe to spend this week</div>
+      </div>
+      <div class="b-kpi-row">
+        <div class="b-kpi"><div class="b-kpi-lbl">Net Cash</div><div class="b-kpi-val green">$4,820</div></div>
+        <div class="b-kpi"><div class="b-kpi-lbl">Spent</div><div class="b-kpi-val">$3,180</div></div>
+        <div class="b-kpi"><div class="b-kpi-lbl">Points</div><div class="b-kpi-val purple">$1,240</div></div>
+      </div>
+      <div class="b-cards">
+        <div class="b-card">
+          <div class="b-card-lbl">Food &amp; Drink</div>
+          <div class="b-card-val">$342</div>
+          <div class="b-bar-track"><div class="b-bar-fill-purple" style="width:85%"></div></div>
+        </div>
+        <div class="b-card">
+          <div class="b-card-lbl">Groceries</div>
+          <div class="b-card-val">$216</div>
+          <div class="b-bar-track"><div class="b-bar-fill-green" style="width:54%"></div></div>
+        </div>
+        <div class="b-card">
+          <div class="b-card-lbl">Travel</div>
+          <div class="b-card-val">$540</div>
+          <div class="b-bar-track"><div class="b-bar-fill-red" style="width:100%"></div></div>
+        </div>
+        <div class="b-card">
+          <div class="b-card-lbl">Utilities</div>
+          <div class="b-card-val">$128</div>
+          <div class="b-bar-track"><div class="b-bar-fill-blue" style="width:32%"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="option-label">
+      <h3>B · Full Monarch Clone</h3>
+      <p>Violet/purple as the primary accent. Closest to Monarch's exact product aesthetic. Drops the honey brand entirely.</p>
+    </div>
+  </div>
+
+  <!-- OPTION C -->
+  <div class="option" data-choice="c" onclick="pick(this)">
+    <div class="option-preview preview-c">
+      <div class="check-badge">✓</div>
+      <div class="c-hero">
+        <div class="c-eyebrow">Dashboard · April 2026</div>
+        <div class="c-big">$<em>847</em></div>
+        <div class="c-sub">safe to spend this week</div>
+      </div>
+      <div class="c-kpi-row">
+        <div class="c-kpi"><div class="c-kpi-lbl">Net Cash</div><div class="c-kpi-val teal">$4,820</div></div>
+        <div class="c-kpi"><div class="c-kpi-lbl">Spent</div><div class="c-kpi-val">$3,180</div></div>
+        <div class="c-kpi"><div class="c-kpi-lbl">Points</div><div class="c-kpi-val blue">$1,240</div></div>
+      </div>
+      <div class="c-cards">
+        <div class="c-card">
+          <div class="c-card-lbl">Food &amp; Drink</div>
+          <div class="c-card-val">$342</div>
+          <div class="c-bar-track"><div class="c-bar-fill" style="width:85%"></div></div>
+        </div>
+        <div class="c-card">
+          <div class="c-card-lbl">Groceries</div>
+          <div class="c-card-val">$216</div>
+          <div class="c-bar-track"><div class="c-bar-fill-teal" style="width:54%"></div></div>
+        </div>
+        <div class="c-card">
+          <div class="c-card-lbl">Travel</div>
+          <div class="c-card-val">$540</div>
+          <div class="c-bar-track"><div class="c-bar-fill" style="width:100%;background:linear-gradient(90deg,#7C3AED,#A78BFA)"></div></div>
+        </div>
+        <div class="c-card">
+          <div class="c-card-lbl">Utilities</div>
+          <div class="c-card-val">$128</div>
+          <div class="c-bar-track"><div class="c-bar-fill" style="width:32%;background:linear-gradient(90deg,#0D9488,#2DD4BF)"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="option-label">
+      <h3>C · Origin — Navy + Electric Blue</h3>
+      <p>Deep navy background, electric blue/teal accents. Most "wealth management" feeling. Premium but coldest.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="bottom-bar">
+  <span class="bottom-hint">Note: A keeps the HIVE honey brand · B/C replace it entirely</span>
+  <span class="sel-label" id="sel">—</span>
+</div>
+
+<script>
+function pick(el) {
+  document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  const label = el.querySelector('h3').textContent.trim();
+  const sel = document.getElementById('sel');
+  sel.textContent = '✓ ' + label;
+  sel.classList.add('vis');
+  fetch('/events', {method:'POST', body: JSON.stringify({type:'click',choice:el.dataset.choice,text:label,timestamp:Date.now()})});
+}
+</script>
+</body>
+</html>

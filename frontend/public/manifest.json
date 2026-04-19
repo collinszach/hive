@@ -1,0 +1,36 @@
+{
+  "name": "Hive Finance",
+  "short_name": "Hive",
+  "description": "Self-hosted personal finance intelligence platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090E",
+  "theme_color": "#09090E",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/",
+      "description": "View your financial dashboard"
+    },
+    {
+      "name": "Card Optimizer",
+      "url": "/optimize",
+      "description": "Find the best card to use"
+    },
+    {
+      "name": "Transactions",
+      "url": "/transactions",
+      "description": "Browse all transactions"
+    }
+  ]
+}

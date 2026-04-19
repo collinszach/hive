@@ -1,0 +1,129 @@
+<h2>Income Flow — n8n Style</h2>
+<p class="subtitle">Here's what the current Sankey and an n8n node-graph replacement would look like. Click your preference.</p>
+
+<div class="split" style="gap: 24px; align-items: flex-start;">
+
+  <!-- Option A: Current Sankey -->
+  <div class="card" data-choice="keep-sankey" onclick="toggleSelect(this)" style="flex:1; min-width: 280px;">
+    <div class="card-image" style="background:#0d0d0f; padding: 20px; border-radius: 8px 8px 0 0; overflow:hidden;">
+      <p style="font-size:10px; color:#6b6b73; margin-bottom:12px; text-transform:uppercase; letter-spacing:.06em;">Current — Sankey Ribbons</p>
+      <svg viewBox="0 0 340 180" width="100%" style="display:block;">
+        <!-- Income bar -->
+        <rect x="0" y="0" width="12" height="180" fill="#32D583" rx="3"/>
+        <text x="18" y="14" fill="#32D583" font-size="8" font-weight="600">Income</text>
+        <text x="18" y="24" fill="#6b6b73" font-size="7">$8,400</text>
+        <!-- Ribbons + right bars -->
+        <!-- Food & Drink 28% -->
+        <path d="M12 0 C153 0, 187 0, 328 0 L328 50 C187 50, 153 50, 12 50 Z" fill="#7C6AFA" opacity="0.18"/>
+        <rect x="328" y="1" width="12" height="48" fill="#7C6AFA" rx="2"/>
+        <text x="320" y="22" text-anchor="end" fill="#F5F5F7" font-size="7" font-weight="500">Food &amp; Drink</text>
+        <text x="320" y="32" text-anchor="end" fill="#6b6b73" font-size="6">$2,352 · 28%</text>
+        <!-- Housing 25% -->
+        <path d="M12 50 C153 50, 187 50, 328 50 L328 95 C187 95, 153 95, 12 95 Z" fill="#38BDF8" opacity="0.18"/>
+        <rect x="328" y="51" width="12" height="44" fill="#38BDF8" rx="2"/>
+        <text x="320" y="70" text-anchor="end" fill="#F5F5F7" font-size="7" font-weight="500">Housing</text>
+        <text x="320" y="80" text-anchor="end" fill="#6b6b73" font-size="6">$2,100 · 25%</text>
+        <!-- Travel 15% -->
+        <path d="M12 95 C153 95, 187 95, 328 95 L328 122 C187 122, 153 122, 12 122 Z" fill="#FB923C" opacity="0.18"/>
+        <rect x="328" y="96" width="12" height="26" fill="#FB923C" rx="2"/>
+        <text x="320" y="111" text-anchor="end" fill="#F5F5F7" font-size="7" font-weight="500">Travel</text>
+        <!-- Savings 18% -->
+        <path d="M12 122 C153 122, 187 122, 328 122 L328 154 C187 154, 153 154, 12 154 Z" fill="#32D583" opacity="0.18"/>
+        <rect x="328" y="123" width="12" height="32" fill="#32D583" rx="2"/>
+        <text x="320" y="142" text-anchor="end" fill="#32D583" font-size="7" font-weight="500">Savings</text>
+        <!-- Other -->
+        <path d="M12 154 C153 154, 187 154, 328 154 L328 180 C187 180, 153 180, 12 180 Z" fill="#C084FC" opacity="0.18"/>
+        <rect x="328" y="155" width="12" height="25" fill="#C084FC" rx="2"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>A — Sankey (current)</h3>
+      <p>Flowing ribbon chart. Proportional but reads like a visualization tool, not a product.</p>
+    </div>
+  </div>
+
+  <!-- Option B: n8n Node Graph -->
+  <div class="card" data-choice="n8n-nodes" onclick="toggleSelect(this)" style="flex:1; min-width: 280px;">
+    <div class="card-image" style="background:#0d0d0f; padding: 20px; border-radius: 8px 8px 0 0; overflow:hidden;">
+      <p style="font-size:10px; color:#6b6b73; margin-bottom:12px; text-transform:uppercase; letter-spacing:.06em;">Proposed — n8n Node Graph</p>
+      <svg viewBox="0 0 340 200" width="100%" style="display:block;">
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+        </defs>
+
+        <!-- Source: Income node -->
+        <rect x="4" y="70" width="88" height="60" rx="8" fill="#1a1a2e" stroke="#32D583" stroke-width="1.5"/>
+        <rect x="4" y="70" width="4" height="60" rx="4" fill="#32D583"/>
+        <!-- icon bg -->
+        <rect x="12" y="78" width="20" height="20" rx="5" fill="#32D583" opacity="0.2"/>
+        <text x="22" y="92" text-anchor="middle" fill="#32D583" font-size="12">$</text>
+        <text x="38" y="87" fill="#F5F5F7" font-size="8" font-weight="600">Income</text>
+        <text x="38" y="98" fill="#32D583" font-size="9" font-weight="700">$8,400</text>
+        <text x="12" y="118" fill="#6b6b73" font-size="7">April 2026</text>
+        <!-- output port -->
+        <circle cx="92" cy="100" r="4" fill="#32D583" stroke="#0d0d0f" stroke-width="1.5"/>
+
+        <!-- Bezier connections -->
+        <!-- to Food & Drink -->
+        <path d="M96 100 C170 100, 170 28, 244 28" stroke="#7C6AFA" stroke-width="1.5" fill="none" opacity="0.7"/>
+        <!-- to Housing -->
+        <path d="M96 100 C170 100, 170 68, 244 68" stroke="#38BDF8" stroke-width="1.5" fill="none" opacity="0.7"/>
+        <!-- to Travel -->
+        <path d="M96 100 C170 100, 170 108, 244 108" stroke="#FB923C" stroke-width="1.5" fill="none" opacity="0.7"/>
+        <!-- to Savings -->
+        <path d="M96 100 C170 100, 170 148, 244 148" stroke="#32D583" stroke-width="1.5" fill="none" opacity="0.7"/>
+        <!-- to Other -->
+        <path d="M96 100 C170 100, 170 182, 244 182" stroke="#C084FC" stroke-width="1.5" fill="none" opacity="0.7"/>
+
+        <!-- Category nodes (right) — Food & Drink -->
+        <rect x="244" y="10" width="92" height="36" rx="6" fill="#1a1a2e" stroke="#7C6AFA" stroke-width="1"/>
+        <rect x="244" y="10" width="3" height="36" rx="3" fill="#7C6AFA"/>
+        <circle cx="244" cy="28" r="3.5" fill="#7C6AFA" stroke="#0d0d0f" stroke-width="1.5"/>
+        <text x="252" y="23" fill="#F5F5F7" font-size="7.5" font-weight="600">Food &amp; Drink</text>
+        <text x="252" y="34" fill="#7C6AFA" font-size="8" font-weight="700">$2,352</text>
+        <text x="310" y="34" text-anchor="end" fill="#6b6b73" font-size="7">28%</text>
+
+        <!-- Housing -->
+        <rect x="244" y="50" width="92" height="36" rx="6" fill="#1a1a2e" stroke="#38BDF8" stroke-width="1"/>
+        <rect x="244" y="50" width="3" height="36" rx="3" fill="#38BDF8"/>
+        <circle cx="244" cy="68" r="3.5" fill="#38BDF8" stroke="#0d0d0f" stroke-width="1.5"/>
+        <text x="252" y="63" fill="#F5F5F7" font-size="7.5" font-weight="600">Housing</text>
+        <text x="252" y="74" fill="#38BDF8" font-size="8" font-weight="700">$2,100</text>
+        <text x="310" y="74" text-anchor="end" fill="#6b6b73" font-size="7">25%</text>
+
+        <!-- Travel -->
+        <rect x="244" y="90" width="92" height="36" rx="6" fill="#1a1a2e" stroke="#FB923C" stroke-width="1"/>
+        <rect x="244" y="90" width="3" height="36" rx="3" fill="#FB923C"/>
+        <circle cx="244" cy="108" r="3.5" fill="#FB923C" stroke="#0d0d0f" stroke-width="1.5"/>
+        <text x="252" y="103" fill="#F5F5F7" font-size="7.5" font-weight="600">Travel</text>
+        <text x="252" y="114" fill="#FB923C" font-size="8" font-weight="700">$1,260</text>
+        <text x="310" y="114" text-anchor="end" fill="#6b6b73" font-size="7">15%</text>
+
+        <!-- Savings -->
+        <rect x="244" y="130" width="92" height="36" rx="6" fill="#1a1a2e" stroke="#32D583" stroke-width="1"/>
+        <rect x="244" y="130" width="3" height="36" rx="3" fill="#32D583"/>
+        <circle cx="244" cy="148" r="3.5" fill="#32D583" stroke="#0d0d0f" stroke-width="1.5"/>
+        <text x="252" y="143" fill="#F5F5F7" font-size="7.5" font-weight="600">Savings</text>
+        <text x="252" y="154" fill="#32D583" font-size="8" font-weight="700">$1,512</text>
+        <text x="310" y="154" text-anchor="end" fill="#6b6b73" font-size="7">18%</text>
+
+        <!-- Other -->
+        <rect x="244" y="165" width="92" height="28" rx="6" fill="#1a1a2e" stroke="#C084FC" stroke-width="1"/>
+        <rect x="244" y="165" width="3" height="28" rx="3" fill="#C084FC"/>
+        <circle cx="244" cy="179" r="3.5" fill="#C084FC" stroke="#0d0d0f" stroke-width="1.5"/>
+        <text x="252" y="177" fill="#F5F5F7" font-size="7.5" font-weight="600">Other</text>
+        <text x="252" y="187" fill="#C084FC" font-size="8" font-weight="700">$1,176</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>B — n8n Node Graph</h3>
+      <p>One source node → category destination nodes connected by colored bezier wires. Reads like a workflow, shows money routing clearly.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top: 16px;">Let me know in the terminal or click your pick.</p>

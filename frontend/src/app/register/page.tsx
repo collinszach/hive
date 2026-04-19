@@ -1,0 +1,377 @@
+"use client";
+
+import { useState, useEffect, FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  Lock, Eye, EyeOff, AlertCircle, CheckCircle2,
+  CreditCard, Star, Server, ArrowRight,
+} from "lucide-react";
+import { setToken, getToken } from "@/lib/auth";
+
+/* ── Hive hex logo ───────────────────────────────────────────────────────── */
+function HiveLogo({ size = 48 }: { size?: number }) {
+  return (
+    <div
+      style={{ width: size, height: size }}
+      className="rounded-[14px] flex items-center justify-center
+                 bg-gradient-to-br from-honey to-honey-deep
+                 shadow-[0_0_40px_rgba(245,185,66,0.35)]"
+    >
+      <svg viewBox="0 0 20 20" fill="none" style={{ width: size * 0.5, height: size * 0.5 }}>
+        <path d="M10 2L16.928 6V14L10 18L3.072 14V6L10 2Z" fill="rgba(11,11,12,0.85)" />
+        <path d="M10 5.5L14.33 8V13L10 15.5L5.67 13V8L10 5.5Z" fill="rgba(245,185,66,0.45)" />
+        <circle cx="10" cy="10" r="1.5" fill="rgba(245,185,66,0.9)" />
+      </svg>
+    </div>
+  );
+}
+
+/* ── Feature bullet ──────────────────────────────────────────────────────── */
+interface FeatureBulletProps {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+}
+function FeatureBullet({ icon, title, desc }: FeatureBulletProps) {
+  return (
+    <div className="flex items-start gap-3.5">
+      <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.08]
+                      flex items-center justify-center shrink-0 mt-0.5">
+        {icon}
+      </div>
+      <div>
+        <p className="text-[14px] font-semibold text-ink-primary leading-snug">{title}</p>
+        <p className="text-[13px] text-ink-tertiary mt-0.5 leading-relaxed">{desc}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ── Password strength bar ───────────────────────────────────────────────── */
+type Strength = "weak" | "fair" | "strong";
+function PasswordStrengthBar({ strength }: { strength: Strength }) {
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <div className="flex gap-1">
+        {(["weak", "fair", "strong"] as Strength[]).map((level, i) => (
+          <div
+            key={level}
+            className={`h-[3px] w-8 rounded-full transition-colors duration-300 ${
+              strength === "weak"   && i === 0 ? "bg-semantic-expense" :
+              strength === "fair"   && i <= 1  ? "bg-semantic-warning" :
+              strength === "strong"             ? "bg-semantic-income"  :
+              "bg-white/[0.08]"
+            }`}
+          />
+        ))}
+      </div>
+      <span className={`text-[11px] ${
+        strength === "weak"   ? "text-semantic-expense" :
+        strength === "fair"   ? "text-semantic-warning" :
+        "text-semantic-income"
+      }`}>
+        {strength}
+      </span>
+    </div>
+  );
+}
+
+/* ── Page ────────────────────────────────────────────────────────────────── */
+export default function RegisterPage() {
+  const router = useRouter();
+  const [username, setUsername]         = useState("");
+  const [password, setPassword]         = useState("");
+  const [confirm, setConfirm]           = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading]           = useState(false);
+  const [checking, setChecking]         = useState(true);
+  const [error, setError]               = useState("");
+
+  useEffect(() => {
+    if (getToken()) { router.replace("/"); return; }
+    fetch("/api/auth/setup-required")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.setup_required) router.replace("/login");
+        else setChecking(false);
+      })
+      .catch(() => setChecking(false));
+  }, [router]);
+
+  const passwordStrength: Strength | null = (() => {
+    if (password.length === 0) return null;
+    if (password.length < 10)  return "weak";
+    if (password.length < 14)  return "fair";
+    return "strong";
+  })();
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (password !== confirm)    { setError("Passwords do not match."); return; }
+    if (password.length < 10)    { setError("Password must be at least 10 characters."); return; }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail ?? "Registration failed");
+      setToken(data.access_token);
+      router.replace("/connect");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Registration failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (checking) return null;
+
+  const canSubmit = !loading && password === confirm && password.length >= 10 && username.length >= 3;
+
+  return (
+    <div className="min-h-screen bg-base flex overflow-hidden">
+
+      {/* ── LEFT — branding panel ─────────────────────────────────────────── */}
+      <div className="hidden lg:flex flex-col justify-between w-[52%] relative overflow-hidden px-14 py-12">
+
+        {/* Animated amber glow blobs */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: `
+              radial-gradient(ellipse 80% 60% at 20% 10%, rgba(245,185,66,0.13) 0%, transparent 65%),
+              radial-gradient(ellipse 60% 50% at 80% 80%, rgba(245,185,66,0.07) 0%, transparent 60%),
+              radial-gradient(ellipse 40% 40% at 50% 50%, rgba(245,185,66,0.04) 0%, transparent 70%)
+            `,
+          }}
+        />
+        {/* Subtle hex grid texture */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.015]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='52' viewBox='0 0 60 52' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 17.3V34.6L30 52L0 34.6V17.3L30 0Z' fill='none' stroke='white' stroke-width='1'/%3E%3C/svg%3E")`,
+            backgroundSize: "60px 52px",
+          }}
+        />
+
+        {/* Top logo */}
+        <div className="relative z-10">
+          <div className="flex items-center gap-3">
+            <HiveLogo size={40} />
+            <span className="text-[18px] font-bold tracking-[-0.02em] text-ink-primary">HIVE</span>
+          </div>
+        </div>
+
+        {/* Center hero text */}
+        <div className="relative z-10 space-y-10 -mt-12">
+          <div>
+            <h1 className="text-[42px] font-bold tracking-[-0.03em] text-ink-primary leading-[1.08]">
+              Your money,<br />
+              <span className="text-honey">finally making</span><br />
+              sense.
+            </h1>
+            <p className="mt-4 text-[16px] text-ink-secondary leading-relaxed max-w-[380px]">
+              A self-hosted finance platform that pulls all your accounts together,
+              categorizes every transaction with AI, and maximizes your credit card rewards.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            <FeatureBullet
+              icon={<CreditCard className="w-4 h-4 text-honey" />}
+              title="AI-powered categorization"
+              desc="Every transaction automatically tagged — restaurants, travel, groceries and more."
+            />
+            <FeatureBullet
+              icon={<Star className="w-4 h-4 text-honey" />}
+              title="Maximize your rewards"
+              desc="Always know which card earns the most points for every purchase you make."
+            />
+            <FeatureBullet
+              icon={<Server className="w-4 h-4 text-honey" />}
+              title="100% self-hosted"
+              desc="Runs on your own server. Your financial data never leaves your home network."
+            />
+          </div>
+        </div>
+
+        {/* Bottom tagline */}
+        <div className="relative z-10">
+          <p className="text-[12px] text-ink-tertiary/50 tracking-wide">
+            SELF-HOSTED · PRIVATE BY DESIGN · OPEN SOURCE
+          </p>
+        </div>
+      </div>
+
+      {/* ── RIGHT — form panel ────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 sm:px-12 py-12 relative">
+
+        {/* Subtle right-side ambient glow */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: "radial-gradient(ellipse 50% 50% at 50% 0%, rgba(245,185,66,0.04) 0%, transparent 70%)",
+          }}
+        />
+
+        <div className="w-full max-w-[400px] relative z-10">
+
+          {/* Mobile-only logo header */}
+          <div className="flex flex-col items-center mb-10 lg:hidden">
+            <HiveLogo size={48} />
+            <h1 className="text-2xl font-bold tracking-[-0.02em] text-ink-primary mt-3">HIVE</h1>
+            <p className="text-[13px] text-ink-tertiary mt-1">Your money, finally making sense.</p>
+          </div>
+
+          {/* Desktop heading */}
+          <div className="mb-8 hidden lg:block">
+            <h2 className="text-[26px] font-bold tracking-[-0.02em] text-ink-primary">
+              Create your account
+            </h2>
+            <p className="text-[14px] text-ink-tertiary mt-1.5">
+              First-time setup — choose your admin credentials.
+            </p>
+          </div>
+
+          {/* Mobile heading */}
+          <div className="mb-6 lg:hidden">
+            <h2 className="text-[20px] font-bold tracking-[-0.02em] text-ink-primary text-center">
+              Create your account
+            </h2>
+            <p className="text-[13px] text-ink-tertiary mt-1 text-center">
+              Choose your admin credentials
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* Username */}
+            <div>
+              <label className="hive-label">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoFocus
+                autoComplete="username"
+                pattern="[A-Za-z0-9_\-]{3,32}"
+                placeholder="admin"
+                className="hive-input"
+              />
+              <p className="mt-1.5 text-[11px] text-ink-tertiary/50">
+                3–32 characters: letters, digits, _ or -
+              </p>
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="hive-label">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-ink-tertiary pointer-events-none" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  placeholder="••••••••••"
+                  className="hive-input pl-9 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-tertiary hover:text-ink-secondary transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-[15px] h-[15px]" /> : <Eye className="w-[15px] h-[15px]" />}
+                </button>
+              </div>
+              {passwordStrength && <PasswordStrengthBar strength={passwordStrength} />}
+            </div>
+
+            {/* Confirm password */}
+            <div>
+              <label className="hive-label">Confirm password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-ink-tertiary pointer-events-none" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  placeholder="••••••••••"
+                  className={`hive-input pl-9 pr-10 ${
+                    confirm.length > 0 && password !== confirm
+                      ? "border-semantic-expense/40 focus:border-semantic-expense/60"
+                      : confirm.length > 0 && password === confirm
+                      ? "border-semantic-income/40 focus:border-semantic-income/60"
+                      : ""
+                  }`}
+                />
+                {confirm.length > 0 && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {password === confirm
+                      ? <CheckCircle2 className="w-[15px] h-[15px] text-semantic-income" />
+                      : <AlertCircle className="w-[15px] h-[15px] text-semantic-expense" />
+                    }
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="flex items-center gap-2 rounded-xl bg-semantic-expense/[0.08]
+                              border border-semantic-expense/20 px-3 py-2.5">
+                <AlertCircle className="w-[14px] h-[14px] text-semantic-expense shrink-0" />
+                <p className="text-[13px] text-semantic-expense">{error}</p>
+              </div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="hive-btn-primary w-full text-[14px] py-3 mt-2 group"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2 justify-center">
+                  <span className="w-4 h-4 rounded-full border-2 border-black/30 border-t-black/80 animate-spin" />
+                  Creating account…
+                </span>
+              ) : (
+                <span className="flex items-center gap-2 justify-center">
+                  Get started
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              )}
+            </button>
+
+          </form>
+
+          {/* Already have an account */}
+          <p className="mt-6 text-center text-[13px] text-ink-tertiary">
+            Already have an account?{" "}
+            <Link
+              href="/login"
+              className="text-honey hover:text-honey/80 font-medium transition-colors"
+            >
+              Sign in
+            </Link>
+          </p>
+
+        </div>
+      </div>
+    </div>
+  );
+}
