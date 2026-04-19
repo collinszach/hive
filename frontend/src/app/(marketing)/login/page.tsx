@@ -5,45 +5,28 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Lock, User, Shield, Eye, EyeOff, AlertCircle } from "lucide-react";
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-
 async function safeJson(res: Response): Promise<Record<string, unknown>> {
   const ct = res.headers.get("content-type") ?? "";
   if (!ct.includes("application/json")) return {};
   try { return await res.json(); } catch { return {}; }
 }
 
-// ── design tokens ─────────────────────────────────────────────────────────────
-const BG      = "#09090E";
-const SURFACE = "#13131A";
-const BORDER  = "rgba(255,255,255,0.07)";
-const A       = "#F5B942";
-const A_DIM   = "rgba(245,185,66,0.09)";
-const A_GLOW  = "rgba(245,185,66,0.28)";
-const TEXT    = "#E8E2DA";
-const MUTED   = "#7A7268";
-const ERR     = "#F87171";
-const ERR_BG  = "rgba(248,113,113,0.08)";
-const ERR_BD  = "rgba(248,113,113,0.2)";
-
 type Step = "credentials" | "totp";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [step, setStep]           = useState<Step>("credentials");
-  const [username, setUsername]   = useState("");
-  const [password, setPassword]   = useState("");
-  const [totpCode, setTotpCode]   = useState("");
-  const [showPw, setShowPw]       = useState(false);
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState("");
+  const [step, setStep]         = useState<Step>("credentials");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [showPw, setShowPw]     = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
 
   useEffect(() => {
-    // Redirect if already logged in
     fetch("/api/auth/me", { credentials: "include" })
       .then(r => { if (r.ok) router.replace("/dashboard"); })
       .catch(() => {});
-    // Redirect to setup if no account exists yet
     fetch("/api/auth/setup-required")
       .then(safeJson)
       .then(d => { if (d.setup_required) router.replace("/register"); })
@@ -56,9 +39,9 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res  = await fetch("/api/auth/login", {
-        method:      "POST",
-        headers:     { "Content-Type": "application/json" },
-        body:        JSON.stringify({ username, password }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
         credentials: "include",
       });
       const data = await safeJson(res);
@@ -78,9 +61,9 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res  = await fetch("/api/auth/login", {
-        method:      "POST",
-        headers:     { "Content-Type": "application/json" },
-        body:        JSON.stringify({ username, password, totp_code: totpCode }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password, totp_code: totpCode }),
         credentials: "include",
       });
       const data = await safeJson(res);
@@ -94,113 +77,250 @@ export default function LoginPage() {
     }
   }
 
-  // ── shared input style ───────────────────────────────────────────────────────
-  const inputStyle: React.CSSProperties = {
-    width:           "100%",
-    background:      "#0D0D14",
-    border:          `1px solid ${BORDER}`,
-    borderRadius:    10,
-    color:           TEXT,
-    fontSize:        14,
-    padding:         "10px 12px",
-    outline:         "none",
-    transition:      "border-color 150ms",
-    boxSizing:       "border-box",
-  };
-
   return (
-    <div
-      style={{
-        minHeight:      "100vh",
-        background:     BG,
-        display:        "flex",
-        alignItems:     "center",
-        justifyContent: "center",
-        padding:        "24px 16px",
-        position:       "relative",
-        overflow:       "hidden",
-      }}
-    >
-      {/* Ambient glow */}
-      <div
-        aria-hidden
-        style={{
-          position:       "absolute",
-          inset:          0,
-          pointerEvents:  "none",
-          background:     `radial-gradient(ellipse 70% 50% at 50% 0%,${A_GLOW.replace("0.28","0.05")} 0%,transparent 70%)`,
-        }}
-      />
+    <>
+      {/* Inline styles to guarantee rendering independent of Tailwind */}
+      <style>{`
+        .login-page {
+          min-height: 100vh;
+          background: #09090E;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px 16px;
+          position: relative;
+          overflow: hidden;
+          font-family: system-ui, -apple-system, sans-serif;
+        }
+        .login-glow {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: radial-gradient(ellipse 70% 40% at 50% 0%, rgba(245,185,66,0.06) 0%, transparent 65%);
+        }
+        .login-wrap {
+          width: 100%;
+          max-width: 380px;
+          position: relative;
+          z-index: 1;
+        }
+        .login-brand {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin-bottom: 32px;
+        }
+        .login-hex {
+          width: 52px;
+          height: 52px;
+          border-radius: 15px;
+          background: linear-gradient(135deg, #F5B942, #C9920E);
+          box-shadow: 0 0 0 1px rgba(245,185,66,0.5), 0 8px 28px rgba(245,185,66,0.30);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 14px;
+        }
+        .login-title {
+          font-size: 20px;
+          font-weight: 700;
+          color: #F2EDE8;
+          letter-spacing: 0.07em;
+          margin: 0 0 4px;
+        }
+        .login-subtitle {
+          font-size: 13px;
+          color: #5A5450;
+          margin: 0;
+        }
+        .login-card {
+          background: #18181F;
+          border: 1px solid rgba(255,255,255,0.10);
+          border-radius: 20px;
+          padding: 32px;
+          box-shadow: 0 32px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+        }
+        .login-card-title {
+          font-size: 17px;
+          font-weight: 600;
+          color: #F2EDE8;
+          margin: 0 0 4px;
+        }
+        .login-card-sub {
+          font-size: 13px;
+          color: #6A6460;
+          margin: 0 0 24px;
+        }
+        .login-label {
+          display: block;
+          font-size: 12px;
+          font-weight: 500;
+          color: #9A9290;
+          margin-bottom: 7px;
+          letter-spacing: 0.03em;
+        }
+        .login-field {
+          position: relative;
+          margin-bottom: 16px;
+        }
+        .login-input {
+          width: 100%;
+          box-sizing: border-box;
+          background: #0E0E16 !important;
+          border: 1.5px solid rgba(255,255,255,0.09);
+          border-radius: 11px;
+          color: #F2EDE8 !important;
+          font-size: 14px;
+          padding: 11px 12px;
+          outline: none;
+          transition: border-color 150ms;
+          -webkit-text-fill-color: #F2EDE8 !important;
+        }
+        .login-input::placeholder {
+          color: #3A3630 !important;
+          -webkit-text-fill-color: #3A3630 !important;
+        }
+        .login-input:focus {
+          border-color: #F5B942;
+          box-shadow: 0 0 0 3px rgba(245,185,66,0.12);
+        }
+        .login-input-padl { padding-left: 40px; }
+        .login-input-padr { padding-right: 42px; }
+        .login-icon-l {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #4A4640;
+          pointer-events: none;
+          display: flex;
+        }
+        .login-icon-r {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #4A4640;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 0;
+          display: flex;
+          transition: color 150ms;
+        }
+        .login-icon-r:hover { color: #9A9290; }
+        .login-error {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: rgba(248,113,113,0.08);
+          border: 1px solid rgba(248,113,113,0.22);
+          border-radius: 10px;
+          padding: 10px 12px;
+          margin-bottom: 16px;
+        }
+        .login-error-text {
+          font-size: 13px;
+          color: #F87171;
+        }
+        .login-btn {
+          width: 100%;
+          padding: 12px 0;
+          border-radius: 11px;
+          background: linear-gradient(135deg, #F5B942, #C9920E);
+          color: #09090E;
+          font-size: 14px;
+          font-weight: 600;
+          border: none;
+          cursor: pointer;
+          box-shadow: 0 4px 18px rgba(245,185,66,0.28);
+          transition: opacity 150ms, box-shadow 150ms;
+        }
+        .login-btn:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+          box-shadow: none;
+        }
+        .login-btn-ghost {
+          width: 100%;
+          padding: 10px 0;
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 13px;
+          color: #5A5450;
+          transition: color 150ms;
+          margin-top: 6px;
+        }
+        .login-btn-ghost:hover { color: #C8BFB4; }
+        .login-footer {
+          display: flex;
+          justify-content: center;
+          gap: 20px;
+          margin-top: 20px;
+        }
+        .login-footer a {
+          font-size: 12px;
+          color: #3A3630;
+          text-decoration: none;
+          transition: color 150ms;
+        }
+        .login-footer a:hover { color: #7A7268; }
+        .totp-shield {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          background: rgba(245,185,66,0.09);
+          border: 1px solid rgba(245,185,66,0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 14px;
+        }
+        .totp-input {
+          font-size: 26px !important;
+          font-family: monospace !important;
+          text-align: center;
+          letter-spacing: 0.4em;
+          padding: 14px 12px !important;
+          margin-bottom: 16px;
+        }
+      `}</style>
 
-      <div style={{ width: "100%", maxWidth: 380, position: "relative", zIndex: 1 }}>
+      <div className="login-page">
+        <div className="login-glow" aria-hidden />
 
-        {/* Brand */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 36 }}>
-          <div
-            style={{
-              width:        48,
-              height:       48,
-              borderRadius: 14,
-              background:   "linear-gradient(135deg,#F5B942,#C9920E)",
-              boxShadow:    `0 0 0 1px rgba(245,185,66,.4),0 6px 24px ${A_GLOW}`,
-              display:      "flex",
-              alignItems:   "center",
-              justifyContent: "center",
-              marginBottom: 16,
-            }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" style={{ width: 26, height: 26 }}>
-              <path d="M12 2L20.66 7V17L12 22L3.34 17V7L12 2Z" fill="rgba(9,8,7,.8)" />
-              <path d="M12 6L17.2 9V15L12 18L6.8 15V9L12 6Z" fill="rgba(245,185,66,.4)" />
-              <circle cx="12" cy="12" r="2"   fill="rgba(9,8,7,.9)" />
-              <circle cx="12" cy="12" r="1"   fill="rgba(245,185,66,.95)" />
-            </svg>
+        <div className="login-wrap">
+          {/* Brand */}
+          <div className="login-brand">
+            <div className="login-hex">
+              <svg viewBox="0 0 24 24" fill="none" style={{ width: 28, height: 28 }}>
+                <path d="M12 2L20.66 7V17L12 22L3.34 17V7L12 2Z" fill="rgba(9,8,7,.8)" />
+                <path d="M12 6L17.2 9V15L12 18L6.8 15V9L12 6Z" fill="rgba(245,185,66,.4)" />
+                <circle cx="12" cy="12" r="2" fill="rgba(9,8,7,.9)" />
+                <circle cx="12" cy="12" r="1" fill="rgba(245,185,66,.95)" />
+              </svg>
+            </div>
+            <h1 className="login-title">HIVE</h1>
+            <p className="login-subtitle">Personal Finance Intelligence</p>
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, letterSpacing: "0.06em", margin: 0 }}>
-            HIVE
-          </h1>
-          <p style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Personal Finance Intelligence</p>
-        </div>
 
-        {/* Card */}
-        <div
-          style={{
-            background:   SURFACE,
-            border:       `1px solid ${BORDER}`,
-            borderRadius: 18,
-            padding:      32,
-            boxShadow:    "0 24px 48px rgba(0,0,0,.5)",
-          }}
-        >
-          {step === "credentials" ? (
-            <>
-              <h2 style={{ fontSize: 16, fontWeight: 600, color: TEXT, margin: "0 0 4px" }}>
-                Welcome back
-              </h2>
-              <p style={{ fontSize: 13, color: MUTED, margin: "0 0 24px" }}>
-                Sign in to your account
-              </p>
+          {/* Card */}
+          <div className="login-card">
+            {step === "credentials" ? (
+              <>
+                <h2 className="login-card-title">Welcome back</h2>
+                <p className="login-card-sub">Sign in to your account</p>
 
-              <form onSubmit={handleCredentials}>
-                {/* Username */}
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: MUTED, marginBottom: 6, letterSpacing: "0.04em" }}>
-                    Username
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <User
-                      style={{
-                        position:  "absolute",
-                        left:      12,
-                        top:       "50%",
-                        transform: "translateY(-50%)",
-                        width:     15,
-                        height:    15,
-                        color:     MUTED,
-                        pointerEvents: "none",
-                      }}
-                    />
+                <form onSubmit={handleCredentials}>
+                  {/* Username */}
+                  <label className="login-label">Username</label>
+                  <div className="login-field">
+                    <span className="login-icon-l">
+                      <User size={15} />
+                    </span>
                     <input
+                      className="login-input login-input-padl"
                       type="text"
                       value={username}
                       onChange={e => setUsername(e.target.value)}
@@ -208,226 +328,103 @@ export default function LoginPage() {
                       autoFocus
                       autoComplete="username"
                       placeholder="admin"
-                      style={{ ...inputStyle, paddingLeft: 38 }}
-                      onFocus={e  => (e.target.style.borderColor = A)}
-                      onBlur={e   => (e.target.style.borderColor = BORDER)}
                     />
                   </div>
-                </div>
 
-                {/* Password */}
-                <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: MUTED, marginBottom: 6, letterSpacing: "0.04em" }}>
-                    Password
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <Lock
-                      style={{
-                        position:  "absolute",
-                        left:      12,
-                        top:       "50%",
-                        transform: "translateY(-50%)",
-                        width:     15,
-                        height:    15,
-                        color:     MUTED,
-                        pointerEvents: "none",
-                      }}
-                    />
+                  {/* Password */}
+                  <label className="login-label">Password</label>
+                  <div className="login-field" style={{ marginBottom: 20 }}>
+                    <span className="login-icon-l">
+                      <Lock size={15} />
+                    </span>
                     <input
+                      className="login-input login-input-padl login-input-padr"
                       type={showPw ? "text" : "password"}
                       value={password}
                       onChange={e => setPassword(e.target.value)}
                       required
                       autoComplete="current-password"
                       placeholder="••••••••"
-                      style={{ ...inputStyle, paddingLeft: 38, paddingRight: 40 }}
-                      onFocus={e => (e.target.style.borderColor = A)}
-                      onBlur={e  => (e.target.style.borderColor = BORDER)}
                     />
                     <button
                       type="button"
+                      className="login-icon-r"
                       onClick={() => setShowPw(p => !p)}
-                      style={{
-                        position:   "absolute",
-                        right:      12,
-                        top:        "50%",
-                        transform:  "translateY(-50%)",
-                        background: "none",
-                        border:     "none",
-                        cursor:     "pointer",
-                        color:      MUTED,
-                        padding:    0,
-                        display:    "flex",
-                      }}
                     >
-                      {showPw
-                        ? <EyeOff style={{ width: 15, height: 15 }} />
-                        : <Eye    style={{ width: 15, height: 15 }} />}
+                      {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
                   </div>
+
+                  {error && (
+                    <div className="login-error">
+                      <AlertCircle size={14} color="#F87171" style={{ flexShrink: 0 }} />
+                      <span className="login-error-text">{error}</span>
+                    </div>
+                  )}
+
+                  <button type="submit" disabled={loading} className="login-btn">
+                    {loading ? "Signing in…" : "Sign in"}
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <div className="totp-shield">
+                  <Shield size={20} color="#F5B942" />
                 </div>
+                <h2 className="login-card-title">Two-factor auth</h2>
+                <p className="login-card-sub">Enter the 6-digit code from your authenticator app</p>
 
-                {/* Error */}
-                {error && (
-                  <div
-                    style={{
-                      display:      "flex",
-                      alignItems:   "center",
-                      gap:          8,
-                      background:   ERR_BG,
-                      border:       `1px solid ${ERR_BD}`,
-                      borderRadius: 10,
-                      padding:      "10px 12px",
-                      marginBottom: 16,
-                    }}
+                <form onSubmit={handleTotp}>
+                  <input
+                    className="login-input totp-input"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    value={totpCode}
+                    onChange={e => setTotpCode(e.target.value.replace(/\D/g, ""))}
+                    required
+                    autoFocus
+                    autoComplete="one-time-code"
+                    placeholder="000000"
+                  />
+
+                  {error && (
+                    <div className="login-error">
+                      <AlertCircle size={14} color="#F87171" style={{ flexShrink: 0 }} />
+                      <span className="login-error-text">{error}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading || totpCode.length !== 6}
+                    className="login-btn"
                   >
-                    <AlertCircle style={{ width: 14, height: 14, color: ERR, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: ERR }}>{error}</span>
-                  </div>
-                )}
+                    {loading ? "Verifying…" : "Verify"}
+                  </button>
 
-                {/* Submit */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{
-                    width:        "100%",
-                    padding:      "11px 0",
-                    borderRadius: 10,
-                    background:   loading ? "rgba(245,185,66,.5)" : "linear-gradient(135deg,#F5B942,#C9920E)",
-                    color:        "#09090E",
-                    fontSize:     14,
-                    fontWeight:   600,
-                    border:       "none",
-                    cursor:       loading ? "not-allowed" : "pointer",
-                    boxShadow:    loading ? "none" : `0 4px 16px ${A_GLOW}`,
-                    transition:   "all 150ms",
-                  }}
-                >
-                  {loading ? "Signing in…" : "Sign in"}
-                </button>
-              </form>
-            </>
-          ) : (
-            <>
-              {/* TOTP step */}
-              <div
-                style={{
-                  width:        40,
-                  height:       40,
-                  borderRadius: 10,
-                  background:   A_DIM,
-                  border:       `1px solid rgba(245,185,66,.2)`,
-                  display:      "flex",
-                  alignItems:   "center",
-                  justifyContent: "center",
-                  marginBottom: 14,
-                }}
-              >
-                <Shield style={{ width: 18, height: 18, color: A }} />
-              </div>
-
-              <h2 style={{ fontSize: 16, fontWeight: 600, color: TEXT, margin: "0 0 4px" }}>
-                Two-factor authentication
-              </h2>
-              <p style={{ fontSize: 13, color: MUTED, margin: "0 0 24px" }}>
-                Enter the 6-digit code from your authenticator app
-              </p>
-
-              <form onSubmit={handleTotp}>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  value={totpCode}
-                  onChange={e => setTotpCode(e.target.value.replace(/\D/g, ""))}
-                  required
-                  autoFocus
-                  autoComplete="one-time-code"
-                  placeholder="000000"
-                  style={{
-                    ...inputStyle,
-                    fontSize:       22,
-                    fontFamily:     "monospace",
-                    textAlign:      "center",
-                    letterSpacing:  "0.35em",
-                    padding:        "14px 12px",
-                    marginBottom:   16,
-                  }}
-                  onFocus={e => (e.target.style.borderColor = A)}
-                  onBlur={e  => (e.target.style.borderColor = BORDER)}
-                />
-
-                {error && (
-                  <div
-                    style={{
-                      display:      "flex",
-                      alignItems:   "center",
-                      gap:          8,
-                      background:   ERR_BG,
-                      border:       `1px solid ${ERR_BD}`,
-                      borderRadius: 10,
-                      padding:      "10px 12px",
-                      marginBottom: 16,
-                    }}
+                  <button
+                    type="button"
+                    className="login-btn-ghost"
+                    onClick={() => { setStep("credentials"); setError(""); setTotpCode(""); }}
                   >
-                    <AlertCircle style={{ width: 14, height: 14, color: ERR, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: ERR }}>{error}</span>
-                  </div>
-                )}
+                    ← Back to sign in
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
 
-                <button
-                  type="submit"
-                  disabled={loading || totpCode.length !== 6}
-                  style={{
-                    width:        "100%",
-                    padding:      "11px 0",
-                    borderRadius: 10,
-                    background:   (loading || totpCode.length !== 6) ? "rgba(245,185,66,.4)" : "linear-gradient(135deg,#F5B942,#C9920E)",
-                    color:        "#09090E",
-                    fontSize:     14,
-                    fontWeight:   600,
-                    border:       "none",
-                    cursor:       (loading || totpCode.length !== 6) ? "not-allowed" : "pointer",
-                    boxShadow:    (loading || totpCode.length !== 6) ? "none" : `0 4px 16px ${A_GLOW}`,
-                    marginBottom: 10,
-                    transition:   "all 150ms",
-                  }}
-                >
-                  {loading ? "Verifying…" : "Verify"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setStep("credentials"); setError(""); setTotpCode(""); }}
-                  style={{
-                    width:      "100%",
-                    padding:    "9px 0",
-                    background: "none",
-                    border:     "none",
-                    cursor:     "pointer",
-                    fontSize:   13,
-                    color:      MUTED,
-                    transition: "color 150ms",
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.color = TEXT)}
-                  onMouseLeave={e => (e.currentTarget.style.color = MUTED)}
-                >
-                  ← Back to sign in
-                </button>
-              </form>
-            </>
-          )}
-        </div>
-
-        {/* Footer links */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 20, marginTop: 20 }}>
-          <Link href="/"        style={{ fontSize: 12, color: "#3A3630", textDecoration: "none" }}>Home</Link>
-          <Link href="/pricing" style={{ fontSize: 12, color: "#3A3630", textDecoration: "none" }}>Pricing</Link>
-          <Link href="/privacy" style={{ fontSize: 12, color: "#3A3630", textDecoration: "none" }}>Privacy</Link>
+          {/* Footer */}
+          <div className="login-footer">
+            <Link href="/">Home</Link>
+            <Link href="/pricing">Pricing</Link>
+            <Link href="/privacy">Privacy</Link>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
