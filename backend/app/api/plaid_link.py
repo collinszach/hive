@@ -52,6 +52,17 @@ async def create_link_token(
         raise HTTPException(status_code=502, detail="Failed to create link token. Please try again.") from exc
 
 
+@router.get("/last-synced")
+async def last_synced(db: AsyncSession = Depends(get_db)) -> dict:
+    """Return the most recent last_sync_at across all active Plaid links."""
+    from sqlalchemy import func as sqlfunc
+    result = await db.execute(
+        select(sqlfunc.max(PlaidLink.last_sync_at)).where(PlaidLink.is_active == True)  # noqa: E712
+    )
+    ts = result.scalar_one_or_none()
+    return {"last_synced_at": ts.isoformat() if ts else None}
+
+
 @router.post("/sync-now", status_code=202)
 async def trigger_sync_now(db: AsyncSession = Depends(get_db)) -> dict:
     """Manually trigger an immediate sync of all active Plaid links."""

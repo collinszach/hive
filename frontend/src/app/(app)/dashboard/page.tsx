@@ -312,20 +312,25 @@ export default function Dashboard() {
     const yd        = new Date(); yd.setDate(yd.getDate() - 1);
     const yesterday = toLocalDateStr(yd);
 
-    api.transactions.list({ page_size: 50, include_pending: false })
-      .then((res) => {
-        const todayTxs     = res.items.filter((tx) => tx.date === today     && !tx.is_excluded);
-        const yesterdayTxs = res.items.filter((tx) => tx.date === yesterday && !tx.is_excluded);
-        const allDates     = res.items.map((tx) => tx.date).sort().reverse();
-        setTodayData({
-          spentToday:     todayTxs.reduce((s, tx) => s + tx.amount, 0),
-          countToday:     todayTxs.length,
-          spentYesterday: yesterdayTxs.reduce((s, tx) => s + tx.amount, 0),
-          lastSyncedAt:   allDates[0] ?? null,
-        });
-      })
-      .catch(() => setTodayData(null))
-      .finally(() => setTodayLoading(false));
+    Promise.allSettled([
+      api.transactions.list({ page_size: 50, include_pending: false }),
+      fetch("/api/plaid/last-synced", { credentials: "include" }).then((r) => r.ok ? r.json() : null),
+    ]).then(([txRes, syncRes]) => {
+      const items = txRes.status === "fulfilled" ? txRes.value.items : [];
+      const todayTxs     = items.filter((tx) => tx.date === today     && !tx.is_excluded);
+      const yesterdayTxs = items.filter((tx) => tx.date === yesterday && !tx.is_excluded);
+      const lastSyncedAt = syncRes.status === "fulfilled" && syncRes.value?.last_synced_at
+        ? (syncRes.value as { last_synced_at: string }).last_synced_at
+        : null;
+      setTodayData({
+        spentToday:     todayTxs.reduce((s, tx) => s + tx.amount, 0),
+        countToday:     todayTxs.length,
+        spentYesterday: yesterdayTxs.reduce((s, tx) => s + tx.amount, 0),
+        lastSyncedAt,
+      });
+    })
+    .catch(() => setTodayData(null))
+    .finally(() => setTodayLoading(false));
   }, []);
 
   const sortedAccts = applyOrder(accts, acctOrder);
