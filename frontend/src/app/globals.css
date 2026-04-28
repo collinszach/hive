@@ -2,80 +2,123 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Base ─────────────────────────────────────────────────────── */
+
 body {
   background: #0A0C10;
   color: #F0F0F4;
   position: relative;
+  font-family: var(--font-sans, system-ui, sans-serif);
 }
 
+/* Subtle noise grain overlay — ORIGIN signature texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ── Card primitives ──────────────────────────────────────────── */
+
+/* Primary card surface */
 .hive-card {
-  background: #0F1117;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  background-image: linear-gradient(145deg, rgba(255,255,255,0.015) 0%, transparent 55%);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.03);
+  background: #0C0E13;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background-image: linear-gradient(160deg, rgba(255,255,255,0.02) 0%, transparent 50%);
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.8),
+    0 0 0 1px rgba(255,255,255,0.03),
+    inset 0 1px 0 rgba(255,255,255,0.05);
   transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 .hive-card:hover {
-  border-color: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
 /* Glass card — KPI tiles, account cards */
 .glass-card {
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   backdrop-filter: blur(20px);
   background-image: linear-gradient(145deg, rgba(255,255,255,0.04) 0%, transparent 55%);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+  box-shadow:
+    0 4px 16px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.07);
   transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 .glass-card:hover {
-  border-color: rgba(255, 255, 255, 0.11);
-  box-shadow: 0 6px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.09);
 }
 
 /* Tinted glass — semantic color variants */
 .glass-card-income {
   background: rgba(52, 211, 153, 0.04);
-  border: 1px solid rgba(52, 211, 153, 0.12);
-  border-radius: 16px;
+  border: 1px solid rgba(52, 211, 153, 0.14);
+  border-radius: 12px;
   backdrop-filter: blur(20px);
-  background-image: linear-gradient(145deg, rgba(52,211,153,0.06) 0%, transparent 55%);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(52,211,153,0.06);
+  background-image: linear-gradient(145deg, rgba(52,211,153,0.07) 0%, transparent 55%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(52,211,153,0.08);
 }
 .glass-card-expense {
   background: rgba(248, 113, 113, 0.04);
-  border: 1px solid rgba(248, 113, 113, 0.12);
-  border-radius: 16px;
+  border: 1px solid rgba(248, 113, 113, 0.14);
+  border-radius: 12px;
   backdrop-filter: blur(20px);
-  background-image: linear-gradient(145deg, rgba(248,113,113,0.06) 0%, transparent 55%);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(248,113,113,0.06);
+  background-image: linear-gradient(145deg, rgba(248,113,113,0.07) 0%, transparent 55%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(248,113,113,0.08);
 }
 .glass-card-amber {
   background: rgba(245, 185, 66, 0.05);
-  border: 1px solid rgba(245, 185, 66, 0.16);
-  border-radius: 16px;
+  border: 1px solid rgba(245, 185, 66, 0.18);
+  border-radius: 12px;
   backdrop-filter: blur(20px);
-  background-image: linear-gradient(145deg, rgba(245,185,66,0.08) 0%, transparent 55%);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 20px rgba(245,185,66,0.08);
+  background-image: linear-gradient(145deg, rgba(245,185,66,0.09) 0%, transparent 55%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 24px rgba(245,185,66,0.07), inset 0 1px 0 rgba(245,185,66,0.10);
 }
 .glass-card-sky {
   background: rgba(56, 189, 248, 0.04);
-  border: 1px solid rgba(56, 189, 248, 0.12);
-  border-radius: 16px;
+  border: 1px solid rgba(56, 189, 248, 0.14);
+  border-radius: 12px;
   backdrop-filter: blur(20px);
-  background-image: linear-gradient(145deg, rgba(56,189,248,0.06) 0%, transparent 55%);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(56,189,248,0.06);
+  background-image: linear-gradient(145deg, rgba(56,189,248,0.07) 0%, transparent 55%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(56,189,248,0.08);
 }
 .glass-card-violet {
   background: rgba(167, 139, 250, 0.04);
-  border: 1px solid rgba(167, 139, 250, 0.12);
-  border-radius: 16px;
+  border: 1px solid rgba(167, 139, 250, 0.14);
+  border-radius: 12px;
   backdrop-filter: blur(20px);
-  background-image: linear-gradient(145deg, rgba(167,139,250,0.06) 0%, transparent 55%);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(167,139,250,0.06);
+  background-image: linear-gradient(145deg, rgba(167,139,250,0.07) 0%, transparent 55%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(167,139,250,0.08);
 }
+
+/* ── Section header ───────────────────────────────────────────── */
 
 .hive-section-header {
   display: flex;
@@ -85,17 +128,107 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
-.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
-.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
-.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
-.stagger-children > *:nth-child(5)  { animation-delay: 200ms; }
-.stagger-children > *:nth-child(6)  { animation-delay: 250ms; }
-.stagger-children > *:nth-child(7)  { animation-delay: 300ms; }
-.stagger-children > *:nth-child(8)  { animation-delay: 350ms; }
-.stagger-children > *:nth-child(9)  { animation-delay: 400ms; }
-.stagger-children > *:nth-child(10) { animation-delay: 450ms; }
+/* ── Typography utilities ─────────────────────────────────────── */
 
+.hive-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: #4B5063;
+}
+
+/* ── Divider ──────────────────────────────────────────────────── */
+
+.hive-divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ── Button system ────────────────────────────────────────────── */
+
+.hive-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #F5B942 0%, #C9920E 100%);
+  color: #09090E;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 9px;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(245,185,66,0.40), 0 4px 14px rgba(245,185,66,0.25);
+  transition: box-shadow 150ms ease, transform 100ms ease, opacity 150ms;
+  letter-spacing: -0.01em;
+}
+.hive-btn-primary:hover {
+  box-shadow: 0 0 0 1px rgba(245,185,66,0.55), 0 6px 20px rgba(245,185,66,0.35);
+  transform: translateY(-1px);
+}
+.hive-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 0 0 1px rgba(245,185,66,0.35), 0 2px 8px rgba(245,185,66,0.20);
+}
+.hive-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.hive-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #9CA3AF;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms, color 150ms;
+  letter-spacing: -0.01em;
+}
+.hive-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #F0F0F4;
+}
+
+.hive-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  color: #4B5063;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: none;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+.hive-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #9CA3AF;
+}
+
+/* ── Animations ───────────────────────────────────────────────── */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
 @keyframes barGrow {
   from { width: 0%; }
   to   { width: var(--bar-w, 100%); }
@@ -112,3 +245,20 @@ body {
   from { stroke-dashoffset: var(--path-len, 1000); }
   to   { stroke-dashoffset: 0; }
 }
+
+.animate-fade-in {
+  animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Stagger helpers ──────────────────────────────────────────── */
+
+.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2)  { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3)  { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4)  { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 250ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 300ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 350ms; }
+.stagger-children > *:nth-child(9)  { animation-delay: 400ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 450ms; }
