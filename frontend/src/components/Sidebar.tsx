@@ -38,7 +38,7 @@ const NAV_GROUPS = [
   },
   {
     id: "track",
-    label: "FINANCES",
+    label: "Finances",
     items: [
       { href: "/transactions",  label: "Transactions",  icon: Receipt,  exact: false },
       { href: "/budgets",       label: "Budgets",       icon: Target,   exact: false },
@@ -47,13 +47,13 @@ const NAV_GROUPS = [
   },
   {
     id: "optimize",
-    label: "INTELLIGENCE",
+    label: "Intelligence",
     items: [
-      { href: "/optimize",  label: "Optimizer",      icon: Zap,          exact: false },
-      { href: "/points",    label: "Points",         icon: Star,         exact: false },
-      { href: "/net-worth", label: "Net Worth",      icon: TrendingUp,   exact: false },
-      { href: "/reports",   label: "Reports",        icon: BarChart3,    exact: false },
-      { href: "/tax",       label: "Tax Calculator", icon: Calculator,   exact: false },
+      { href: "/optimize",  label: "Optimizer",      icon: Zap,           exact: false },
+      { href: "/points",    label: "Points",         icon: Star,          exact: false },
+      { href: "/net-worth", label: "Net Worth",      icon: TrendingUp,    exact: false },
+      { href: "/reports",   label: "Reports",        icon: BarChart3,     exact: false },
+      { href: "/tax",       label: "Tax",            icon: Calculator,    exact: false },
       { href: "/chat",      label: "AI Chat",        icon: MessageSquare, exact: false },
     ],
   },
@@ -84,35 +84,20 @@ function NavItem({
     <Link
       href={href}
       className={cn(
-        "group relative flex items-center gap-2.5 px-3 py-[6px] rounded-[9px]",
-        "text-[13px] font-medium transition-all duration-150",
+        "group flex items-center gap-2.5 px-3 py-[6px] rounded-[8px]",
+        "text-[12.5px] font-medium transition-all duration-150",
         active
-          ? [
-              "text-[#F5B942]",
-              "bg-[rgba(245,185,66,0.08)]",
-            ].join(" ")
-          : "text-[#7A7268] hover:text-[#C8BFB4] hover:bg-[rgba(245,185,66,0.04)]"
+          ? "text-[#F5B942] bg-[rgba(245,185,66,0.09)] border border-[rgba(245,185,66,0.14)]"
+          : "text-[#505568] border border-transparent hover:text-[#8A90A0] hover:bg-[rgba(255,255,255,0.04)]"
       )}
     >
-      {/* Active left bar */}
-      {active && (
-        <span
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-[18px] rounded-r-full"
-          style={{
-            background: "linear-gradient(180deg, #FFD166 0%, #F5B942 100%)",
-            boxShadow: "0 0 8px rgba(245,185,66,0.5)",
-          }}
-        />
-      )}
-
       <Icon
         className={cn(
           "w-[14px] h-[14px] shrink-0 transition-colors duration-150",
-          active ? "text-[#F5B942]" : "text-[#4A4640] group-hover:text-[#8A8278]"
+          active ? "text-[#F5B942]" : "text-[#383C4A] group-hover:text-[#6B7280]"
         )}
         strokeWidth={active ? 2.2 : 1.8}
       />
-
       <span className="leading-none tracking-[-0.01em]">{label}</span>
     </Link>
   );
@@ -146,100 +131,77 @@ export function Sidebar() {
 
   return (
     <aside
-      className="w-[210px] shrink-0 h-screen sticky top-0 flex flex-col z-10"
+      className="w-[204px] shrink-0 h-screen sticky top-0 flex flex-col z-10"
       style={{
-        background: "#09090E",
-        borderRight: "1px solid rgba(255, 255, 255, 0.05)",
+        background: "#080A0F",
+        borderRight: "1px solid rgba(255, 255, 255, 0.06)",
       }}
     >
-      {/* ── Ambient amber glow at top ─────────────────────── */}
-      <div
-        className="absolute top-0 left-0 right-0 h-[180px] pointer-events-none"
-        style={{
-          background: "radial-gradient(ellipse 160% 100% at 50% 0%, rgba(245,185,66,0.08) 0%, transparent 70%)",
-        }}
-      />
-
       {/* ── Brand mark ───────────────────────────────────── */}
       <div
-        className="relative px-4 pt-5 pb-4"
+        className="px-4 pt-5 pb-4"
         style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
       >
         <Link href="/dashboard" className="flex items-center gap-3 group">
           {/* Honeycomb hex mark */}
           <div
-            className="relative w-9 h-9 shrink-0 flex items-center justify-center rounded-[10px]"
+            className="relative w-8 h-8 shrink-0 flex items-center justify-center rounded-[9px]"
             style={{
               background: "linear-gradient(135deg, #F5B942 0%, #C9920E 100%)",
-              boxShadow: "0 0 0 1px rgba(245,185,66,0.4), 0 4px 16px rgba(245,185,66,0.30), 0 2px 4px rgba(0,0,0,0.5)",
+              boxShadow: "0 0 0 1px rgba(245,185,66,0.35), 0 3px 12px rgba(245,185,66,0.25), 0 1px 3px rgba(0,0,0,0.5)",
             }}
           >
-            <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
-              {/* Outer hex */}
-              <path
-                d="M12 2L20.66 7V17L12 22L3.34 17V7L12 2Z"
-                fill="rgba(9,8,7,0.75)"
-              />
-              {/* Inner hex */}
-              <path
-                d="M12 6L17.2 9V15L12 18L6.8 15V9L12 6Z"
-                fill="rgba(245,185,66,0.35)"
-              />
-              {/* Center dot */}
+            <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4">
+              <path d="M12 2L20.66 7V17L12 22L3.34 17V7L12 2Z" fill="rgba(9,8,7,0.75)" />
+              <path d="M12 6L17.2 9V15L12 18L6.8 15V9L12 6Z" fill="rgba(245,185,66,0.35)" />
               <circle cx="12" cy="12" r="2" fill="rgba(9,8,7,0.9)" />
               <circle cx="12" cy="12" r="1" fill="rgba(245,185,66,0.95)" />
             </svg>
           </div>
 
-          <div>
-            <p
-              className="text-[15px] font-bold tracking-[0.04em] text-[#F2EDE8]"
-              style={{ fontFamily: "var(--font-display)", letterSpacing: "0.08em" }}
+          <div className="flex items-baseline gap-1.5">
+            <span
+              className="text-[14px] font-bold tracking-[0.08em] text-[#E8E4DF]"
+              style={{ fontFamily: "var(--font-sans, system-ui)" }}
             >
               HIVE
-            </p>
-            <p className="text-[9.5px] tracking-[0.12em] uppercase text-[#4A4640] mt-[1px]">
-              Finance
-            </p>
+            </span>
+            <span className="text-[9px] tracking-[0.10em] uppercase text-[#23262E] font-medium">
+              v2
+            </span>
           </div>
         </Link>
       </div>
 
       {/* ── Navigation ───────────────────────────────────── */}
-      <nav className="relative flex-1 px-2.5 py-3 overflow-y-auto space-y-[2px]">
+      <nav className="flex-1 px-2.5 py-3 overflow-y-auto space-y-[2px]">
         {NAV_GROUPS.map((group, gi) => (
-          <div key={group.id} className={gi > 0 ? "mt-3" : ""}>
+          <div key={group.id} className={gi > 0 ? "mt-4" : ""}>
             {/* Section label */}
             {group.label && (
               <p
-                className="px-3 pb-1.5 text-[9.5px] font-semibold tracking-[0.14em]"
-                style={{ color: "#3A3630" }}
+                className="px-3 pb-1.5 text-[9px] font-semibold tracking-[0.16em] uppercase"
+                style={{ color: "#23262E" }}
               >
                 {group.label}
               </p>
             )}
 
             {/* Nav items */}
-            {group.items.map(({ href, label, icon, exact }) => {
-              const active = exact ? pathname === href : pathname.startsWith(href);
-              return (
-                <NavItem
-                  key={href}
-                  href={href}
-                  label={label}
-                  icon={icon}
-                  active={active}
-                />
-              );
-            })}
-
-            {/* Group separator (except last) */}
-            {gi < NAV_GROUPS.length - 1 && (
-              <div
-                className="mx-3 mt-3"
-                style={{ height: "1px", background: "rgba(255,255,255,0.04)" }}
-              />
-            )}
+            <div className="space-y-[2px]">
+              {group.items.map(({ href, label, icon, exact }) => {
+                const active = exact ? pathname === href : pathname.startsWith(href);
+                return (
+                  <NavItem
+                    key={href}
+                    href={href}
+                    label={label}
+                    icon={icon}
+                    active={active}
+                  />
+                );
+              })}
+            </div>
           </div>
         ))}
       </nav>
@@ -254,11 +216,11 @@ export function Sidebar() {
           onClick={handleSync}
           disabled={syncing}
           className={cn(
-            "w-full flex items-center gap-2.5 px-3 py-[6px] rounded-[9px]",
-            "text-[13px] font-medium transition-all duration-150",
+            "w-full flex items-center gap-2.5 px-3 py-[6px] rounded-[8px]",
+            "text-[12.5px] font-medium transition-all duration-150 border",
             syncDone
-              ? "text-[#3DD68C] bg-[rgba(61,214,140,0.07)]"
-              : "text-[#7A7268] hover:text-[#C8BFB4] hover:bg-[rgba(245,185,66,0.04)] disabled:opacity-40"
+              ? "text-[#3DD68C] bg-[rgba(61,214,140,0.07)] border-[rgba(61,214,140,0.14)]"
+              : "text-[#505568] border-transparent hover:text-[#8A90A0] hover:bg-[rgba(255,255,255,0.04)] disabled:opacity-40"
           )}
         >
           {syncDone ? (
@@ -267,13 +229,13 @@ export function Sidebar() {
             <RefreshCw
               className={cn(
                 "w-[14px] h-[14px] shrink-0 transition-colors",
-                syncing ? "animate-spin text-[#F5B942]" : "text-[#4A4640]"
+                syncing ? "animate-spin text-[#F5B942]" : "text-[#383C4A]"
               )}
               strokeWidth={1.8}
             />
           )}
           <span className="leading-none tracking-[-0.01em]">
-            {syncing ? "Syncing…" : syncDone ? "Synced!" : "Sync Now"}
+            {syncing ? "Syncing…" : syncDone ? "Synced!" : "Sync"}
           </span>
         </button>
 
@@ -286,18 +248,18 @@ export function Sidebar() {
         {/* Sign out */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-2.5 px-3 py-[6px] rounded-[9px]
-                     text-[13px] font-medium tracking-[-0.01em]
-                     text-[#4A4640] hover:text-[#F87171] hover:bg-[rgba(248,113,113,0.06)]
+          className="w-full flex items-center gap-2.5 px-3 py-[6px] rounded-[8px] border border-transparent
+                     text-[12.5px] font-medium tracking-[-0.01em]
+                     text-[#383C4A] hover:text-[#F87171] hover:bg-[rgba(248,113,113,0.06)]
                      transition-all duration-150"
         >
-          <LogOut className="w-[14px] h-[14px] shrink-0 text-[#3A3630]" strokeWidth={1.8} />
+          <LogOut className="w-[14px] h-[14px] shrink-0 text-[#2C2F3A]" strokeWidth={1.8} />
           <span className="leading-none">Sign out</span>
         </button>
 
         {/* Footer note */}
-        <p className="px-3 pt-1.5 text-[9.5px] tracking-[0.08em] text-[#2C2926]">
-          PRIVATE · SELF-HOSTED
+        <p className="px-3 pt-1.5 text-[9px] tracking-[0.10em] uppercase" style={{ color: "#1E2028" }}>
+          Private · Self-hosted
         </p>
       </div>
     </aside>

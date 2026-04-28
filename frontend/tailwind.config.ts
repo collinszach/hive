@@ -8,6 +8,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+      },
       colors: {
         base:     '#0A0C10',
         surface:  '#0F1117',
@@ -51,6 +55,9 @@ const config: Config = {
         'bar-rise':     'barRise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both',
         'slide-in-row': 'slideInRow 0.2s cubic-bezier(0.16, 1, 0.3, 1) both',
         'chart-draw':   'chartDraw 1.2s cubic-bezier(0.4, 0, 0.2, 1) both',
+        'fade-up':      'fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'scale-in':     'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'fade-in':      'fadeIn 0.25s ease both',
       },
       keyframes: {
         barGrow: {
@@ -68,6 +75,18 @@ const config: Config = {
         chartDraw: {
           from: { strokeDashoffset: 'var(--path-len, 1000)' },
           to:   { strokeDashoffset: '0' },
+        },
+        fadeUp: {
+          from: { opacity: '0', transform: 'translateY(10px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        scaleIn: {
+          from: { opacity: '0', transform: 'scale(0.96)' },
+          to:   { opacity: '1', transform: 'scale(1)' },
+        },
+        fadeIn: {
+          from: { opacity: '0' },
+          to:   { opacity: '1' },
         },
       },
     },
