@@ -246,52 +246,43 @@ function TransactionsPageInner() {
       />
 
       {/* ── Filters ───────────────────────────────────────────────────── */}
-      <div className="hive-card p-4">
-        <div className="flex flex-wrap gap-2.5 items-center">
-          <SlidersHorizontal className="w-[15px] h-[15px] text-ink-tertiary shrink-0" />
+      <div className="hive-card px-4 py-3">
+        <div className="flex flex-wrap gap-2 items-center">
+          <SlidersHorizontal className="w-[13px] h-[13px] text-ink-tertiary/60 shrink-0" />
 
           <select
             value={month}
             onChange={(e) => { setMonth(e.target.value); setPage(1); }}
-            className="hive-select text-[13px] py-1.5 w-auto"
+            className="hive-select"
           >
-            {months.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
+            {months.map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
 
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-ink-tertiary pointer-events-none" />
+            <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-tertiary/60 pointer-events-none" />
             <input
               type="search"
               placeholder="Search merchant…"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="bg-elevated border border-white/[0.08] rounded-xl pl-8 pr-3 py-1.5 text-[13px]
-                         text-ink-primary placeholder-ink-tertiary min-w-[200px]
+              className="bg-white/[0.04] border border-white/[0.08] rounded-[9px] pl-7 pr-3 py-[7px]
+                         text-[12px] text-ink-primary placeholder:text-ink-tertiary/60 min-w-[180px]
                          focus:outline-none focus:border-honey/40 transition-colors"
             />
           </div>
 
-          <label className="flex items-center gap-2 text-[13px] text-ink-secondary cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={includePending}
-              onChange={(e) => setIncludePending(e.target.checked)}
-              className="rounded accent-[#F5B942] w-3.5 h-3.5"
-            />
-            Pending
-          </label>
-
-          <label className="flex items-center gap-2 text-[13px] text-ink-secondary cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={includeExcluded}
-              onChange={(e) => setIncludeExcluded(e.target.checked)}
-              className="rounded accent-[#F5B942] w-3.5 h-3.5"
-            />
-            Excluded
-          </label>
+          <div className="flex items-center gap-3 ml-1">
+            <label className="flex items-center gap-1.5 text-[12px] text-ink-tertiary cursor-pointer select-none hover:text-ink-secondary transition-colors">
+              <input type="checkbox" checked={includePending} onChange={(e) => setIncludePending(e.target.checked)}
+                className="rounded accent-[#F5B942] w-3 h-3" />
+              Pending
+            </label>
+            <label className="flex items-center gap-1.5 text-[12px] text-ink-tertiary cursor-pointer select-none hover:text-ink-secondary transition-colors">
+              <input type="checkbox" checked={includeExcluded} onChange={(e) => setIncludeExcluded(e.target.checked)}
+                className="rounded accent-[#F5B942] w-3 h-3" />
+              Excluded
+            </label>
+          </div>
         </div>
       </div>
 
@@ -338,32 +329,32 @@ function TransactionsPageInner() {
                 onClick={() => setSelectedTx(tx)}
                 className={cn(
                   "hover:bg-white/[0.02] cursor-pointer transition-colors animate-slide-in-row",
-                  tx.is_excluded && "opacity-35",
-                  tx.pending && "opacity-60"
+                  tx.is_excluded && "opacity-30",
+                  tx.pending && "opacity-55"
                 )}
-                style={index < 10 ? { animationDelay: `${index * 40}ms` } : undefined}
+                style={index < 10 ? { animationDelay: `${index * 30}ms` } : undefined}
               >
-                <td className="px-5 py-3 whitespace-nowrap">
-                  <span className="text-[12px] font-mono text-ink-tertiary">{fmtDate(tx.date)}</span>
+                <td className="px-4 py-2.5 whitespace-nowrap">
+                  <span className="text-[11px] font-mono text-ink-tertiary/70">{fmtDate(tx.date)}</span>
                 </td>
-                <td className="px-5 py-3 max-w-[260px]">
+                <td className="px-4 py-2.5 max-w-[260px]">
                   <MerchantCell tx={tx} onSave={handleMerchantSaved} />
                 </td>
-                <td className="px-5 py-3 min-w-[200px]">
+                <td className="px-4 py-2.5 min-w-[180px]">
                   <div className="flex items-center gap-1.5">
                     <CategoryBadge category={tx.category} />
                     {tx.subcategory && (
-                      <span className="text-[11px] text-ink-tertiary truncate max-w-[80px]">
+                      <span className="text-[10px] text-ink-tertiary/60 truncate max-w-[70px]">
                         {tx.subcategory}
                       </span>
                     )}
                   </div>
                 </td>
-                <td className="px-5 py-3">
+                <td className="px-4 py-2.5">
                   <CardBadge cardSlug={tx.card_slug} accountName={tx.account_name} />
                 </td>
                 <td className={cn(
-                  "px-5 py-3 text-right font-mono tabular-nums whitespace-nowrap text-[13px] font-medium",
+                  "px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap text-[13px] font-semibold",
                   tx.amount < 0 ? "text-semantic-income" : "text-ink-primary"
                 )}>
                   {tx.amount < 0 ? `+${fmt(Math.abs(tx.amount))}` : fmt(tx.amount)}
