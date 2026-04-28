@@ -64,108 +64,80 @@ function BudgetCard({
   }
 
   return (
-    <GlassCard
-      tint="none"
-      className={cn(
-        "p-5 transition-all duration-200",
-        isOver && "border-semantic-expense/20",
-        isWarning && "border-honey/20"
-      )}
-    >
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-[14px] font-medium text-ink-primary">{b.category}</span>
-        {editing ? (
-          <div className="flex items-center gap-1.5">
-            <span className="text-[13px] text-ink-tertiary">$</span>
-            <input
-              type="number"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              className="w-20 bg-elevated border border-white/[0.1] rounded-lg px-2 py-1 text-[13px]
-                         text-ink-primary focus:outline-none focus:border-honey/40"
-              onKeyDown={(e) => e.key === "Enter" && save()}
-              autoFocus
-            />
-            <button
-              onClick={save}
-              disabled={saving}
-              className="flex items-center gap-1 text-[11px] bg-honey/[0.12] border border-honey/20
-                         text-honey px-2 py-1 rounded-lg hover:bg-honey/[0.2] disabled:opacity-40 transition-colors"
-            >
-              <Check className="w-3 h-3" />
-            </button>
-            <button
-              onClick={() => setEditing(false)}
-              className="flex items-center justify-center w-6 h-6 rounded-lg text-ink-tertiary
-                         hover:bg-white/[0.06] transition-colors"
-            >
-              <X className="w-3 h-3" />
-            </button>
+    <div className={cn(
+      "px-5 py-4 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.015] transition-colors",
+      isOver && "border-l-2 border-l-semantic-expense",
+    )}>
+      <div className="flex items-center gap-4">
+        {/* Category + bar */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[13px] font-medium text-ink-primary">{b.category}</span>
+            <span className={cn("text-[11px] font-mono font-semibold tabular-nums", pctColor)}>
+              {b.pct_used.toFixed(0)}%
+            </span>
           </div>
-        ) : confirmDelete ? (
-          <div className="flex items-center gap-2">
-            <span className="text-[12px] text-semantic-expense">Remove?</span>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-[11px] bg-semantic-expense/10 border border-semantic-expense/20
-                         text-semantic-expense px-2.5 py-1 rounded-lg hover:bg-semantic-expense/20
-                         disabled:opacity-40 transition-colors"
-            >
-              {deleting ? "…" : "Yes"}
-            </button>
-            <button
-              onClick={() => setConfirmDelete(false)}
-              className="flex items-center justify-center w-6 h-6 rounded-lg text-ink-tertiary
-                         hover:bg-white/[0.06] transition-colors"
-            >
-              <X className="w-3 h-3" />
-            </button>
+          <AnimatedBar pct={barPct} color={barColor} height={4} delay={index * 60} />
+          <div className="flex items-center justify-between mt-1.5">
+            <span className="text-[10px] font-mono text-ink-tertiary/60 tabular-nums">
+              {fmt(b.actual_spend)} of {fmt(b.budget_amount)}
+            </span>
+            <span className={cn("text-[10px] font-mono tabular-nums", b.remaining >= 0 ? "text-ink-tertiary/50" : "text-semantic-expense/70")}>
+              {b.remaining >= 0 ? `${fmt(b.remaining)} left` : `${fmt(Math.abs(b.remaining))} over`}
+            </span>
           </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setEditing(true)}
-              className="text-[12px] text-honey/70 hover:text-honey transition-colors px-2 py-1 rounded-lg hover:bg-honey/[0.06]"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="flex items-center justify-center w-7 h-7 rounded-lg text-ink-tertiary/50
-                         hover:text-semantic-expense hover:bg-semantic-expense/[0.08] transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
-      </div>
+        </div>
 
-      {/* Animated progress bar */}
-      <AnimatedBar
-        pct={barPct}
-        color={barColor}
-        height={6}
-        delay={index * 80}
-        className="mb-4"
-      />
-
-      {/* Stats */}
-      <div className="flex items-center justify-between">
-        <span className={cn("text-[13px] font-semibold font-mono", pctColor)}>
-          {b.pct_used.toFixed(0)}%
-        </span>
-        <span className="text-[12px] font-mono text-ink-tertiary tabular-nums">
-          {fmt(b.actual_spend)} / {fmt(b.budget_amount)}
-        </span>
+        {/* Actions */}
+        <div className="flex items-center gap-1 shrink-0">
+          {editing ? (
+            <div className="flex items-center gap-1">
+              <span className="text-[12px] text-ink-tertiary">$</span>
+              <input
+                type="number" value={value} onChange={(e) => setValue(e.target.value)}
+                className="w-16 bg-elevated border border-white/[0.1] rounded-lg px-2 py-1 text-[12px]
+                           text-ink-primary focus:outline-none focus:border-honey/40"
+                onKeyDown={(e) => e.key === "Enter" && save()} autoFocus
+              />
+              <button onClick={save} disabled={saving}
+                className="w-6 h-6 flex items-center justify-center rounded-lg text-honey bg-honey/[0.10]
+                           hover:bg-honey/[0.2] disabled:opacity-40 transition-colors">
+                <Check className="w-3 h-3" />
+              </button>
+              <button onClick={() => setEditing(false)}
+                className="w-6 h-6 flex items-center justify-center rounded-lg text-ink-tertiary hover:bg-white/[0.06] transition-colors">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : confirmDelete ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-semantic-expense">Remove?</span>
+              <button onClick={handleDelete} disabled={deleting}
+                className="text-[10px] bg-semantic-expense/10 border border-semantic-expense/20 text-semantic-expense
+                           px-2 py-0.5 rounded-lg hover:bg-semantic-expense/20 disabled:opacity-40 transition-colors">
+                {deleting ? "…" : "Yes"}
+              </button>
+              <button onClick={() => setConfirmDelete(false)}
+                className="w-6 h-6 flex items-center justify-center rounded-lg text-ink-tertiary hover:bg-white/[0.06] transition-colors">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <button onClick={() => setEditing(true)}
+                className="text-[11px] text-honey/60 hover:text-honey transition-colors px-2 py-1 rounded-lg hover:bg-honey/[0.06]">
+                Edit
+              </button>
+              <button onClick={() => setConfirmDelete(true)}
+                className="w-6 h-6 flex items-center justify-center rounded-lg text-ink-tertiary/40
+                           hover:text-semantic-expense hover:bg-semantic-expense/[0.08] transition-colors">
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
-      <p className="text-[11px] text-ink-tertiary/60 mt-1 font-mono tabular-nums">
-        {b.remaining >= 0
-          ? `${fmt(b.remaining)} remaining`
-          : `${fmt(Math.abs(b.remaining))} over budget`}
-      </p>
-    </GlassCard>
+    </div>
   );
 }
 
@@ -319,19 +291,26 @@ export default function BudgetsPage() {
         </div>
       </div>
 
-      {/* ── Budget Grid ─────────────────────────────────────────────── */}
+      {/* ── Budget List ──────────────────────────────────────────────── */}
       {loading ? (
-        <div className="flex items-center gap-2 text-ink-tertiary text-[13px] py-4">
-          <div className="w-3 h-3 rounded-full border border-ink-tertiary/40 border-t-honey animate-spin" />
-          Loading…
+        <div className="hive-card overflow-hidden">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="px-5 py-4 border-b border-white/[0.04] last:border-0 animate-pulse">
+              <div className="flex items-center justify-between mb-2">
+                <div className="h-2.5 bg-white/[0.08] rounded w-24" />
+                <div className="h-2 bg-white/[0.06] rounded w-8" />
+              </div>
+              <div className="h-1 bg-white/[0.06] rounded-full" />
+            </div>
+          ))}
         </div>
       ) : budgets.length === 0 ? (
-        <div className="hive-card p-16 text-center border-dashed">
-          <p className="text-[14px] text-ink-secondary mb-1">No budgets for {monthLabel(month)}</p>
+        <div className="hive-card px-5 py-12 text-center">
+          <p className="text-[13px] text-ink-secondary mb-1">No budgets for {monthLabel(month)}</p>
           <p className="text-[12px] text-ink-tertiary">Add one above to start tracking your spending.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="hive-card overflow-hidden">
           {budgets.map((b, index) => (
             <BudgetCard key={b.id} b={b} index={index} onUpdate={handleUpdate} onDelete={handleDelete} />
           ))}

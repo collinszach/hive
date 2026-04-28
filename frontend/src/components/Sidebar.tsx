@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Receipt,
@@ -109,6 +109,16 @@ export function Sidebar() {
   const pathname = usePathname();
   const [syncing, setSyncing] = useState(false);
   const [syncDone, setSyncDone] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => d?.email && setUserEmail(d.email))
+      .catch(() => {});
+  }, []);
+
+  const userInitial = userEmail ? userEmail[0].toUpperCase() : "?";
 
   function handleLogout() {
     clearToken();
@@ -245,20 +255,42 @@ export function Sidebar() {
           return <NavItem key={href} href={href} label={label} icon={Icon} active={active} />;
         })}
 
-        {/* Sign out */}
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-2.5 px-3 py-[6px] rounded-[8px] border border-transparent
-                     text-[12.5px] font-medium tracking-[-0.01em]
-                     text-[#383C4A] hover:text-[#F87171] hover:bg-[rgba(248,113,113,0.06)]
-                     transition-all duration-150"
+        {/* User identity + sign out */}
+        <div
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-[8px] mt-1"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: "10px", marginTop: "4px" }}
         >
-          <LogOut className="w-[14px] h-[14px] shrink-0 text-[#2C2F3A]" strokeWidth={1.8} />
-          <span className="leading-none">Sign out</span>
-        </button>
+          {/* Avatar bubble */}
+          <div
+            className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold"
+            style={{
+              background: "linear-gradient(135deg, rgba(245,185,66,0.25) 0%, rgba(245,185,66,0.10) 100%)",
+              border: "1px solid rgba(245,185,66,0.20)",
+              color: "#F5B942",
+            }}
+          >
+            {userInitial}
+          </div>
+
+          {/* Email truncated */}
+          <span className="flex-1 min-w-0 text-[11px] text-[#3A3D4A] truncate leading-none">
+            {userEmail ?? "—"}
+          </span>
+
+          {/* Sign out icon */}
+          <button
+            onClick={handleLogout}
+            title="Sign out"
+            className="shrink-0 w-5 h-5 flex items-center justify-center rounded-[6px] border border-transparent
+                       text-[#2C2F3A] hover:text-[#F87171] hover:bg-[rgba(248,113,113,0.06)]
+                       transition-all duration-150"
+          >
+            <LogOut className="w-3 h-3" strokeWidth={1.8} />
+          </button>
+        </div>
 
         {/* Footer note */}
-        <p className="px-3 pt-1.5 text-[9px] tracking-[0.10em] uppercase" style={{ color: "#1E2028" }}>
+        <p className="px-3 pt-1 text-[9px] tracking-[0.10em] uppercase" style={{ color: "#1E2028" }}>
           Private · Self-hosted
         </p>
       </div>

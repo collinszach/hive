@@ -219,6 +219,25 @@ body::before {
   color: #9CA3AF;
 }
 
+/* ── Input ────────────────────────────────────────────────────── */
+
+.hive-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  color: #F0F0F4;
+  font-size: 13px;
+  font-weight: 400;
+  padding: 7px 12px;
+  outline: none;
+  transition: border-color 150ms, background 150ms;
+  letter-spacing: -0.01em;
+  width: 100%;
+}
+.hive-input::placeholder { color: #4B5063; }
+.hive-input:hover  { border-color: rgba(255, 255, 255, 0.12); }
+.hive-input:focus  { border-color: rgba(245, 185, 66, 0.40); background: rgba(255, 255, 255, 0.05); }
+
 /* ── Select ───────────────────────────────────────────────────── */
 
 .hive-select {
@@ -283,6 +302,11 @@ body::before {
 .animate-fade-in {
   animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* ── Scrollbar hide ───────────────────────────────────────────── */
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ── Stagger helpers ──────────────────────────────────────────── */
 
