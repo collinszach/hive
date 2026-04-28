@@ -71,29 +71,29 @@ export function PageHero({
 
   return (
     <div
-      className={cn("rounded-[14px] overflow-hidden border border-white/[0.06]", className)}
-      style={{ background: "#0C0E13" }}
+      className={cn("rounded-[12px] overflow-hidden border border-white/[0.08]", className)}
+      style={{ background: "#1C1F2A" }}
     >
       {/* Hero band */}
       <div
-        className="relative px-6 pt-6 pb-5 overflow-hidden"
+        className="relative px-6 pt-5 pb-4 overflow-hidden"
         style={{
-          background: `linear-gradient(180deg, ${GLOW_BAND[glowColor]} 0%, transparent 60%)`,
-          borderBottom: hasStrip ? "1px solid rgba(255,255,255,0.05)" : undefined,
+          background: `linear-gradient(180deg, ${GLOW_BAND[glowColor]} 0%, transparent 70%)`,
+          borderBottom: hasStrip ? "1px solid rgba(255,255,255,0.07)" : undefined,
         }}
       >
         {/* Ambient radial glow — top-left corner only */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-10 -left-6 w-56 h-36 rounded-full"
+          className="pointer-events-none absolute -top-8 -left-4 w-48 h-28 rounded-full"
           style={{ background: `radial-gradient(ellipse, ${GLOW_RGBA[glowColor]} 0%, transparent 70%)` }}
         />
 
         {/* Eyebrow */}
-        <div className={cn("relative flex items-center gap-1.5 mb-3", EYEBROW_CLASS[glowColor])}>
+        <div className={cn("relative flex items-center gap-1.5 mb-2.5", EYEBROW_CLASS[glowColor])}>
           <span
             className="w-1.5 h-1.5 rounded-full shrink-0"
-            style={{ background: DOT_COLOR[glowColor], boxShadow: `0 0 6px ${DOT_COLOR[glowColor]}` }}
+            style={{ background: DOT_COLOR[glowColor], boxShadow: `0 0 5px ${DOT_COLOR[glowColor]}` }}
           />
           <p className="text-[10px] font-semibold tracking-[0.12em] uppercase opacity-80">
             {eyebrow}
@@ -101,27 +101,27 @@ export function PageHero({
         </div>
 
         {/* Headline */}
-        <div className="relative text-[48px] font-black tracking-[-0.05em] leading-none text-ink-primary">
+        <div className="relative text-[36px] font-bold tracking-[-0.03em] leading-none text-ink-primary">
           {headline}
         </div>
 
         {subtext && (
-          <p className="relative mt-2 text-[11px] text-ink-tertiary tracking-[-0.01em]">{subtext}</p>
+          <p className="relative mt-2 text-[12px] text-ink-tertiary">{subtext}</p>
         )}
       </div>
 
       {/* Stat strip */}
       {hasStrip && (
         <div
-          className="grid divide-x divide-white/[0.04]"
+          className="grid divide-x divide-white/[0.06]"
           style={{ gridTemplateColumns: `repeat(${statStrip!.length}, 1fr)` }}
         >
           {statStrip!.map((s) => (
-            <div key={s.label} className="px-5 py-3.5">
+            <div key={s.label} className="px-5 py-3">
               <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-ink-ghost mb-1">
                 {s.label}
               </p>
-              <p className={cn("text-[15px] font-mono font-semibold tabular-nums", STAT_VALUE_CLASS[s.color ?? "default"])}>
+              <p className={cn("text-[14px] font-mono font-semibold tabular-nums", STAT_VALUE_CLASS[s.color ?? "default"])}>
                 {s.value}
               </p>
             </div>

@@ -39,17 +39,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       <main
         className="flex-1 overflow-y-auto min-h-screen relative"
         style={{
-          /* Subtle ambient radial — very faint amber emanating from top */
-          background: "radial-gradient(ellipse 80% 40% at 60% 0%, rgba(245,185,66,0.028) 0%, transparent 60%), #090807",
+          background: "#13151C",
         }}
       >
-        {/* Top edge highlight — a hair-thin line of warmth */}
-        <div
-          className="sticky top-0 left-0 right-0 h-[1px] pointer-events-none z-50"
-          style={{
-            background: "linear-gradient(90deg, transparent 0%, rgba(245,185,66,0.12) 30%, rgba(245,185,66,0.18) 60%, transparent 100%)",
-          }}
-        />
 
         <div className="max-w-[1120px] mx-auto px-8 py-8">
           {children}

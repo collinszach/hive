@@ -87,14 +87,14 @@ function NavItem({
         "group flex items-center gap-2.5 px-3 py-[6px] rounded-[8px]",
         "text-[12.5px] font-medium transition-all duration-150",
         active
-          ? "text-[#F5B942] bg-[rgba(245,185,66,0.09)] border border-[rgba(245,185,66,0.14)]"
-          : "text-[#505568] border border-transparent hover:text-[#8A90A0] hover:bg-[rgba(255,255,255,0.04)]"
+          ? "text-[#F5B942] bg-[rgba(245,185,66,0.10)] border border-[rgba(245,185,66,0.18)]"
+          : "text-[#5A6275] border border-transparent hover:text-[#9AA0B0] hover:bg-[rgba(255,255,255,0.05)]"
       )}
     >
       <Icon
         className={cn(
           "w-[14px] h-[14px] shrink-0 transition-colors duration-150",
-          active ? "text-[#F5B942]" : "text-[#383C4A] group-hover:text-[#6B7280]"
+          active ? "text-[#F5B942]" : "text-[#424860] group-hover:text-[#747D96]"
         )}
         strokeWidth={active ? 2.2 : 1.8}
       />
@@ -143,14 +143,14 @@ export function Sidebar() {
     <aside
       className="w-[204px] shrink-0 h-screen sticky top-0 flex flex-col z-10"
       style={{
-        background: "#080A0F",
-        borderRight: "1px solid rgba(255, 255, 255, 0.06)",
+        background: "#0F1118",
+        borderRight: "1px solid rgba(255, 255, 255, 0.08)",
       }}
     >
       {/* ── Brand mark ───────────────────────────────────── */}
       <div
         className="px-4 pt-5 pb-4"
-        style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
+        style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}
       >
         <Link href="/dashboard" className="flex items-center gap-3 group">
           {/* Honeycomb hex mark */}
@@ -176,7 +176,7 @@ export function Sidebar() {
             >
               HIVE
             </span>
-            <span className="text-[9px] tracking-[0.10em] uppercase text-[#23262E] font-medium">
+            <span className="text-[9px] tracking-[0.10em] uppercase text-[#3A3F52] font-medium">
               v2
             </span>
           </div>
@@ -191,7 +191,7 @@ export function Sidebar() {
             {group.label && (
               <p
                 className="px-3 pb-1.5 text-[9px] font-semibold tracking-[0.16em] uppercase"
-                style={{ color: "#23262E" }}
+                style={{ color: "#3A3F52" }}
               >
                 {group.label}
               </p>
@@ -219,7 +219,7 @@ export function Sidebar() {
       {/* ── Footer ───────────────────────────────────────── */}
       <div
         className="px-2.5 py-3 space-y-[2px]"
-        style={{ borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}
+        style={{ borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}
       >
         {/* Sync button */}
         <button
@@ -258,7 +258,7 @@ export function Sidebar() {
         {/* User identity + sign out */}
         <div
           className="flex items-center gap-2.5 px-3 py-2.5 rounded-[8px] mt-1"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: "10px", marginTop: "4px" }}
+          style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "10px", marginTop: "4px" }}
         >
           {/* Avatar bubble */}
           <div
@@ -273,7 +273,7 @@ export function Sidebar() {
           </div>
 
           {/* Email truncated */}
-          <span className="flex-1 min-w-0 text-[11px] text-[#3A3D4A] truncate leading-none">
+          <span className="flex-1 min-w-0 text-[11px] text-[#5A6275] truncate leading-none">
             {userEmail ?? "—"}
           </span>
 
@@ -290,7 +290,7 @@ export function Sidebar() {
         </div>
 
         {/* Footer note */}
-        <p className="px-3 pt-1 text-[9px] tracking-[0.10em] uppercase" style={{ color: "#1E2028" }}>
+        <p className="px-3 pt-1 text-[9px] tracking-[0.10em] uppercase" style={{ color: "#2E3345" }}>
           Private · Self-hosted
         </p>
       </div>
