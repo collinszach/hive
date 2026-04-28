@@ -33,9 +33,10 @@ app.conf.update(
 )
 
 app.conf.beat_schedule = {
-    "daily-sync": {
+    # Sync every 4 hours as a safety net; Plaid webhooks handle near-real-time updates
+    "periodic-sync": {
         "task": "app.tasks.ingestion.sync_all_accounts",
-        "schedule": crontab(hour=6, minute=0),
+        "schedule": crontab(minute=0, hour="*/4"),
         "options": {"queue": "default"},
     },
     "daily-points": {
@@ -48,9 +49,9 @@ app.conf.beat_schedule = {
         "schedule": crontab(hour=7, minute=0),
         "options": {"queue": "default"},
     },
-    "daily-net-worth": {
+    "periodic-net-worth": {
         "task": "app.tasks.maintenance.snapshot_net_worth",
-        "schedule": crontab(hour=7, minute=30),
+        "schedule": crontab(minute=15, hour="*/4"),
         "options": {"queue": "default"},
     },
     "refresh-views": {

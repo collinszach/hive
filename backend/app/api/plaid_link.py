@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.db import get_db
 from app.gates import check_plaid_limit, require_plaid
 from app.models.account import Account
@@ -51,6 +52,17 @@ async def create_link_token(
         raise HTTPException(status_code=502, detail="Failed to create link token. Please try again.") from exc
 
 
+@router.get("/last-synced")
+async def last_synced(db: AsyncSession = Depends(get_db)) -> dict:
+    """Return the most recent last_sync_at across all active Plaid links."""
+    from sqlalchemy import func as sqlfunc
+    result = await db.execute(
+        select(sqlfunc.max(PlaidLink.last_sync_at)).where(PlaidLink.is_active == True)  # noqa: E712
+    )
+    ts = result.scalar_one_or_none()
+    return {"last_synced_at": ts.isoformat() if ts else None}
+
+
 @router.post("/sync-now", status_code=202)
 async def trigger_sync_now(db: AsyncSession = Depends(get_db)) -> dict:
     """Manually trigger an immediate sync of all active Plaid links."""
@@ -73,6 +85,38 @@ async def trigger_apply_rules() -> dict:
     from app.tasks.ingestion import apply_custom_rules_to_all
     apply_custom_rules_to_all.delay()
     return {"status": "queued", "message": "Applying custom rules — transactions will update in ~30 seconds"}
+
+
+@router.post("/update-webhooks", status_code=200)
+async def update_webhooks(db: AsyncSession = Depends(get_db)) -> dict:
+    """
+    Register/update the webhook URL on every active Plaid item.
+    Run this once after setting PLAID_WEBHOOK_URL + PLAID_WEBHOOK_SECRET in .env
+    so that Plaid knows where to send real-time transaction notifications.
+    """
+    if not settings.plaid_webhook_url:
+        raise HTTPException(status_code=400, detail="PLAID_WEBHOOK_URL is not configured in .env")
+
+    result = await db.execute(
+        select(PlaidLink).where(PlaidLink.is_active == True)  # noqa: E712
+    )
+    links = result.scalars().all()
+
+    updated = 0
+    failed = 0
+    for link in links:
+        try:
+            plaid_connector.update_item_webhook(link.access_token, settings.plaid_webhook_url)
+            updated += 1
+        except Exception as exc:
+            logger.warning("Failed to update webhook for item %s: %s", link.item_id, exc)
+            failed += 1
+
+    return {
+        "updated": updated,
+        "failed": failed,
+        "webhook_url": settings.plaid_webhook_url,
+    }
 
 
 @router.post("/exchange-token", response_model=ExchangeTokenResponse)

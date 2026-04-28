@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
 from app.models.account import Account
 from app.models.anomaly import Anomaly
+from app.models.plaid_link import PlaidLink
 from app.models.transaction import Transaction
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ class DashboardSummary(BaseModel):
     top_categories: list[CategorySpend]
     accounts: list[AccountSummary]
     unreviewed_anomalies: AnomalySummary
+    last_synced_at: Optional[str]
 
 
 @router.get("/summary", response_model=DashboardSummary)
@@ -98,6 +100,13 @@ async def dashboard_summary(
         for a in acct_result.scalars().all()
     ]
 
+    # Last sync time — most recent last_sync_at across all active Plaid links
+    sync_result = await db.execute(
+        select(func.max(PlaidLink.last_sync_at)).where(PlaidLink.is_active == True)  # noqa: E712
+    )
+    last_synced_at_dt = sync_result.scalar_one_or_none()
+    last_synced_at = last_synced_at_dt.isoformat() if last_synced_at_dt else None
+
     # Unreviewed anomalies
     anomaly_result = await db.execute(
         select(Anomaly).where(Anomaly.status == "unreviewed").order_by(Anomaly.flagged_at.desc()).limit(1)
@@ -113,6 +122,7 @@ async def dashboard_summary(
         total_spend=round(total_spend, 2),
         top_categories=top_categories,
         accounts=accounts,
+        last_synced_at=last_synced_at,
         unreviewed_anomalies=AnomalySummary(
             count=anomaly_count,
             latest_reason=latest_anomaly.reason if latest_anomaly else None,
