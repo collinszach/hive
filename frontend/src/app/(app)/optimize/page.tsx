@@ -6,6 +6,7 @@ import { fmt, ALL_CATEGORIES, SUBCATEGORIES } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Zap, Trophy } from "lucide-react";
 import { GlassCard } from "@/components/GlassCard";
+import { PageHero } from "@/components/PageHero";
 
 const PROGRAM_VALUE_COLORS: Record<string, string> = {
   "Amex MR":           "text-emerald-400",
@@ -48,14 +49,24 @@ export default function OptimizerPage() {
   return (
     <div className="space-y-5 animate-fade-in">
 
-      {/* ── Ambient honey glow ──────────────────────────────────────── */}
-      <div className="pointer-events-none fixed top-0 left-56 w-96 h-96 rounded-full opacity-[0.06] blur-[80px] bg-honey" />
-
       {/* ── Header ──────────────────────────────────────────────────── */}
-      <div>
-        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Card Optimizer</h1>
-        <p className="text-[13px] text-ink-tertiary mt-0.5">Find the best card to use at checkout</p>
-      </div>
+      <PageHero
+        eyebrow="Card Optimizer"
+        headline={searched && best
+          ? <><span className="text-honey">{best.earn_rate}x</span> on {category || "everything"}</>
+          : <span className="text-ink-secondary">Maximize Points</span>
+        }
+        subtext={searched && best
+          ? `${best.account_name ?? best.card_slug} · ${Math.round(best.points_earned).toLocaleString()} pts · ${fmt(best.dollar_value)} value`
+          : "find the best card to use at checkout"
+        }
+        glowColor="honey"
+        statStrip={searched && best ? [
+          { label: "Best Card", value: best.account_name ?? best.card_slug, color: "amber" },
+          { label: "Earn Rate", value: `${best.earn_rate}x`, color: "default" },
+          { label: "Value", value: fmt(best.dollar_value), color: "green" },
+        ] : undefined}
+      />
 
       {/* ── Input Form ──────────────────────────────────────────────── */}
       <div className="hive-card p-5 space-y-4">

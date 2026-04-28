@@ -219,6 +219,32 @@ body::before {
   color: #9CA3AF;
 }
 
+.hive-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(248, 113, 113, 0.08);
+  color: #F87171;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid rgba(248, 113, 113, 0.20);
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms, color 150ms;
+  letter-spacing: -0.01em;
+}
+.hive-btn-danger:hover {
+  background: rgba(248, 113, 113, 0.14);
+  border-color: rgba(248, 113, 113, 0.30);
+  color: #FCA5A5;
+}
+.hive-btn-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ── Input ────────────────────────────────────────────────────── */
 
 .hive-input {
@@ -299,7 +325,8 @@ body::before {
   to   { stroke-dashoffset: 0; }
 }
 
-.animate-fade-in {
+.animate-fade-in,
+.animate-slide-up {
   animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 

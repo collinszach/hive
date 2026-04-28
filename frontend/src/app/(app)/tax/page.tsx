@@ -8,6 +8,7 @@ import {
   Upload, FileText, CheckCircle2, AlertCircle, Loader2,
   ChevronRight, ChevronLeft, Trash2, RefreshCw, Lightbulb,
 } from "lucide-react";
+import { PageHero } from "@/components/PageHero";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -295,7 +296,7 @@ function ReviewStep({
                     type="number"
                     value={getVal(doc, key)}
                     onChange={e => setVal(doc.id, key, e.target.value)}
-                    className="w-full text-[13px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary focus:outline-none focus:border-honey/30 font-mono"
+                    className="hive-input font-mono"
                   />
                 </div>
               ))}
@@ -378,7 +379,7 @@ function FilingInfoStep({
             <select
               value={req.tax_year}
               onChange={e => set("tax_year", Number(e.target.value))}
-              className="w-full text-[13px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary"
+              className="hive-select w-full"
             >
               <option value={2024}>2024</option>
               <option value={2023}>2023</option>
@@ -389,7 +390,7 @@ function FilingInfoStep({
             <select
               value={req.filing_status}
               onChange={e => set("filing_status", e.target.value)}
-              className="w-full text-[13px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary"
+              className="hive-select w-full"
             >
               {FILING_STATUSES.map(fs => <option key={fs.value} value={fs.value}>{fs.label}</option>)}
             </select>
@@ -399,7 +400,7 @@ function FilingInfoStep({
             <select
               value={req.state}
               onChange={e => set("state", e.target.value)}
-              className="w-full text-[13px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary"
+              className="hive-select w-full"
             >
               {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -434,7 +435,7 @@ function FilingInfoStep({
                   min={0}
                   value={req[key] as number}
                   onChange={e => set(key, Number(e.target.value))}
-                  className="w-full text-[13px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary font-mono"
+                  className="hive-input font-mono"
                   placeholder="0"
                 />
               </div>
@@ -695,18 +696,22 @@ export default function TaxPage() {
 
   return (
     <div className="space-y-5 animate-fade-in max-w-3xl">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Tax Calculator</h1>
-          <p className="text-[13px] text-ink-tertiary mt-0.5">Federal + state tax calculation from your documents</p>
+      <div className="flex items-start gap-4">
+        <div className="flex-1">
+          <PageHero
+            eyebrow={`Tax Calculator · ${taxYear}`}
+            headline={<><span className="text-honey">{taxYear}</span> taxes</>}
+            subtext="Federal + state calculation from your uploaded documents"
+            glowColor="honey"
+          />
         </div>
         <select
           value={taxYear}
           onChange={e => setTaxYear(Number(e.target.value))}
-          className="text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary"
+          className="hive-select mt-1 shrink-0"
         >
-          <option value={2024}>2024 Tax Year</option>
-          <option value={2023}>2023 Tax Year</option>
+          <option value={2024}>2024</option>
+          <option value={2023}>2023</option>
         </select>
       </div>
 

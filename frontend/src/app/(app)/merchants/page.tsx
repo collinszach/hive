@@ -6,6 +6,7 @@ import { fmt } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Store, ChevronRight, ArrowLeft, Loader2 } from "lucide-react";
 import { GlassCard } from "@/components/GlassCard";
+import { PageHero } from "@/components/PageHero";
 import {
   BarChart,
   Bar,
@@ -144,19 +145,25 @@ export default function MerchantsPage() {
   if (selected && detail) {
     return (
       <div className="space-y-5 animate-fade-in">
-        <div className="pointer-events-none fixed top-0 left-56 w-96 h-96 rounded-full opacity-[0.06] blur-[80px]"
-             style={{ background: "#38BDF8" }} />
         <div className="flex items-center gap-3">
           <button
             onClick={() => { setSelected(null); setDetail(null); }}
-            className="p-1.5 rounded-lg hover:bg-white/[0.05] text-ink-tertiary hover:text-ink-primary transition-colors"
+            className="p-1.5 rounded-lg hover:bg-white/[0.05] text-ink-tertiary hover:text-ink-primary transition-colors shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">{detail.merchant_name}</h1>
-            <p className="text-[13px] text-ink-tertiary">{detail.transaction_count} transactions · {fmt(detail.total_spent)} total</p>
-          </div>
+          <PageHero
+            eyebrow="Merchant Detail"
+            headline={<span className="text-[#38BDF8]">{detail.merchant_name}</span>}
+            subtext={`${detail.transaction_count} transactions · ${fmt(detail.total_spent)} total`}
+            glowColor="sky"
+            statStrip={[
+              { label: "Total Spent", value: fmt(detail.total_spent), color: "red" },
+              { label: "Transactions", value: String(detail.transaction_count), color: "default" },
+              { label: "Avg Amount", value: fmt(detail.total_spent / detail.transaction_count), color: "default" },
+            ]}
+            className="flex-1"
+          />
         </div>
 
         {/* Monthly chart */}
@@ -185,7 +192,7 @@ export default function MerchantsPage() {
               <select
                 value={editCategory}
                 onChange={e => { setEditCategory(e.target.value); setEditSubcategory(""); }}
-                className="text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-1.5 text-ink-primary"
+                className="hive-select"
               >
                 <option value="">— category —</option>
                 {Object.keys(CATEGORY_TAXONOMY).map(cat => (
@@ -196,7 +203,7 @@ export default function MerchantsPage() {
                 <select
                   value={editSubcategory}
                   onChange={e => setEditSubcategory(e.target.value)}
-                  className="text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-1.5 text-ink-primary"
+                  className="hive-select"
                 >
                   <option value="">— subcategory —</option>
                   {(CATEGORY_TAXONOMY[editCategory] ?? []).map(sub => (
@@ -298,18 +305,29 @@ export default function MerchantsPage() {
     );
   }
 
+  const totalSpend = merchants.reduce((s, m) => s + m.total_spent, 0);
+
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Sky ambient glow */}
-      <div className="pointer-events-none fixed top-0 left-56 w-96 h-96 rounded-full opacity-[0.06] blur-[80px]"
-           style={{ background: "#38BDF8" }} />
-
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Merchants</h1>
-          <p className="text-[13px] text-ink-tertiary mt-0.5">Top merchants by spend</p>
+      <div className="flex items-start gap-4">
+        <div className="flex-1">
+          <PageHero
+            eyebrow={`Merchants · ${days === 365 ? "1 year" : `${days} days`}`}
+            headline={
+              loading
+                ? <span className="text-ink-secondary">—</span>
+                : <><span className="text-[#38BDF8]">{merchants.length}</span> merchants</>
+            }
+            subtext="top merchants by spend"
+            glowColor="sky"
+            statStrip={merchants.length > 0 ? [
+              { label: "Total Spend", value: fmt(totalSpend), color: "red" },
+              { label: "Merchants", value: String(merchants.length), color: "default" },
+              { label: "Top Merchant", value: merchants[0]?.merchant_name ?? "—", color: "sky" },
+            ] : undefined}
+          />
         </div>
-        <div className="flex items-center gap-1 bg-elevated rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-elevated rounded-lg p-1 mt-1 shrink-0">
           {[30, 90, 365].map((d) => (
             <button
               key={d}

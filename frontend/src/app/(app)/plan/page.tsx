@@ -31,6 +31,7 @@ import {
   Scissors,
   CheckCircle2,
 } from "lucide-react";
+import { PageHero } from "@/components/PageHero";
 
 type Tab = "projection" | "goals" | "trim";
 
@@ -242,7 +243,7 @@ function ProjectionTab() {
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
                   placeholder="New car, vacation…"
-                  className="w-full text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary placeholder:text-ink-tertiary focus:outline-none focus:border-honey/30"
+                  className="hive-input"
                 />
               </div>
               <div>
@@ -252,7 +253,7 @@ function ProjectionTab() {
                   onChange={e => setNewAmount(e.target.value)}
                   type="number"
                   placeholder="35000"
-                  className="w-full text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary placeholder:text-ink-tertiary focus:outline-none focus:border-honey/30"
+                  className="hive-input"
                 />
               </div>
               <div>
@@ -261,7 +262,7 @@ function ProjectionTab() {
                   value={newDate}
                   onChange={e => setNewDate(e.target.value)}
                   type="date"
-                  className="w-full text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary focus:outline-none focus:border-honey/30"
+                  className="hive-input"
                 />
               </div>
               <div>
@@ -269,7 +270,7 @@ function ProjectionTab() {
                 <select
                   value={newCat}
                   onChange={e => setNewCat(e.target.value)}
-                  className="w-full text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary focus:outline-none focus:border-honey/30"
+                  className="hive-select w-full"
                 >
                   <option value="">— optional —</option>
                   {["Housing", "Vehicle", "Travel", "Education", "Medical", "Investment", "Other"].map(c => (
@@ -422,7 +423,7 @@ function GoalsTab() {
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 placeholder="House down payment, emergency fund…"
-                className="w-full text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary placeholder:text-ink-tertiary focus:outline-none focus:border-honey/30"
+                className="hive-input"
               />
             </div>
             <div>
@@ -430,7 +431,7 @@ function GoalsTab() {
               <select
                 value={newType}
                 onChange={e => setNewType(e.target.value)}
-                className="w-full text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary"
+                className="hive-select w-full"
               >
                 {Object.entries(GOAL_TYPE_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
@@ -444,7 +445,7 @@ function GoalsTab() {
                 onChange={e => setNewTarget(e.target.value)}
                 type="number"
                 placeholder="50000"
-                className="w-full text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary placeholder:text-ink-tertiary focus:outline-none focus:border-honey/30"
+                className="hive-input"
               />
             </div>
             <div>
@@ -453,7 +454,7 @@ function GoalsTab() {
                 value={newDate}
                 onChange={e => setNewDate(e.target.value)}
                 type="date"
-                className="w-full text-[12px] bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-ink-primary focus:outline-none focus:border-honey/30"
+                className="hive-input"
               />
             </div>
           </div>
@@ -711,10 +712,12 @@ export default function PlanPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <div>
-        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Financial Planning</h1>
-        <p className="text-[13px] text-ink-tertiary mt-0.5">Project your future, set goals, trim the fat</p>
-      </div>
+      <PageHero
+        eyebrow="Financial Planning"
+        headline={<><span className="text-semantic-income">Plan</span> your future</>}
+        subtext="Project your trajectory, set goals, trim the fat"
+        glowColor="sky"
+      />
 
       {/* Tab switcher */}
       <div className="flex items-center gap-1 bg-elevated rounded-xl p-1 w-fit">

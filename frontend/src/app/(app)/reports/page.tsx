@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Download } from "lucide-react";
 import { GlassCard } from "@/components/GlassCard";
 import { FilterPills } from "@/components/FilterPills";
+import { PageHero } from "@/components/PageHero";
 
 type ReportType = "category" | "monthly" | "tax";
 
@@ -102,16 +103,28 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Sky ambient glow */}
-      <div className="pointer-events-none fixed top-0 left-56 w-96 h-96 rounded-full opacity-[0.06] blur-[80px]"
-           style={{ background: "#38BDF8" }} />
-
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Reports</h1>
-          <p className="text-[13px] text-ink-tertiary mt-0.5">Spending analysis &amp; data export</p>
+      {/* Header row with PageHero + export */}
+      <div className="flex items-start gap-4">
+        <div className="flex-1">
+          <PageHero
+            eyebrow={`Reports · ${year}`}
+            headline={
+              report === "category"
+                ? <><span className="text-[#38BDF8]">{catData.length}</span> categories</>
+                : report === "monthly"
+                ? <><span className="text-semantic-income">{monthlyData.length}</span> months</>
+                : <><span className="text-honey">{taxData.length}</span> transactions</>
+            }
+            subtext="spending analysis & data export"
+            glowColor="sky"
+            statStrip={report === "category" && catData.length > 0 ? [
+              { label: "Total Spend", value: fmt(catData.reduce((s, r) => s + r.total, 0)), color: "red" },
+              { label: "Categories", value: String(catData.length), color: "default" },
+              { label: "Transactions", value: String(catData.reduce((s, r) => s + r.transaction_count, 0)), color: "default" },
+            ] : undefined}
+          />
         </div>
-        <button onClick={downloadCSV} className="hive-btn-secondary text-[13px] py-2 px-4">
+        <button onClick={downloadCSV} className="hive-btn-secondary text-[13px] py-2 px-4 mt-1 shrink-0">
           <Download className="w-4 h-4" />
           Export CSV
         </button>
