@@ -111,6 +111,12 @@ def sync_single_link(self, item_id: str) -> dict:
         logger.info(
             "sync_single_link %s: +%d ~%d -%d", item_id, added_count, mod_count, removed_count
         )
+
+        # Refresh net worth snapshot so balances reflect immediately after sync
+        if added_count > 0 or mod_count > 0:
+            from app.tasks.maintenance import snapshot_net_worth
+            snapshot_net_worth.delay()
+
         return {"item_id": item_id, "added": added_count, "modified": mod_count, "removed": removed_count}
 
     except Exception as exc:

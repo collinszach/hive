@@ -7,6 +7,7 @@ from plaid.api import plaid_api
 from plaid.model.accounts_get_request import AccountsGetRequest
 from plaid.model.country_code import CountryCode
 from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
+from plaid.model.item_webhook_update_request import ItemWebhookUpdateRequest
 from plaid.model.link_token_create_request import LinkTokenCreateRequest
 from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
 from plaid.model.products import Products
@@ -56,11 +57,24 @@ class PlaidConnector:
         )
         if settings.plaid_redirect_uri:
             kwargs["redirect_uri"] = settings.plaid_redirect_uri
+        if settings.plaid_webhook_url:
+            kwargs["webhook"] = settings.plaid_webhook_url
 
         request = LinkTokenCreateRequest(**kwargs)
         response = self._client.link_token_create(request)
-        logger.info("Created link token for user %s (redirect_uri=%s)", user_id, settings.plaid_redirect_uri or "none")
+        logger.info(
+            "Created link token for user %s (redirect_uri=%s webhook=%s)",
+            user_id,
+            settings.plaid_redirect_uri or "none",
+            settings.plaid_webhook_url or "none",
+        )
         return response["link_token"]
+
+    def update_item_webhook(self, access_token: str, webhook_url: str) -> None:
+        """Register or update the webhook URL for an existing Plaid item."""
+        request = ItemWebhookUpdateRequest(access_token=access_token, webhook=webhook_url)
+        self._client.item_webhook_update(request)
+        logger.info("Updated webhook URL for item (url=%s)", webhook_url)
 
     def exchange_public_token(self, public_token: str) -> tuple[str, str]:
         """Exchange a public token for an access_token + item_id."""
