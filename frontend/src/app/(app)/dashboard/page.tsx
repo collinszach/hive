@@ -42,6 +42,23 @@ const CAT_BAR: Record<string, string> = {
   "Business":       "bg-cyan-400",
 };
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  "Food & Drink":   "🍽",
+  "Groceries":      "🛒",
+  "Travel":         "✈",
+  "Transportation": "🚗",
+  "Entertainment":  "🎬",
+  "Shopping":       "🛍",
+  "Health":         "💊",
+  "Utilities":      "⚡",
+  "Home":           "🏠",
+  "Education":      "📚",
+  "Personal Care":  "💆",
+  "Business":       "💼",
+  "Income":         "💰",
+  "Transfers":      "🔄",
+};
+
 const CAT_DOT: Record<string, string> = {
   "Food & Drink":   "bg-orange-400",
   "Groceries":      "bg-emerald-400",
@@ -778,7 +795,7 @@ export default function Dashboard() {
                   className="px-5 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors"
                 >
                   <div className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0 bg-elevated">
-                    <span className="text-[10px]">{tx.category?.charAt(0) ?? "?"}</span>
+                    <span className="text-[15px] leading-none">{CATEGORY_EMOJI[tx.category ?? ""] ?? "💳"}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] text-ink-primary font-medium truncate">
