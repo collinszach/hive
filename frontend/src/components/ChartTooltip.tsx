@@ -16,8 +16,8 @@ export function ChartTooltip({ active, payload, label, formatValue }: ChartToolt
     <div
       className="rounded-xl px-3 py-2.5 text-[12px]"
       style={{
-        background:   "#161921",
-        border:       "1px solid rgba(255,255,255,0.08)",
+        background:   "#1F2229",
+        border:       "1px solid #2A2D35",
         boxShadow:    "0 8px 24px rgba(0,0,0,0.5)",
         color:        "#F0F0F4",
         minWidth:     120,
@@ -29,7 +29,7 @@ export function ChartTooltip({ active, payload, label, formatValue }: ChartToolt
           <div className="flex items-center gap-1.5">
             <span
               className="w-2 h-2 rounded-full"
-              style={{ background: entry.color ?? "#F5B942" }}
+              style={{ background: entry.color ?? "#3B82F6" }}
             />
             <span className="text-ink-secondary">{entry.name}</span>
           </div>
@@ -42,12 +42,12 @@ export function ChartTooltip({ active, payload, label, formatValue }: ChartToolt
 
 /** Shared axis/grid props — spread these onto CartesianGrid, XAxis, YAxis */
 export const CHART_GRID_PROPS = {
-  stroke:          "rgba(255,255,255,0.04)",
+  stroke:          "#2A2D35",
   strokeDasharray: "none",
 } as const;
 
 export const CHART_AXIS_PROPS = {
-  tick:     { fill: "#4B5063", fontSize: 11 },
+  tick:     { fill: "#6B7280", fontSize: 11 },
   axisLine: false,
   tickLine: false,
 } as const;

@@ -14,7 +14,7 @@ interface GlassCardProps {
 export function GlassCard({ className, children, onClick }: GlassCardProps) {
   return (
     <div
-      className={cn("glass-card", className)}
+      className={cn("hive-card", className)}
       onClick={onClick}
       role={onClick ? "button" : undefined}
     >
