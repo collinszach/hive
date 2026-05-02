@@ -51,13 +51,13 @@ const CAT_DOT: Record<string, string> = {
 // ── Safe to Spend card ────────────────────────────────────────────────────────
 
 const STS_BG: Record<string, string> = {
-  green: "rgba(45,158,114,0.08)",
-  amber: "rgba(201,146,14,0.08)",
+  green: "rgba(34,197,94,0.08)",
+  amber: "rgba(245,185,66,0.08)",
   red:   "rgba(239,68,68,0.08)",
 };
 const STS_BORDER: Record<string, string> = {
-  green: "rgba(45,158,114,0.20)",
-  amber: "rgba(201,146,14,0.20)",
+  green: "rgba(34,197,94,0.20)",
+  amber: "rgba(245,185,66,0.20)",
   red:   "rgba(239,68,68,0.20)",
 };
 const STS_COLOR: Record<string, string> = {
@@ -105,7 +105,7 @@ function SafeToSpendCard({ data }: { data: SafeToSpend }) {
           </div>
           {!expanded && (
             <p className="text-[11px] text-ink-tertiary mt-1">
-              {fmt(data.breakdown.spent_this_month)} spent · {fmt(data.breakdown.upcoming_bills)} upcoming · {spendPct}% of income committed
+              <span className="font-mono">{fmt(data.breakdown.spent_this_month)}</span> spent · <span className="font-mono">{fmt(data.breakdown.upcoming_bills)}</span> upcoming · <span className="font-mono">{spendPct}%</span> of income committed
             </p>
           )}
         </div>
@@ -448,23 +448,23 @@ export default function Dashboard() {
         ];
 
         return (
-          <div className="flex items-start gap-10 px-6 pt-[18px] pb-[14px] border-b border-white/[0.04]">
+          <div className="flex items-start gap-4 md:gap-10 px-4 md:px-6 pt-[18px] pb-[14px] border-b border-white/[0.04] overflow-x-auto">
             {KPIS.map(({ label, value, href, color, sub }) => (
-              <div key={label} className="cursor-pointer group" onClick={() => router.push(href)}>
+              <div key={label} className="cursor-pointer group shrink-0" onClick={() => router.push(href)}>
                 <p className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-[0.08em] mb-[5px] group-hover:text-ink-secondary transition-colors">{label}</p>
-                <p className="text-[24px] font-bold font-mono leading-none tracking-[-0.02em] group-hover:opacity-80 transition-opacity" style={{ color: color ?? "var(--color-ink-primary)" }}>
+                <p className="text-[20px] md:text-[24px] font-bold font-mono leading-none tracking-[-0.02em] group-hover:opacity-80 transition-opacity" style={{ color: color ?? "var(--color-ink-primary)" }}>
                   {value}
                 </p>
                 <p className="text-[11px] mt-1 whitespace-nowrap" style={{ color: sub.color }}>{sub.text}</p>
               </div>
             ))}
-            <div className="ml-auto flex items-start gap-2 pt-0.5">
+            <div className="ml-auto flex items-start gap-2 pt-0.5 shrink-0">
               {alerts.length > 0 && (
                 <Link href="/points" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-honey bg-honey/[0.08] border border-honey/20 no-underline">
                   <Bell size={12} />{alerts.length} reward{alerts.length > 1 ? "s" : ""} ready
                 </Link>
               )}
-              <Link href="/connect" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-secondary bg-surface border border-white/[0.08] no-underline hover:text-ink-primary transition-colors">
+              <Link href="/connect" className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-secondary bg-surface border border-white/[0.08] no-underline hover:text-ink-primary transition-colors">
                 <Link2 size={12} />{noAccounts ? "Connect account" : "Add account"}
               </Link>
             </div>
@@ -521,9 +521,9 @@ export default function Dashboard() {
               <div className="flex items-center gap-2.5">
                 <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${alert.severity === "danger" ? "bg-semantic-expense" : "bg-semantic-warning"}`} />
                 <span className="text-[12px] text-ink-primary">
-                  {alert.category} on pace for {fmt(alert.projected_spend)}
+                  {alert.category} on pace for <span className="font-mono">{fmt(alert.projected_spend)}</span>
                   <span className="text-ink-tertiary ml-1">
-                    ({alert.pct_projected.toFixed(0)}% of {fmt(alert.budget_amount)} budget)
+                    (<span className="font-mono">{alert.pct_projected.toFixed(0)}%</span> of <span className="font-mono">{fmt(alert.budget_amount)}</span> budget)
                   </span>
                 </span>
               </div>
@@ -550,7 +550,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-2.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-semantic-expense shrink-0" />
                 <span className="text-[12px] text-ink-primary">
-                  Unusual charge: {a.transaction?.merchant ?? a.transaction?.raw_description ?? "Unknown"}{a.transaction ? ` · ${fmt(a.transaction.amount)}` : ""}
+                  Unusual charge: {a.transaction?.merchant ?? a.transaction?.raw_description ?? "Unknown"}{a.transaction ? <> · <span className="font-mono">{fmt(a.transaction.amount)}</span></> : ""}
                 </span>
               </div>
               <Link
@@ -713,8 +713,8 @@ export default function Dashboard() {
                               <div className="h-full rounded-full transition-[width] duration-400" style={{ width: `${pct}%`, background: barColor }} />
                             </div>
                             <div className="flex items-center justify-between mt-1">
-                              <span className="text-[10px] text-ink-tertiary">{pct!.toFixed(0)}% used</span>
-                              <span className="text-[10px] text-ink-ghost">{fmt(limit - used)} available</span>
+                              <span className="text-[10px] text-ink-tertiary font-mono">{pct!.toFixed(0)}% used</span>
+                              <span className="text-[10px] text-ink-ghost font-mono">{fmt(limit - used)} available</span>
                             </div>
                           </>
                         ) : (
@@ -929,7 +929,7 @@ export default function Dashboard() {
                         />
                       </div>
                       <div className="flex items-center justify-between mt-1">
-                        <span className="text-[10px] text-ink-tertiary">{g.pct_complete.toFixed(0)}% complete</span>
+                        <span className="text-[10px] text-ink-tertiary font-mono">{g.pct_complete.toFixed(0)}% complete</span>
                         {g.deadline && (
                           <span className="text-[10px] text-ink-ghost">Due {g.deadline}</span>
                         )}

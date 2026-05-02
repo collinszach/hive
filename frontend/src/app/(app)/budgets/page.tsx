@@ -11,7 +11,6 @@ import { toast } from "@/components/Toast";
 import { Sparkline } from "@/components/Sparkline";
 import { PageHero } from "@/components/PageHero";
 import { AnimatedBar } from "@/components/AnimatedBar";
-import { GlassCard } from "@/components/GlassCard";
 
 const SUBCATEGORIES: Record<string, string[]> = {
   "Food & Drink":   ["Restaurant", "Fast Food", "Coffee", "Delivery", "Bar"],
@@ -523,7 +522,7 @@ function BudgetsPageInner() {
     <div className="space-y-5 animate-fade-in">
 
       {/* ── Header ──────────────────────────────────────────────────── */}
-      <div className="flex items-start gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:gap-4">
         <div className="flex-1">
           <PageHero
             eyebrow={`Budgets · ${currentMonthLabel}`}
@@ -538,7 +537,7 @@ function BudgetsPageInner() {
               )
             }
             subtext={budgets.length > 0 ? "budgets on track this month" : "no budgets set for this month"}
-            glowColor="emerald"
+            glow="green"
             statStrip={budgets.length > 0 ? [
               { label: "Total Budgeted",    value: fmt(totalBudgeted),          color: "default" },
               { label: "Total Spent",       value: fmt(totalSpent),              color: totalSpent > totalBudgeted ? "red" : "default" },
@@ -546,7 +545,7 @@ function BudgetsPageInner() {
             ] : undefined}
           />
         </div>
-        <div className="flex items-center gap-2 mt-2 shrink-0">
+        <div className="flex items-center gap-2 md:mt-2 shrink-0 px-4 md:px-0">
           {budgets.length > 0 && (
             <button
               onClick={copyFromPreviousMonth}
@@ -627,8 +626,8 @@ function BudgetsPageInner() {
               <>
                 <Sparkles className="w-3.5 h-3.5 text-honey shrink-0" />
                 <span className="text-[12px] text-ink-secondary">
-                  3-mo avg <span className="text-ink-primary font-medium">{fmt(suggestion.avg)}</span>
-                  {" · "}suggested <span className="text-honey font-semibold">{fmt(suggestion.suggested)}</span>
+                  3-mo avg <span className="text-ink-primary font-medium font-mono">{fmt(suggestion.avg)}</span>
+                  {" · "}suggested <span className="text-honey font-semibold font-mono">{fmt(suggestion.suggested)}</span>
                 </span>
                 <button
                   onClick={() => { setNewAmount(String(suggestion.suggested)); setSuggestion(null); }}

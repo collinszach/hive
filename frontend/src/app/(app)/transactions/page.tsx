@@ -34,8 +34,10 @@ const FILTER_OPTIONS = [
 function CardBadge({ cardSlug, accountName }: { cardSlug: string | null; accountName: string | null }) {
   const label = accountName ?? cardSlug ?? "—";
   return (
-    <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium
-                     bg-white/[0.05] text-ink-tertiary border border-white/[0.07] whitespace-nowrap">
+    <span
+      className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap"
+      style={{ background: "rgba(255,255,255,0.04)", color: "#9CA3AF", border: "1px solid #2A2D35" }}
+    >
       {label}
     </span>
   );
@@ -63,7 +65,7 @@ const CAT_DOT_COLOR: Record<string, string> = {
 function CategoryBadge({ category }: { category: string | null }) {
   const dotColor = CAT_DOT_COLOR[category ?? ""] ?? "#6b7285";
   return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium border bg-white/[0.05] text-[#9aa0b0] border-white/[0.08]">
+    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium" style={{ background: "rgba(255,255,255,0.04)", color: "#9CA3AF", border: "1px solid #2A2D35" }}>
       <span
         className="inline-block w-[5px] h-[5px] rounded-full mr-1.5 shrink-0"
         style={{ background: dotColor }}
@@ -842,17 +844,18 @@ function TransactionsPageInner() {
     <div className="animate-fade-in" style={{ paddingBottom: 32 }}>
 
       {/* ── Header ────────────────────────────────────────────────────── */}
-      <div style={{ padding: "20px 24px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div className="px-4 md:px-6 pt-5 flex items-center justify-between gap-2">
         <h1 style={{ fontSize: 16, fontWeight: 600, color: "var(--color-ink-primary)", margin: 0 }}>Transactions</h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div className="flex items-center gap-2">
           {data && (
-            <span style={{ fontSize: 12, color: "var(--color-ink-tertiary)", fontFamily: "var(--font-mono)" }}>
+            <span className="hidden sm:inline text-[12px] text-ink-tertiary font-mono">
               {data.total.toLocaleString()} total
             </span>
           )}
           <button
             onClick={handleRecategorize}
             disabled={recategorizing}
+            className="hidden md:inline-flex items-center"
             style={{ background: "var(--color-surface)", border: "1px solid var(--border-default)", borderRadius: 7, padding: "5px 10px", fontSize: 11, color: "var(--color-ink-secondary)", cursor: recategorizing ? "default" : "pointer", opacity: recategorizing ? 0.5 : 1 }}
           >
             {recategorizing ? "Queuing…" : "↻ Re-categorize all"}
@@ -883,7 +886,7 @@ function TransactionsPageInner() {
       </div>
 
       {/* ── Body ──────────────────────────────────────────────────────── */}
-      <div style={{ padding: "16px 24px 0", display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="px-4 md:px-6 pt-4 flex flex-col gap-4">
 
       {/* ── Quick-Add Form ────────────────────────────────────────────── */}
       {showAddForm && (
@@ -1139,7 +1142,8 @@ function TransactionsPageInner() {
 
       {/* ── Table ─────────────────────────────────────────────────────── */}
       <div className="hive-card overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[580px]">
           <thead className="border-b border-white/[0.05]">
             <tr>
               <th className="pl-4 pr-2 py-3 w-8">
@@ -1260,6 +1264,7 @@ function TransactionsPageInner() {
             })}
           </tbody>
         </table>
+        </div>{/* end overflow-x-auto */}
       </div>
 
       </div>{/* end body */}
