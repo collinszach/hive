@@ -11,10 +11,14 @@ interface AnimatedNumberProps {
 export default function AnimatedNumber({ value, format, duration = 600, className }: AnimatedNumberProps) {
   const [displayed, setDisplayed] = useState(0);
   const rafRef = useRef<number>(0);
+  const displayedRef = useRef(0);
+
+  // Keep ref in sync so the next animation can start from current position
+  displayedRef.current = displayed;
 
   useEffect(() => {
     const start = performance.now();
-    const from = 0;
+    const from = displayedRef.current;
     const to = value;
     function tick(now: number) {
       const elapsed = now - start;

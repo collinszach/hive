@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 interface AnimatedBarProps {
   /** 0–100 */
   pct: number;
-  /** CSS color string or gradient — defaults to honey gradient */
+  /** CSS color string or gradient — defaults to blue gradient */
   color?: string;
   /** bar height in px — defaults to 5 */
   height?: number;
