@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import { Check, X, ArrowRight } from "lucide-react";
 import { fmt } from "@/lib/utils";
 import { api, ProgramSummary } from "@/lib/api";
-import { GlassCard } from "@/components/GlassCard";
 import { toast } from "@/components/Toast";
 
 interface ProgramCardProps {
@@ -48,9 +47,8 @@ export function ProgramCard({ program: p, onBalanceUpdate, onViewActivity }: Pro
   }
 
   return (
-    <GlassCard
-      tint="amber"
-      className="p-5 space-y-4 transition-all duration-200"
+    <div
+      className="hive-card-rewards p-5 space-y-4 transition-all duration-200"
     >
       {/* Header */}
       <div className="flex items-start justify-between">
@@ -131,6 +129,6 @@ export function ProgramCard({ program: p, onBalanceUpdate, onViewActivity }: Pro
           <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
         </button>
       )}
-    </GlassCard>
+    </div>
   );
 }

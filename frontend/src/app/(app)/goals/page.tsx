@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { api, type Goal, type GoalCreate, type GoalUpdate, type GoalType, type GoalProjection } from "@/lib/api";
 import { fmt, cn } from "@/lib/utils";
 import { PageHero } from "@/components/PageHero";
-import { GlassCard } from "@/components/GlassCard";
 import { Pencil, Star, Archive, Plus, X, Target, PlusCircle, Loader2, ExternalLink } from "lucide-react";
 import { useRef } from "react";
 import Link from "next/link";
@@ -82,7 +81,7 @@ function GoalCard({
   }
 
   return (
-    <GlassCard className={cn("p-4 transition-opacity", goal.archived && "opacity-50")}>
+    <div className={cn("hive-card p-4 transition-opacity", goal.archived && "opacity-50")}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-[14px] font-semibold text-ink-primary truncate">{goal.name}</span>
@@ -108,7 +107,7 @@ function GoalCard({
       {/* Amounts */}
       <div className="flex items-center justify-between mb-2">
         <span className="text-[12px] font-mono text-ink-tertiary tabular-nums">{fmt(goal.current_amount)}</span>
-        <span className="text-[11px] text-ink-ghost">{goal.pct_complete.toFixed(0)}%</span>
+        <span className="text-[11px] font-mono text-ink-ghost">{goal.pct_complete.toFixed(0)}%</span>
         <span className="text-[12px] font-mono text-ink-tertiary tabular-nums">{fmt(goal.target_amount)}</span>
       </div>
 
@@ -265,7 +264,7 @@ function GoalCard({
           </button>
         </form>
       )}
-    </GlassCard>
+    </div>
   );
 }
 
@@ -532,7 +531,7 @@ export default function GoalsPage() {
                 : <span className="text-ink-secondary">No goals yet</span>
             }
             subtext="Track your financial targets and stay on course"
-            glowColor="amber"
+            glow="green"
             statStrip={activeGoals.length > 0 ? [
               { label: "Active",    value: String(activeGoals.length),    color: "amber"   },
               { label: "Completed", value: String(completedGoals.length), color: "green"   },
@@ -566,14 +565,14 @@ export default function GoalsPage() {
       {loading && (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <GlassCard key={i} className="p-4 h-24 animate-pulse">{null}</GlassCard>
+            <div key={i} className="hive-card p-4 h-24 animate-pulse" />
           ))}
         </div>
       )}
 
       {/* Empty */}
       {!loading && visibleGoals.length === 0 && (
-        <GlassCard className="py-16 text-center">
+        <div className="hive-card py-16 text-center">
           <Target className="w-10 h-10 text-ink-tertiary/20 mx-auto mb-3" />
           <p className="text-[14px] font-medium text-ink-secondary">No goals yet</p>
           <p className="text-[12px] text-ink-tertiary mt-1 mb-5">Create a goal to start tracking your progress.</p>
@@ -584,7 +583,7 @@ export default function GoalsPage() {
             <Plus className="w-3.5 h-3.5" />
             New Goal
           </button>
-        </GlassCard>
+        </div>
       )}
 
       {/* Goal cards */}

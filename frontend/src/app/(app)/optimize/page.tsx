@@ -64,7 +64,7 @@ export default function OptimizerPage() {
           ? `${best.account_name ?? best.card_slug} · ${Math.round(best.points_earned).toLocaleString()} pts · ${fmt(best.dollar_value)} value`
           : "find the best card to use at checkout"
         }
-        glowColor="honey"
+        glow="amber"
         statStrip={searched && best ? [
           { label: "Best Card", value: best.account_name ?? best.card_slug, color: "amber" },
           { label: "Earn Rate", value: `${best.earn_rate}x`, color: "default" },
@@ -117,7 +117,7 @@ export default function OptimizerPage() {
         <button
           onClick={optimize}
           disabled={loading}
-          className="hive-btn-primary"
+          className="hive-btn-rewards"
         >
           <Zap className="w-4 h-4" />
           {loading ? "Calculating…" : "Find Best Card"}

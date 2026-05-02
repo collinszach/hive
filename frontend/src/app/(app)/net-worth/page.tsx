@@ -147,6 +147,11 @@ export default function NetWorthPage() {
       <div style={{ position: "relative", minHeight: "100%", overflow: "hidden", paddingBottom: 60 }}>
 
         {/* ── Atmospheric background glow ── */}
+        <div aria-hidden className="glow-blue" style={{
+          position:    "absolute",
+          inset:       0,
+          pointerEvents: "none",
+        }} />
         <div aria-hidden style={{
           position:    "absolute",
           top:         -60,
@@ -178,7 +183,7 @@ export default function NetWorthPage() {
         </div>
 
         {/* ── Giant number hero ── */}
-        <div style={{ padding: "48px 28px 24px", textAlign: "center" }}>
+        <div className="hive-card-hero" style={{ margin: "24px 28px", padding: "32px 28px 24px", textAlign: "center" }}>
           {loading ? (
             <div style={{ height: 108, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <div style={{
@@ -354,11 +359,8 @@ export default function NetWorthPage() {
             }}
           >
             {/* Assets */}
-            <div style={{
-              background:   "rgba(61,214,140,0.03)",
-              border:       "1px solid rgba(61,214,140,0.1)",
-              borderRadius: 14,
-              padding:      "20px 20px 18px",
+            <div className="hive-card" style={{
+              padding: "20px 20px 18px",
             }}>
               <p style={{
                 fontSize: 9, fontWeight: 700, letterSpacing: "0.22em",
@@ -381,11 +383,8 @@ export default function NetWorthPage() {
             </div>
 
             {/* Liabilities */}
-            <div style={{
-              background:   "rgba(248,113,113,0.03)",
-              border:       "1px solid rgba(248,113,113,0.1)",
-              borderRadius: 14,
-              padding:      "20px 20px 18px",
+            <div className="hive-card" style={{
+              padding: "20px 20px 18px",
             }}>
               <p style={{
                 fontSize: 9, fontWeight: 700, letterSpacing: "0.22em",
@@ -491,11 +490,8 @@ function MilestoneSection({ data, currentNW }: { data: NetWorthSnapshot[]; curre
   if (crossings.length === 0 && !nextMilestone) return null;
 
   return (
-    <div style={{
+    <div className="hive-card" style={{
       margin: "20px 28px 0",
-      background: "rgba(255,255,255,0.015)",
-      border: "1px solid rgba(255,255,255,0.06)",
-      borderRadius: 14,
       padding: "20px 22px",
     }}>
       <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)", marginBottom: 3 }}>
@@ -599,11 +595,8 @@ function BenchmarkSection({ netWorth }: { netWorth: number | null }) {
   const maxBar = Math.max(nw, bracket.median, bracket.mean, 1);
 
   return (
-    <div style={{
+    <div className="hive-card" style={{
       margin: "20px 28px 0",
-      background: "rgba(255,255,255,0.015)",
-      border: "1px solid rgba(255,255,255,0.06)",
-      borderRadius: 14,
       padding: "20px 22px",
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>

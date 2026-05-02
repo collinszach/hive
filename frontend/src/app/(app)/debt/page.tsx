@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect } from "react";
 import { api } from "@/lib/api";
 import { Info, X } from "lucide-react";
 import { PageHero } from "@/components/PageHero";
-import { GlassCard } from "@/components/GlassCard";
 import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -259,7 +258,7 @@ export default function DebtPage() {
             : <span className="text-ink-secondary">Enter your debts</span>
         }
         subtext="Model avalanche vs snowball strategies and see your payoff timeline"
-        glowColor={validDebts.length > 0 ? "coral" : "amber"}
+        glow="green"
         statStrip={validDebts.length > 0 && current.length > 0 ? [
           { label: "Payoff",    value: monthLabel(current.length),        color: "green"   },
           { label: "Months",    value: String(current.length),            color: "default" },
@@ -270,7 +269,7 @@ export default function DebtPage() {
 
       <div className="space-y-5">
         {/* ── Debt inputs ─────────────────────────────────────── */}
-        <GlassCard className="p-5">
+        <div className="hive-card p-5">
           <h2 className="text-[13px] font-semibold text-ink-primary mb-4">Your Debts</h2>
 
           {/* Pre-populated notice */}
@@ -310,10 +309,10 @@ export default function DebtPage() {
           >
             <span className="text-base leading-none">+</span> Add debt
           </button>
-        </GlassCard>
+        </div>
 
         {/* ── Extra payment + strategy ─────────────────────────── */}
-        <GlassCard className="p-5">
+        <div className="hive-card p-5">
           <h2 className="text-[13px] font-semibold text-ink-primary mb-4">Payment Settings</h2>
 
           <div className="grid grid-cols-2 gap-6">
@@ -334,7 +333,7 @@ export default function DebtPage() {
                 />
               </div>
               <p className="text-[11px] text-ink-ghost mt-1.5">
-                Total monthly: {fmt(totalMin + extraPayment)}
+                Total monthly: <span className="font-mono">{fmt(totalMin + extraPayment)}</span>
               </p>
             </div>
 
@@ -363,7 +362,7 @@ export default function DebtPage() {
               </p>
             </div>
           </div>
-        </GlassCard>
+        </div>
 
         {/* ── Results ──────────────────────────────────────────── */}
         {validDebts.length > 0 && current.length > 0 && (
@@ -395,7 +394,7 @@ export default function DebtPage() {
                   color: interestSaved >= 0 ? "text-semantic-income" : "text-honey",
                 },
               ].map((k) => (
-                <GlassCard key={k.label} className="px-4 py-4">
+                <div key={k.label} className="hive-card px-4 py-4">
                   <p className="hive-label mb-1.5">{k.label}</p>
                   <p className={cn("text-[22px] font-bold font-mono tabular-nums", k.color)}>
                     {k.value}
@@ -403,12 +402,12 @@ export default function DebtPage() {
                   {"sub" in k && k.sub && (
                     <p className="text-[11px] text-ink-ghost mt-0.5">{k.sub}</p>
                   )}
-                </GlassCard>
+                </div>
               ))}
             </div>
 
             {/* Balance chart */}
-            <GlassCard className="p-5">
+            <div className="hive-card p-5">
               <h2 className="text-[13px] font-semibold text-ink-primary mb-4">Balance Over Time</h2>
               <div className="relative h-36 flex items-end gap-px">
                 {/* Starting bar */}
@@ -446,10 +445,10 @@ export default function DebtPage() {
                   <span className="text-[11px] text-ink-tertiary">Paid off</span>
                 </div>
               </div>
-            </GlassCard>
+            </div>
 
             {/* Per-debt payoff dates */}
-            <GlassCard className="p-5">
+            <div className="hive-card p-5">
               <h2 className="text-[13px] font-semibold text-ink-primary mb-4">Payoff Order</h2>
               <div className="space-y-3">
                 {validDebts
@@ -493,10 +492,10 @@ export default function DebtPage() {
                     );
                   })}
               </div>
-            </GlassCard>
+            </div>
 
             {/* Month-by-month table (collapsible) */}
-            <GlassCard className="p-5">
+            <div className="hive-card p-5">
               <button
                 onClick={() => setShowTable((v) => !v)}
                 className="flex items-center gap-2 w-full text-left"
@@ -548,17 +547,17 @@ export default function DebtPage() {
                   </table>
                 </div>
               )}
-            </GlassCard>
+            </div>
           </>
         )}
 
         {/* Empty state */}
         {validDebts.length === 0 && (
-          <GlassCard className="py-16 text-center">
+          <div className="hive-card py-16 text-center">
             <p className="text-3xl mb-3">🎯</p>
             <p className="text-[14px] font-medium text-ink-secondary">Add your debts above to see your payoff plan</p>
             <p className="text-[12px] mt-1 text-ink-tertiary">Fill in balance, APR, and minimum payment for each account</p>
-          </GlassCard>
+          </div>
         )}
       </div>
     </div>
