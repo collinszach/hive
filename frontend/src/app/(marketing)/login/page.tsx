@@ -187,6 +187,7 @@ export default function LoginPage() {
   const [showPw,   setShowPw]   = useState(false);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
+  const submittingRef = useRef(false);
 
   // Redirect if already authenticated; send to setup if no users yet
   useEffect(() => {
@@ -247,8 +248,11 @@ export default function LoginPage() {
 
   // Auto-submit TOTP once 6 digits entered
   useEffect(() => {
-    if (step === "totp" && totpCode.replace(/\s/g, "").length === 6 && !loading) {
-      handleTotp({ preventDefault: () => {} } as FormEvent);
+    if (step === "totp" && totpCode.replace(/\s/g, "").length === 6 && !submittingRef.current) {
+      submittingRef.current = true;
+      handleTotp({ preventDefault: () => {} } as FormEvent).finally(() => {
+        submittingRef.current = false;
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totpCode, step]);

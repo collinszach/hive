@@ -85,7 +85,10 @@ export default function RegisterPage() {
   useEffect(() => {
     Promise.all([
       fetch("/api/auth/me", { credentials: "include" }),
-      fetch("/api/auth/setup-required").then((r) => r.json() as Promise<{ setup_required: boolean }>),
+      fetch("/api/auth/setup-required").then(async (r) => {
+        if (!r.ok) throw new Error("setup-required check failed");
+        return r.json() as Promise<{ setup_required: boolean }>;
+      }),
     ])
       .then(([meRes, setupData]) => {
         if (meRes.ok) { router.replace("/dashboard"); return; }
