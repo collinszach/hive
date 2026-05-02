@@ -73,8 +73,10 @@ async def dashboard_summary(
                 Transaction.date >= start,
                 Transaction.date < end,
                 Transaction.is_excluded == False,  # noqa: E712
+                Transaction.is_transfer == False,  # noqa: E712
                 Transaction.pending == False,  # noqa: E712
                 Transaction.amount > 0,
+                Transaction.category != "Transfers",
                 Account.subtype.notin_(["savings", "cd", "money market", "checking"]),
             )
         )
