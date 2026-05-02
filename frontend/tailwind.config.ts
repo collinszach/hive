@@ -9,8 +9,10 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+        sans:         ['var(--font-sans)',       'system-ui', 'sans-serif'],
+        mono:         ['var(--font-mono)',       'ui-monospace', 'monospace'],
+        geist:        ['var(--font-geist)',      'system-ui', 'sans-serif'],
+        'geist-mono': ['var(--font-geist-mono)','ui-monospace', 'monospace'],
       },
       colors: {
         base:     '#13151C',

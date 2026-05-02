@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const sans = IBM_Plex_Sans({
@@ -16,9 +16,21 @@ const mono = IBM_Plex_Mono({
   display: "swap",
 });
 
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Hive — Personal Finance",
-  description: "Self-hosted personal finance intelligence platform",
+  description: "Your money, your data, your rules.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -41,7 +53,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable} antialiased`}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${mono.variable} ${geist.variable} ${geistMono.variable} antialiased`}
+    >
       <body>{children}</body>
     </html>
   );
