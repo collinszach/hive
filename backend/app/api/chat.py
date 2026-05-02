@@ -12,9 +12,11 @@ from slowapi.util import get_remote_address
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.auth import _get_bearer_token, decode_token
 from app.config import settings
 from app.db import get_db
 from app.models.account import Account
+from app.models.user import PlanTier, User, UserRole
 from app.models.anomaly import Anomaly
 from app.models.budget import Budget
 from app.models.goal import Goal
@@ -403,6 +405,16 @@ async def chat(
     messages.append({"role": "user", "content": body.message})
 
     if body.use_claude:
+        # Gate: Claude requires Pro plan (admins always allowed)
+        token = _get_bearer_token(request)
+        _payload = decode_token(token)
+        _user_result = await db.execute(select(User).where(User.username == _payload.get("sub")))
+        _user = _user_result.scalar_one_or_none()
+        if _user is None or (_user.role != UserRole.admin and _user.plan != PlanTier.pro):
+            raise HTTPException(
+                status_code=402,
+                detail={"message": "Claude AI chat requires Pro plan.", "gate": "claude"},
+            )
         answer, input_tokens, output_tokens, model_used = await _chat_with_claude(
             system_prompt=system_prompt,
             messages=messages,

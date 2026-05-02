@@ -9,6 +9,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.accounts import router as accounts_router
+from app.api.billing import router as billing_router
 from app.api.admin import router as admin_router
 from app.api.anomalies import router as anomalies_router
 from app.api.auth import router as auth_router
@@ -74,6 +75,7 @@ _PUBLIC_EXACT = {
     "/api/auth/setup-required",
     "/api/auth/logout",   # just clears a cookie — no data returned
     "/api/health",
+    "/api/billing/webhook",   # Stripe webhook — no user auth
 }
 # Prefix-match paths (webhooks have sub-paths like /api/plaid/webhook/...)
 _PUBLIC_PREFIXES = ("/api/plaid/webhook",)
@@ -103,6 +105,7 @@ async def require_auth(request: Request, call_next):
 
 
 app.include_router(accounts_router)
+app.include_router(billing_router)
 app.include_router(admin_router)
 app.include_router(auth_router)
 app.include_router(anomalies_router)
