@@ -98,7 +98,6 @@ export function PageHeader(props: Props) {
             color: "var(--color-ink-primary)",
             lineHeight: 1.2,
             letterSpacing: "-0.01em",
-            fontFamily: "var(--font-mono, monospace)",
             margin: 0,
           }}>
             {title}

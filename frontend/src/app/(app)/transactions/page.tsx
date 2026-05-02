@@ -1105,7 +1105,6 @@ function TransactionsPageInner() {
         <div className="flex items-center justify-between px-1 -mt-1 mb-0.5">
           <span className="text-[11px] text-ink-ghost">
             {data.total.toLocaleString()} transaction{data.total !== 1 ? "s" : ""}
-            {data.pages > 1 && ` · page ${data.page} of ${data.pages}`}
           </span>
           {data.total_amount !== 0 && (
             <span className="text-[11px] font-mono text-ink-tertiary tabular-nums">
