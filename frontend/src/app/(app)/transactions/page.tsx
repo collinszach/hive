@@ -1112,6 +1112,31 @@ function TransactionsPageInner() {
         </div>
       )}
 
+      {/* ── Pagination ────────────────────────────────────────────────── */}
+      {data && data.pages > 1 && (
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] text-ink-tertiary font-mono">
+            {data.total.toLocaleString()} transactions · page {page} of {data.pages}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage(page - 1)}
+              className="hive-btn-secondary py-1.5 px-3 text-[12px] disabled:opacity-30"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" /> Prev
+            </button>
+            <button
+              disabled={page >= data.pages}
+              onClick={() => setPage(page + 1)}
+              className="hive-btn-secondary py-1.5 px-3 text-[12px] disabled:opacity-30"
+            >
+              Next <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Table ─────────────────────────────────────────────────────── */}
       <div className="hive-card overflow-hidden">
         <table className="w-full text-sm">
@@ -1236,31 +1261,6 @@ function TransactionsPageInner() {
           </tbody>
         </table>
       </div>
-
-      {/* ── Pagination ────────────────────────────────────────────────── */}
-      {data && data.pages > 1 && (
-        <div className="flex items-center justify-between">
-          <span className="text-[12px] text-ink-tertiary font-mono">
-            {data.total.toLocaleString()} transactions · page {page} of {data.pages}
-          </span>
-          <div className="flex items-center gap-1.5">
-            <button
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
-              className="hive-btn-secondary py-1.5 px-3 text-[12px] disabled:opacity-30"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" /> Prev
-            </button>
-            <button
-              disabled={page >= data.pages}
-              onClick={() => setPage(page + 1)}
-              className="hive-btn-secondary py-1.5 px-3 text-[12px] disabled:opacity-30"
-            >
-              Next <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
 
       </div>{/* end body */}
 
