@@ -75,6 +75,7 @@ export default function ConnectPage() {
   const [snaptradeLoading, setSnaptradeLoading]       = useState(false);
   const [snaptradeMessage, setSnaptradeMessage]       = useState<string>("");
   const [showGraph, setShowGraph]                     = useState(false);
+  const [plaidGated, setPlaidGated]                   = useState(false);
 
   const detectedRedirectUri = typeof window !== "undefined"
     ? `${window.location.protocol}//${window.location.host}/connect`
@@ -83,12 +84,16 @@ export default function ConnectPage() {
   const fetchLinkToken = useCallback(() => {
     authedFetch(`/api/plaid/link-token`, { method: "POST" })
       .then(async (r) => {
+        if (r.status === 402) {
+          setPlaidGated(true);
+          return null;
+        }
         const data = await r.json();
         if (!r.ok) throw new Error(data.detail ?? `Server error ${r.status}`);
         if (!data.link_token) throw new Error("Server returned no link_token");
         return data;
       })
-      .then((data) => setLinkToken(data.link_token))
+      .then((data) => { if (data) setLinkToken(data.link_token); })
       .catch((err) => {
         setStatus("error");
         setMessage(`Failed to get link token: ${err.message}`);
@@ -478,14 +483,24 @@ export default function ConnectPage() {
         <p className="text-[12px] text-ink-tertiary mb-4">
           Connect any bank, credit card, or investment account. Plaid supports 12,000+ institutions.
         </p>
-        <button
-          onClick={() => open()}
-          disabled={!ready || status === "syncing"}
-          className="hive-btn-primary"
-        >
-          <Link2 className="w-4 h-4" />
-          {!linkToken ? "Loading…" : status === "syncing" ? "Connecting…" : "Connect Bank Account"}
-        </button>
+        {plaidGated ? (
+          <div className="hive-card p-5 text-center mb-4">
+            <p className="text-ink-primary font-semibold mb-2">Bank Sync Requires Starter or Pro</p>
+            <p className="text-ink-secondary text-sm mb-4">
+              Connect up to 3 accounts on Starter ($9/mo) or 10 on Pro ($19/mo).
+            </p>
+            <a href="/billing" className="hive-btn-primary inline-block">View Plans →</a>
+          </div>
+        ) : (
+          <button
+            onClick={() => open()}
+            disabled={!ready || status === "syncing"}
+            className="hive-btn-primary"
+          >
+            <Link2 className="w-4 h-4" />
+            {!linkToken ? "Loading…" : status === "syncing" ? "Connecting…" : "Connect Bank Account"}
+          </button>
+        )}
       </div>
 
       {/* ── Manual Accounts ─────────────────────────────────────────── */}

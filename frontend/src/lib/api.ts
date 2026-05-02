@@ -11,6 +11,21 @@ function handleUnauthorized(status: number): void {
   }
 }
 
+async function handle402(res: Response, path: string): Promise<never> {
+  let gate: string | undefined;
+  try {
+    const body = await res.clone().json();
+    if (body?.detail?.gate) gate = body.detail.gate;
+    else if (body?.gate) gate = body.gate;
+  } catch { /* no JSON body */ }
+  if (!gate) gate = res.headers.get("X-Gate") ?? "plaid";
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("upgrade-required", { detail: { gate } }));
+  }
+  const err = Object.assign(new Error(`402 ${path}`), { status: 402, gate });
+  throw err;
+}
+
 async function get<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
   const searchStr = params
     ? "?" + new URLSearchParams(
@@ -23,7 +38,7 @@ async function get<T>(path: string, params?: Record<string, string | number | bo
     : "";
   const url = IS_SERVER ? `${SERVER_BASE}${path}${searchStr}` : `${path}${searchStr}`;
   const res = await fetch(url, { cache: "no-store", headers: authHeader(), credentials: "include" });
-  if (!res.ok) { handleUnauthorized(res.status); throw new Error(`GET ${path} → ${res.status}`); }
+  if (!res.ok) { if (res.status === 402) return handle402(res, path) as never; handleUnauthorized(res.status); throw new Error(`GET ${path} → ${res.status}`); }
   return res.json();
 }
 
@@ -36,7 +51,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     cache: "no-store",
     credentials: "include",
   });
-  if (!res.ok) { handleUnauthorized(res.status); throw new Error(`POST ${path} → ${res.status}`); }
+  if (!res.ok) { if (res.status === 402) return handle402(res, path) as never; handleUnauthorized(res.status); throw new Error(`POST ${path} → ${res.status}`); }
   return res.json();
 }
 
@@ -57,7 +72,7 @@ async function del<T>(path: string, params?: Record<string, string | boolean | u
     cache: "no-store",
     credentials: "include",
   });
-  if (!res.ok) { handleUnauthorized(res.status); throw new Error(`DELETE ${path} → ${res.status}`); }
+  if (!res.ok) { if (res.status === 402) return handle402(res, path) as never; handleUnauthorized(res.status); throw new Error(`DELETE ${path} → ${res.status}`); }
   // 204 No Content has no body — don't attempt to parse JSON
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -72,7 +87,7 @@ async function patch<T>(path: string, body: unknown): Promise<T> {
     cache: "no-store",
     credentials: "include",
   });
-  if (!res.ok) { handleUnauthorized(res.status); throw new Error(`PATCH ${path} → ${res.status}`); }
+  if (!res.ok) { if (res.status === 402) return handle402(res, path) as never; handleUnauthorized(res.status); throw new Error(`PATCH ${path} → ${res.status}`); }
   return res.json();
 }
 
@@ -85,7 +100,7 @@ async function put<T>(path: string, body: unknown): Promise<T> {
     cache: "no-store",
     credentials: "include",
   });
-  if (!res.ok) { handleUnauthorized(res.status); throw new Error(`PUT ${path} → ${res.status}`); }
+  if (!res.ok) { if (res.status === 402) return handle402(res, path) as never; handleUnauthorized(res.status); throw new Error(`PUT ${path} → ${res.status}`); }
   return res.json();
 }
 

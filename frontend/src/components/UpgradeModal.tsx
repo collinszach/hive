@@ -80,14 +80,14 @@ export function UpgradeModal({ gate, onClose }: UpgradeModalProps) {
         {/* Actions */}
         <div className="flex gap-3">
           <Link
-            href="/pricing"
+            href="/billing"
             onClick={onClose}
             className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl
                        text-[13px] font-semibold text-[#0A0C10]
                        transition-all duration-150 hover:opacity-90"
             style={{ background: "linear-gradient(135deg, #F5B942 0%, #C9920E 100%)" }}
           >
-            See Plans
+            View Plans →
           </Link>
           <button
             onClick={onClose}

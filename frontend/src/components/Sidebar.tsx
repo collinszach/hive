@@ -26,6 +26,7 @@ import {
   Store,
   Filter,
   Link as LinkIcon,
+  CreditCard,
 } from "lucide-react";
 import { clearToken } from "@/lib/auth";
 import { api } from "@/lib/api";
@@ -379,6 +380,14 @@ export default function Sidebar() {
           label="Settings"
           icon={Settings2}
           active={pathname.startsWith("/settings")}
+        />
+
+        {/* Billing */}
+        <NavItem
+          href="/billing"
+          label="Billing"
+          icon={CreditCard}
+          active={pathname.startsWith("/billing")}
         />
 
         {/* Avatar row */}

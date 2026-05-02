@@ -27,6 +27,8 @@ interface AdminUser {
   id: string;
   username: string;
   role: "admin" | "viewer";
+  plan: string;
+  stripe_status: string | null;
   is_active: boolean;
   last_login_at: string | null;
   created_at: string;
@@ -154,7 +156,7 @@ export default function AccountPage() {
     router.push("/login");
   }
 
-  async function patchUser(id: string, patch: Partial<{ role: "admin" | "viewer"; is_active: boolean }>) {
+  async function patchUser(id: string, patch: Partial<{ role: "admin" | "viewer"; plan: string; is_active: boolean }>) {
     try {
       const res = await authedFetch(`/api/admin/users/${id}`, {
         method: "PATCH",
@@ -470,6 +472,8 @@ export default function AccountPage() {
                   <tr className="border-b border-white/[0.06]">
                     <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider pr-4">User</th>
                     <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider pr-4">Role</th>
+                    <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider pr-4">Plan</th>
+                    <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider pr-4">Stripe</th>
                     <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider pr-4">Status</th>
                     <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider pr-4">Last Login</th>
                     <th className="text-left pb-2 text-ink-tertiary font-semibold uppercase tracking-wider">Actions</th>
@@ -499,6 +503,30 @@ export default function AccountPage() {
                           </select>
                           <ChevronDown className="absolute right-1.5 w-2.5 h-2.5 text-ink-tertiary pointer-events-none" />
                         </div>
+                      </td>
+
+                      {/* Plan dropdown */}
+                      <td className="py-2.5 pr-4">
+                        <div className="relative inline-flex items-center">
+                          <select
+                            value={user.plan ?? "free"}
+                            onChange={(e) => patchUser(user.id, { plan: e.target.value })}
+                            className="appearance-none text-[11px] text-ink-secondary bg-transparent
+                                       border border-white/[0.08] rounded-lg px-2 py-1 pr-5
+                                       hover:border-white/[0.15] focus:outline-none cursor-pointer
+                                       focus:border-honey/30 transition-colors"
+                          >
+                            <option value="free">Free</option>
+                            <option value="starter">Starter</option>
+                            <option value="pro">Pro</option>
+                          </select>
+                          <ChevronDown className="absolute right-1.5 w-2.5 h-2.5 text-ink-tertiary pointer-events-none" />
+                        </div>
+                      </td>
+
+                      {/* Stripe status */}
+                      <td className="py-2.5 pr-4 text-ink-tertiary font-mono tabular-nums">
+                        {user.stripe_status ?? "—"}
                       </td>
 
                       {/* Active status */}
