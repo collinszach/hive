@@ -1,0 +1,82 @@
+# Secrets — NEVER commit
+.env
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+.next/
+.nuxt/
+dist/
+.DS_Store
+
+# Docker
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# ML artifacts (trained model files — NOT the SQLAlchemy models/ directory)
+*.pkl
+*.joblib
+ml_models/
+
+# Alembic (keep versions, ignore compiled)
+*.pyc
+.env
+*.pyc
+__pycache__/
+node_modules/
+.next/
+.worktrees/
+
+# TLS certs
+nginx/certs/
+*.crt
+*.key
+*.pem
+
+# Superpowers brainstorm artifacts
+.superpowers/
+
+# MCP config (contains local paths)
+.mcp.json
+
+# Browser automation artifacts (may contain session data)
+.playwright-mcp/
+
+# Internal AI planning docs (contain local paths)
+docs/superpowers/
+docs/feature-gap-analysis.md
+
+# Internal planning and AI instruction files
+CLAUDE.md
+BUILD_PLAN.md
+BWS_SECRETS.md
+PROMPTS.md
+RECON.md
+ROADMAP.md
+SPEC.md
+STABILITY.md
+
+# Claude local settings (contains local paths)
+.claude/
+
+# TypeScript build info
+*.tsbuildinfo

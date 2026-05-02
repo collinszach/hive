@@ -1,0 +1,4 @@
+# Unignore lib/ — the root .gitignore has lib/ (Python artifact pattern)
+# but frontend/src/lib/ contains source code that must be tracked.
+!lib/
+!lib/**

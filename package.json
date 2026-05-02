@@ -1,0 +1,9 @@
+{
+  "name": "hive",
+  "dependencies": {
+    "tailwind-merge": "^3.5.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
+  }
+}

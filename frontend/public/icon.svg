@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Outer honeycomb hex: honey amber #F5B942 -->
+  <polygon
+    points="256,36 447,146 447,366 256,476 65,366 65,146"
+    fill="#F5B942"
+  />
+  <!-- Inner hex: darker amber #C9920E -->
+  <polygon
+    points="256,110 383,183 383,329 256,402 129,329 129,183"
+    fill="#C9920E"
+  />
+  <!-- Center dot: white -->
+  <circle cx="256" cy="256" r="50" fill="#FFFFFF"/>
+</svg>

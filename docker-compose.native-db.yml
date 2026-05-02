@@ -1,0 +1,30 @@
+# Override: use host postgres+redis instead of Docker containers.
+# Use when postgres/redis are already running natively on the host.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.native-db.yml up -d
+services:
+  postgres:
+    image: busybox
+    command: ["sh", "-c", "while true; do sleep 86400; done"]
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 1s
+      timeout: 1s
+      retries: 1
+      start_period: 0s
+
+  redis:
+    image: busybox
+    command: ["sh", "-c", "while true; do sleep 86400; done"]
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 1s
+      timeout: 1s
+      retries: 1
+      start_period: 0s
+
+  backend:
+    volumes:
+      - tax-docs:/data/tax-docs
+
+volumes:
+  tax-docs:
