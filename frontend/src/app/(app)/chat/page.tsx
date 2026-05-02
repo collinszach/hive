@@ -170,7 +170,7 @@ function MessageBubble({ msg }: { msg: Message }) {
 
 // ── Page ────────────────────────────────────────────────────────────────
 
-export default function InsightsPage() {
+export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput]       = useState("");
   const [loading, setLoading]   = useState(false);

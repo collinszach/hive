@@ -192,7 +192,7 @@ export default function ReportsPage() {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 4 }, (_, i) => currentYear - i);
 
-  async function loadReport() {
+  const loadReport = useCallback(async () => {
     setLoading(true);
     setDrill(null);
     setCatPriorData([]);
@@ -236,9 +236,9 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [report, year, yoyCategory, catPeriod, catCustomStart, catCustomEnd, catAccountId]);
 
-  useEffect(() => { loadReport(); }, [report, year, yoyCategory, catPeriod, catCustomStart, catCustomEnd, catAccountId]);
+  useEffect(() => { loadReport(); }, [loadReport]);
 
   useEffect(() => {
     api.accounts.list().then((accts) => setAccounts(accts.filter((a) => a.is_active && !a.is_excluded))).catch(() => {});
