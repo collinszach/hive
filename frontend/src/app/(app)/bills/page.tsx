@@ -146,7 +146,6 @@ export default function BillsPage() {
             }
             subtext={summary ? `${fmt(summary.total_monthly_cost ?? 0)}/mo in recurring · ${summary.count} tracked` : "Credit card payments & recurring charges"}
             glow="red"
-            glowColor={cardsDueSoon > 0 ? "amber" : "green"}
           />
         </div>
         <div className="flex items-center gap-2 mt-1 shrink-0">
