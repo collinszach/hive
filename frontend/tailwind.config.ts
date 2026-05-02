@@ -15,10 +15,10 @@ const config: Config = {
         'geist-mono': ['var(--font-geist-mono)','ui-monospace', 'monospace'],
       },
       colors: {
-        base:     '#13151C',
-        surface:  '#181B24',
-        elevated: '#1C1F2A',
-        overlay:  '#22263A',
+        base:     '#13151A',
+        surface:  '#1A1D24',
+        elevated: '#1F2229',
+        overlay:  '#252830',
 
         honey: {
           DEFAULT: '#F5B942',
@@ -30,24 +30,33 @@ const config: Config = {
           border:  'rgba(245, 185, 66, 0.18)',
         },
 
+        blue: {
+          DEFAULT: '#3B82F6',
+          hover:   '#2563EB',
+          faint:   'rgba(59, 130, 246, 0.08)',
+          subtle:  'rgba(59, 130, 246, 0.05)',
+          glow:    'rgba(59, 130, 246, 0.22)',
+          border:  'rgba(59, 130, 246, 0.20)',
+        },
+
         ink: {
-          primary:   '#EEEEF0',
-          secondary: '#A0A8B8',
-          tertiary:  '#5A6475',
-          ghost:     '#3D4257',
+          primary:   '#F0F2F5',
+          secondary: '#9CA3AF',
+          tertiary:  '#6B7280',
+          ghost:     '#4B5563',
         },
 
         semantic: {
-          income:  '#34D399',
-          expense: '#F87171',
-          warning: '#FBBF24',
-          info:    '#60A5FA',
+          income:  '#22C55E',
+          expense: '#EF4444',
+          warning: '#F59E0B',
+          info:    '#3B82F6',
         },
 
         border: {
-          DEFAULT: 'rgba(255, 255, 255, 0.07)',
-          subtle:  'rgba(255, 255, 255, 0.04)',
-          strong:  'rgba(255, 255, 255, 0.11)',
+          DEFAULT: '#2A2D35',
+          subtle:  '#22252E',
+          strong:  '#3A3E4A',
           white:   'rgba(255, 255, 255, 0.09)',
           honey:   'rgba(245, 185, 66, 0.18)',
         },
