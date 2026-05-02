@@ -17,10 +17,15 @@ import {
   Settings2,
   BarChart2,
   AlertTriangle,
-  CreditCard,
   Bell,
   Search,
   Wallet,
+  MessageSquare,
+  Flag,
+  Calendar,
+  Store,
+  Filter,
+  Link as LinkIcon,
 } from "lucide-react";
 import { clearToken } from "@/lib/auth";
 import { api } from "@/lib/api";
@@ -28,28 +33,60 @@ import { toast } from "@/components/Toast";
 
 // ── Nav structure ──────────────────────────────────────────────
 
-const NAV_PRIMARY = [
-  { href: "/dashboard",    label: "Dashboard",    icon: LayoutDashboard, exact: true  },
-  { href: "/transactions", label: "Transactions", icon: Receipt,         exact: false },
-  { href: "/budgets",      label: "Budgets",      icon: Target,          exact: false },
-  { href: "/bills",        label: "Bills",        icon: CalendarClock,   exact: false },
+const NAV_SECTIONS = [
+  {
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/chat",      label: "Chat",      icon: MessageSquare },
+    ],
+  },
+  {
+    label: "MONEY IN / OUT",
+    items: [
+      { href: "/transactions",  label: "Transactions",  icon: Receipt },
+      { href: "/income",        label: "Income",        icon: ArrowDownLeft },
+      { href: "/bills",         label: "Bills",         icon: CalendarClock },
+      { href: "/subscriptions", label: "Subscriptions", icon: RefreshCw },
+      { href: "/cash-flow",     label: "Cash Flow",     icon: TrendingDown },
+    ],
+  },
+  {
+    label: "PLANNING",
+    items: [
+      { href: "/budgets", label: "Budgets", icon: Target },
+      { href: "/goals",   label: "Goals",   icon: Flag },
+      { href: "/debt",    label: "Debt",    icon: TrendingDown },
+      { href: "/plan",    label: "Plan",    icon: Calendar },
+    ],
+  },
+  {
+    label: "WEALTH",
+    items: [
+      { href: "/net-worth", label: "Net Worth", icon: TrendingUp },
+      { href: "/position",  label: "Position",  icon: Wallet },
+      { href: "/reports",   label: "Reports",   icon: BarChart2 },
+      { href: "/insights",  label: "Insights",  icon: Bell },
+    ],
+  },
+  {
+    label: "REWARDS",
+    items: [
+      { href: "/points",   label: "Points",   icon: Star },
+      { href: "/optimize", label: "Optimize", icon: Zap },
+    ],
+  },
 ] as const;
 
-const NAV_SECONDARY = [
-  { href: "/cash-flow",  label: "Cash Flow",  icon: TrendingDown,  exact: false },
-  { href: "/position",   label: "Position",   icon: Wallet,        exact: false },
-  { href: "/income",     label: "Income",     icon: ArrowDownLeft, exact: false },
-  { href: "/points",     label: "Points",     icon: Star,          exact: false },
-  { href: "/optimize",   label: "Optimizer",  icon: Zap,           exact: false },
-  { href: "/net-worth",  label: "Net Worth",  icon: TrendingUp,    exact: false },
-  { href: "/insights",   label: "Insights",   icon: Bell,          exact: false },
-  { href: "/reports",    label: "Reports",    icon: BarChart2,     exact: false },
-  { href: "/anomalies",  label: "Anomalies",  icon: AlertTriangle, exact: false },
+const NAV_BOTTOM = [
+  { href: "/merchants", label: "Merchants", icon: Store },
+  { href: "/rules",     label: "Rules",     icon: Filter },
+  { href: "/anomalies", label: "Anomalies", icon: AlertTriangle },
+  { href: "/connect",   label: "Connect",   icon: LinkIcon },
 ] as const;
 
-// ── IconButton with tooltip ────────────────────────────────────
+// ── NavItem ───────────────────────────────────────────────────
 
-function NavButton({
+function NavItem({
   href,
   label,
   icon: Icon,
@@ -62,88 +99,62 @@ function NavButton({
   active: boolean;
   badge?: number;
 }) {
-  const [hovered, setHovered] = useState(false);
-
   return (
-    <div className="relative flex items-center justify-center">
-      <Link
-        href={href}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          position: "relative",
+    <Link
+      href={href}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        height: 34,
+        padding: "0 10px",
+        borderRadius: 7,
+        borderLeft: active ? "2px solid #3B82F6" : "2px solid transparent",
+        background: active ? "rgba(59,130,246,0.10)" : "transparent",
+        color: active ? "#F0F2F5" : "#6B7280",
+        fontSize: 13,
+        fontWeight: 500,
+        textDecoration: "none",
+        transition: "all 120ms ease",
+        marginLeft: 6,
+        marginRight: 6,
+      }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.color = "#9CA3AF";
+          e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.color = "#6B7280";
+          e.currentTarget.style.background = "transparent";
+        }
+      }}
+    >
+      <Icon size={15} strokeWidth={active ? 2.1 : 1.8} style={{ flexShrink: 0 }} />
+      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {label}
+      </span>
+      {badge != null && badge > 0 && (
+        <span style={{
+          minWidth: 16,
+          height: 16,
+          borderRadius: 8,
+          background: "#3B82F6",
+          color: "#fff",
+          fontSize: 9,
+          fontWeight: 700,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          transition: "all 0.1s ease",
-          color: active
-            ? "var(--color-honey-bright)"
-            : hovered
-            ? "var(--color-ink-secondary)"
-            : "var(--color-ink-ghost)",
-          background: active
-            ? "rgba(201,146,14,0.10)"
-            : hovered
-            ? "rgba(255,255,255,0.04)"
-            : "transparent",
-          borderLeft: active ? "2px solid var(--color-honey)" : "2px solid transparent",
-        }}
-      >
-        <Icon
-          size={16}
-          strokeWidth={active ? 2.1 : 1.8}
-        />
-        {badge != null && badge > 0 && (
-          <span style={{
-            position: "absolute",
-            top: 4,
-            right: 4,
-            minWidth: 14,
-            height: 14,
-            borderRadius: 7,
-            background: "var(--color-honey)",
-            color: "#0B0C0F",
-            fontSize: 8,
-            fontWeight: 700,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "0 3px",
-            lineHeight: 1,
-          }}>
-            {badge > 9 ? "9+" : badge}
-          </span>
-        )}
-      </Link>
-
-      {/* Tooltip */}
-      {hovered && (
-        <div
-          style={{
-            position: "absolute",
-            left: "calc(100% + 10px)",
-            top: "50%",
-            transform: "translateY(-50%)",
-            background: "#1A1B21",
-            border: "1px solid var(--border-strong)",
-            color: "var(--color-ink-primary)",
-            fontSize: 11,
-            fontWeight: 500,
-            padding: "5px 10px",
-            borderRadius: 6,
-            whiteSpace: "nowrap",
-            pointerEvents: "none",
-            zIndex: 50,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-          }}
-        >
-          {label}
-        </div>
+          padding: "0 4px",
+          flexShrink: 0,
+        }}>
+          {badge > 9 ? "9+" : badge}
+        </span>
       )}
-    </div>
+    </Link>
   );
 }
 
@@ -191,219 +202,225 @@ export default function Sidebar() {
 
   return (
     <aside
+      className="hidden md:flex md:flex-col"
       style={{
         position: "fixed",
         left: 0,
         top: 0,
-        width: 52,
+        width: 220,
         height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
         background: "var(--color-surface)",
         borderRight: "1px solid var(--border-default)",
         zIndex: 40,
-        paddingTop: 0,
+        overflowY: "auto",
+        overflowX: "hidden",
       }}
     >
-      {/* ── Logo ────────────────────────────────────────────── */}
+      {/* ── Logo + wordmark ─────────────────────────────────── */}
       <Link
         href="/dashboard"
-        title="Dashboard"
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          width: 28,
-          height: 28,
-          borderRadius: 7,
-          background: "var(--color-honey)",
-          marginTop: 14,
-          marginBottom: 16,
+          gap: 8,
+          padding: "14px 14px 10px",
+          textDecoration: "none",
           flexShrink: 0,
         }}
       >
         {/* Hex mark */}
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <polygon points="8,1 14,4.5 14,11.5 8,15 2,11.5 2,4.5" stroke="#0B0C0F" strokeWidth="1.5" fill="none" />
-          <polygon points="8,4 11.5,6 11.5,10 8,12 4.5,10 4.5,6" stroke="#0B0C0F" strokeWidth="1" fill="#0B0C0F" opacity="0.35" />
-          <circle cx="8" cy="8" r="1.2" fill="#0B0C0F" />
-        </svg>
+        <div style={{
+          width: 26,
+          height: 26,
+          borderRadius: 6,
+          background: "var(--color-honey-bright)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <polygon points="8,1 14,4.5 14,11.5 8,15 2,11.5 2,4.5" stroke="#0B0C0F" strokeWidth="1.5" fill="none" />
+            <polygon points="8,4 11.5,6 11.5,10 8,12 4.5,10 4.5,6" stroke="#0B0C0F" strokeWidth="1" fill="#0B0C0F" opacity="0.35" />
+            <circle cx="8" cy="8" r="1.2" fill="#0B0C0F" />
+          </svg>
+        </div>
+        <span style={{ fontSize: 15, fontWeight: 700, color: "#F0F2F5", letterSpacing: "-0.02em" }}>
+          Hive
+        </span>
       </Link>
 
-      {/* ── Primary nav ─────────────────────────────────────── */}
-      <nav
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 2,
-          width: "100%",
-          paddingLeft: 8,
-          paddingRight: 8,
-        }}
-      >
-        {NAV_PRIMARY.map(({ href, label, icon, exact }) => {
-          const active = exact ? pathname === href : pathname.startsWith(href);
-          return (
-            <NavButton key={href} href={href} label={label} icon={icon} active={active} />
-          );
-        })}
+      {/* ── Main scrollable nav ──────────────────────────────── */}
+      <nav style={{ flex: 1, paddingBottom: 8 }}>
+        {NAV_SECTIONS.map((section, si) => (
+          <div key={si}>
+            {"label" in section && section.label && (
+              <div className="sidebar-section-label">{section.label}</div>
+            )}
+            {section.items.map(({ href, label, icon }) => {
+              const active = href === "/dashboard"
+                ? pathname === href
+                : pathname.startsWith(href);
+              const badge =
+                href === "/insights" && unreadCount > 0 ? unreadCount : undefined;
+              return (
+                <NavItem
+                  key={href}
+                  href={href}
+                  label={label}
+                  icon={icon}
+                  active={active}
+                  badge={badge}
+                />
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* ── Divider ─────────────────────────────────────────── */}
-      <div
-        style={{
-          width: "calc(100% - 16px)",
-          height: 1,
-          background: "var(--border-subtle)",
-          margin: "6px 8px",
-          flexShrink: 0,
-        }}
-      />
+      <div style={{ height: 1, background: "var(--border-subtle)", margin: "0 14px" }} />
 
-      {/* ── Secondary nav ───────────────────────────────────── */}
-      <nav
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 2,
-          width: "100%",
-          paddingLeft: 8,
-          paddingRight: 8,
-          flex: 1,
-        }}
-      >
-        {NAV_SECONDARY.map(({ href, label, icon, exact }) => {
-          const active = exact ? pathname === href : pathname.startsWith(href);
-          const badge =
-            href === "/insights"  && unreadCount  > 0 ? unreadCount  :
-            href === "/anomalies" && anomalyCount  > 0 ? anomalyCount :
-            undefined;
+      {/* ── Bottom cluster (Merchants / Rules / Anomalies / Connect) ── */}
+      <div style={{ paddingTop: 4, paddingBottom: 4 }}>
+        {NAV_BOTTOM.map(({ href, label, icon }) => {
+          const active = pathname.startsWith(href);
+          const badge = href === "/anomalies" && anomalyCount > 0 ? anomalyCount : undefined;
           return (
-            <NavButton key={href} href={href} label={label} icon={icon} active={active} badge={badge} />
+            <NavItem key={href} href={href} label={label} icon={icon} active={active} badge={badge} />
           );
         })}
-      </nav>
+      </div>
 
-      {/* ── Footer ──────────────────────────────────────────── */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 4,
-          paddingBottom: 14,
-          paddingLeft: 8,
-          paddingRight: 8,
-        }}
-      >
-        {/* Search / Command Palette */}
+      {/* ── Divider ─────────────────────────────────────────── */}
+      <div style={{ height: 1, background: "var(--border-subtle)", margin: "0 14px" }} />
+
+      {/* ── Footer: Search / Sync / Settings / Avatar ───────── */}
+      <div style={{ padding: "6px 8px 14px" }}>
+        {/* Search */}
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("hive:cmd-k"))}
-          title="Search (⌘K)"
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            width: 36,
-            height: 36,
-            borderRadius: 8,
+            gap: 8,
+            width: "100%",
+            height: 34,
+            padding: "0 10px",
+            borderRadius: 7,
             border: "none",
             background: "transparent",
-            color: "var(--color-ink-ghost)",
+            color: "#4B5563",
+            fontSize: 13,
+            fontWeight: 500,
             cursor: "pointer",
-            transition: "all 0.1s ease",
+            transition: "all 120ms ease",
+            marginLeft: 6,
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
-            (e.currentTarget as HTMLButtonElement).style.color = "var(--color-ink-secondary)";
+            e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+            e.currentTarget.style.color = "#9CA3AF";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-            (e.currentTarget as HTMLButtonElement).style.color = "var(--color-ink-ghost)";
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = "#4B5563";
           }}
         >
-          <Search size={16} strokeWidth={1.8} />
+          <Search size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, textAlign: "left" }}>Search</span>
+          <span style={{ fontSize: 10, color: "#4B5563" }}>⌘K</span>
         </button>
 
         {/* Sync */}
         <button
           onClick={handleSync}
           disabled={syncing}
-          title="Sync accounts"
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            width: 36,
-            height: 36,
-            borderRadius: 8,
+            gap: 8,
+            width: "100%",
+            height: 34,
+            padding: "0 10px",
+            borderRadius: 7,
             border: "none",
             background: "transparent",
-            color: syncing ? "var(--color-honey-bright)" : "var(--color-ink-ghost)",
+            color: syncing ? "#F5B942" : "#4B5563",
+            fontSize: 13,
+            fontWeight: 500,
             cursor: syncing ? "not-allowed" : "pointer",
-            transition: "all 0.1s ease",
+            transition: "all 120ms ease",
+            marginLeft: 6,
           }}
           onMouseEnter={(e) => {
             if (!syncing) {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
-              (e.currentTarget as HTMLButtonElement).style.color = "var(--color-ink-secondary)";
+              e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+              e.currentTarget.style.color = "#9CA3AF";
             }
           }}
           onMouseLeave={(e) => {
             if (!syncing) {
-              (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-              (e.currentTarget as HTMLButtonElement).style.color = "var(--color-ink-ghost)";
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "#4B5563";
             }
           }}
         >
           <RefreshCw
-            size={16}
+            size={15}
             strokeWidth={1.8}
-            style={{
-              animation: syncing ? "spin 1s linear infinite" : "none",
-            }}
+            style={{ flexShrink: 0, animation: syncing ? "spin 1s linear infinite" : "none" }}
           />
+          <span>{syncing ? "Syncing…" : "Sync"}</span>
         </button>
 
         {/* Settings */}
-        <NavButton href="/settings" label="Settings" icon={Settings2} active={pathname.startsWith("/settings")} />
+        <NavItem
+          href="/settings"
+          label="Settings"
+          icon={Settings2}
+          active={pathname.startsWith("/settings")}
+        />
 
-        {/* Avatar → account page */}
+        {/* Avatar row */}
         <Link
           href="/account"
-          title="Account"
           style={{
-            width: 26,
-            height: 26,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            height: 34,
+            padding: "0 10px",
+            marginLeft: 6,
+            borderRadius: 7,
+            textDecoration: "none",
+            transition: "background 120ms ease",
+            background: pathname.startsWith("/account") ? "rgba(59,130,246,0.10)" : "transparent",
+            borderLeft: pathname.startsWith("/account") ? "2px solid #3B82F6" : "2px solid transparent",
+          }}
+        >
+          <div style={{
+            width: 22,
+            height: 22,
             borderRadius: "50%",
-            background: pathname.startsWith("/account") ? "var(--color-honey-bright)" : "var(--color-honey)",
+            background: "#F5B942",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontSize: 10,
-            fontWeight: 600,
+            fontWeight: 700,
             color: "#0B0C0F",
             flexShrink: 0,
-            marginTop: 2,
-            textDecoration: "none",
-            outline: pathname.startsWith("/account") ? "2px solid var(--color-honey)" : "none",
-            outlineOffset: 2,
-          }}
-        >
-          {userInitial}
+          }}>
+            {userInitial}
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 500, color: pathname.startsWith("/account") ? "#F0F2F5" : "#6B7280" }}>
+            Account
+          </span>
         </Link>
       </div>
 
-      {/* Spin keyframe for sync button */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
-        }
-      `}</style>
+      {/* Spin keyframe */}
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </aside>
   );
 }
