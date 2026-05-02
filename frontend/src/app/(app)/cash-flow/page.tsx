@@ -170,6 +170,7 @@ export default function CashFlowPage() {
               )
             }
             subtext="net cash flow this period"
+            glow="green"
             glowColor="emerald"
             statStrip={summary ? [
               { label: "Income",       value: fmt(summary.income),    color: "green" },

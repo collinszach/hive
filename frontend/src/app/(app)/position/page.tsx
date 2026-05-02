@@ -136,6 +136,7 @@ export default function PositionPage() {
               )
             }
             subtext={data ? `${fmt(data.saved)} already moved to savings · ${fmt(data.available_to_save)} total surplus` : "income · spending · savings · commitments · reimbursements"}
+            glow="blue"
             glowColor="green"
             statStrip={data ? [
               { label: "Income",            value: fmt(data.income),                             color: "green"   },

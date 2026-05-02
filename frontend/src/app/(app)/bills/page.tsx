@@ -145,6 +145,7 @@ export default function BillsPage() {
                 : <span className="text-semantic-income">Nothing urgent</span>
             }
             subtext={summary ? `${fmt(summary.total_monthly_cost ?? 0)}/mo in recurring · ${summary.count} tracked` : "Credit card payments & recurring charges"}
+            glow="red"
             glowColor={cardsDueSoon > 0 ? "amber" : "green"}
           />
         </div>
