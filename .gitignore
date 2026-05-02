@@ -80,3 +80,11 @@ STABILITY.md
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Screenshots and dev photos
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+screenshots/
