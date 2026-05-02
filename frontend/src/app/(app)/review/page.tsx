@@ -13,7 +13,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { PageHero } from "@/components/PageHero";
-import { GlassCard } from "@/components/GlassCard";
 import { MonthPicker } from "@/components/MonthPicker";
 import Link from "next/link";
 
@@ -129,7 +128,6 @@ export default function ReviewPage() {
               )
             }
             subtext={`Close the books — ${monthLabel(month)}`}
-            glowColor={net >= 0 ? "green" : "coral"}
             statStrip={review && !loading ? [
               { label: "Income",  value: fmt(review.total_income),                                         color: "green"   },
               { label: "Spend",   value: fmt(review.total_spend),                                          color: "red"     },
@@ -143,13 +141,13 @@ export default function ReviewPage() {
       </div>
 
       {error && (
-        <GlassCard tint="expense" className="p-4 text-[13px] text-semantic-expense">{error}</GlassCard>
+        <div className="hive-card p-4 text-[13px] text-semantic-expense">{error}</div>
       )}
 
       {loading && !error && (
         <div className="grid grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => (
-            <GlassCard key={i} className="p-4 h-24 animate-pulse">{null}</GlassCard>
+            <div key={i} className="hive-card p-4 h-24 animate-pulse" />
           ))}
         </div>
       )}
@@ -160,7 +158,7 @@ export default function ReviewPage() {
           {/* KPI strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {/* Net worth delta */}
-            <GlassCard className="p-4 cursor-pointer hover:bg-white/[0.04] transition-colors" tint={review.net_worth_delta != null && review.net_worth_delta >= 0 ? "income" : "expense"} onClick={() => router.push("/net-worth")}>
+            <div className="hive-card p-4 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => router.push("/net-worth")}>
               <p className="hive-label mb-2">Net Worth Δ</p>
               <p className={cn(
                 "text-[22px] font-extrabold font-mono tracking-tight tabular-nums",
@@ -177,10 +175,10 @@ export default function ReviewPage() {
                   {review.net_worth_delta >= 0 ? "grew this month" : "shrank this month"}
                 </p>
               )}
-            </GlassCard>
+            </div>
 
             {/* Budgets */}
-            <GlassCard className="p-4 cursor-pointer hover:bg-white/[0.04] transition-colors" tint={review.budget_categories_over > 0 ? "expense" : "income"} onClick={() => router.push(`/budgets?month=${month}`)}>
+            <div className="hive-card p-4 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => router.push(`/budgets?month=${month}`)}>
               <p className="hive-label mb-2">Budgets</p>
               <div className="flex items-end gap-2">
                 <p className={cn(
@@ -192,12 +190,11 @@ export default function ReviewPage() {
                 <p className="text-[11px] text-ink-tertiary mb-1">over</p>
                 <p className="text-[11px] text-semantic-income mb-1">/ {review.budget_categories_under} under</p>
               </div>
-            </GlassCard>
+            </div>
 
             {/* Uncategorized */}
-            <GlassCard
-              className={cn("p-4", review.uncategorized_count > 0 && "cursor-pointer hover:bg-white/[0.04] transition-colors")}
-              tint={review.uncategorized_count > 0 ? "amber" : "none"}
+            <div
+              className={cn("hive-card p-4", review.uncategorized_count > 0 && "cursor-pointer hover:bg-white/[0.04] transition-colors")}
               onClick={review.uncategorized_count > 0 ? () => router.push(`/transactions?category=Uncategorized&month=${month}`) : undefined}
             >
               <p className="hive-label mb-2">Uncategorized</p>
@@ -210,10 +207,10 @@ export default function ReviewPage() {
               <p className="text-[10px] text-ink-tertiary mt-1">
                 {review.uncategorized_count > 0 ? "need review" : "all categorized"}
               </p>
-            </GlassCard>
+            </div>
 
             {/* Income vs spend */}
-            <GlassCard className="p-4 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => router.push(`/cash-flow`)}>
+            <div className="hive-card p-4 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => router.push(`/cash-flow`)}>
               <p className="hive-label mb-2">Savings rate</p>
               <p className={cn(
                 "text-[22px] font-extrabold font-mono tracking-tight",
@@ -224,14 +221,14 @@ export default function ReviewPage() {
                   : "—"}
               </p>
               <p className="text-[10px] text-ink-tertiary mt-1">income saved</p>
-            </GlassCard>
+            </div>
           </div>
 
           {/* Main content: spend changes + points */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             {/* Biggest spend changes */}
-            <GlassCard className="overflow-hidden">
+            <div className="hive-card overflow-hidden">
               <div className="px-5 py-3 border-b border-white/[0.04]">
                 <p className="text-[13px] font-medium text-ink-primary">Biggest Changes vs Last Month</p>
               </div>
@@ -271,10 +268,10 @@ export default function ReviewPage() {
                   })}
                 </div>
               )}
-            </GlassCard>
+            </div>
 
             {/* Points earned */}
-            <GlassCard className="overflow-hidden">
+            <div className="hive-card overflow-hidden">
               <div className="px-5 py-3 border-b border-white/[0.04]">
                 <p className="text-[13px] font-medium text-ink-primary">Points Earned This Month</p>
               </div>
@@ -298,12 +295,12 @@ export default function ReviewPage() {
                   ))}
                 </div>
               )}
-            </GlassCard>
+            </div>
           </div>
 
           {/* Uncategorized CTA */}
           {review.uncategorized_count > 0 && (
-            <GlassCard tint="amber" className="p-4 flex items-center justify-between gap-4">
+            <div className="hive-card p-4 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <AlertCircle className="w-4 h-4 text-honey shrink-0" />
                 <p className="text-[13px] text-ink-primary">
@@ -317,22 +314,22 @@ export default function ReviewPage() {
                 Review Now
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
-            </GlassCard>
+            </div>
           )}
 
           {/* All-clear */}
           {review.uncategorized_count === 0 && review.budget_categories_over === 0 && (
-            <GlassCard tint="income" className="p-4 flex items-center gap-3">
+            <div className="hive-card p-4 flex items-center gap-3">
               <CheckCircle2 className="w-4 h-4 text-semantic-income shrink-0" />
               <p className="text-[13px] text-ink-primary">
                 All clear — {monthLabel(month)} is fully categorized and all budgets held.
               </p>
-            </GlassCard>
+            </div>
           )}
 
           {/* Category breakdown chart */}
           {catChartData.length > 0 && (
-            <GlassCard className="overflow-hidden">
+            <div className="hive-card overflow-hidden">
               <div className="px-5 py-3 border-b border-white/[0.04]">
                 <p className="text-[13px] font-medium text-ink-primary">Spending by Category</p>
                 <p className="text-[11px] text-ink-tertiary mt-0.5">This month vs last month, top 8 categories</p>
@@ -385,11 +382,11 @@ export default function ReviewPage() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </GlassCard>
+            </div>
           )}
 
           {/* Income / spend / net summary bar */}
-          <GlassCard className="p-5">
+          <div className="hive-card p-5">
             <div className="flex items-center gap-8 flex-wrap">
               <div>
                 <p className="hive-label mb-1">Income</p>
@@ -425,7 +422,7 @@ export default function ReviewPage() {
                 </>
               )}
             </div>
-          </GlassCard>
+          </div>
 
         </div>
       )}

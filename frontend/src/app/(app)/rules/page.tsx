@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { api, type CategorizationRule } from "@/lib/api";
 import { ALL_CATEGORIES, SUBCATEGORIES } from "@/lib/utils";
 import { PageHero } from "@/components/PageHero";
-import { GlassCard } from "@/components/GlassCard";
 import { toast } from "@/components/Toast";
 import {
   Plus,
@@ -142,7 +141,7 @@ function RuleForm({ initial = BLANK_FORM, onSave, onCancel, saving }: RuleFormPr
               value={form.amount_min}
               onChange={(e) => set("amount_min", e.target.value)}
               placeholder="0.00"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-ink-primary placeholder-ink-ghost focus:outline-none focus:border-honey/40 focus:bg-white/[0.06]"
+              className="hive-input w-full font-mono"
             />
           </div>
           <div className="flex-1">
@@ -154,7 +153,7 @@ function RuleForm({ initial = BLANK_FORM, onSave, onCancel, saving }: RuleFormPr
               value={form.amount_max}
               onChange={(e) => set("amount_max", e.target.value)}
               placeholder="999.99"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-ink-primary placeholder-ink-ghost focus:outline-none focus:border-honey/40 focus:bg-white/[0.06]"
+              className="hive-input w-full font-mono"
             />
           </div>
         </div>
@@ -172,7 +171,7 @@ function RuleForm({ initial = BLANK_FORM, onSave, onCancel, saving }: RuleFormPr
                 ? "AMAZON.COM*ABCD1234"
                 : "amazon"
             }
-            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-ink-primary placeholder-ink-ghost focus:outline-none focus:border-honey/40 focus:bg-white/[0.06] font-mono"
+            className="hive-input w-full font-mono"
           />
         </div>
       )}
@@ -184,7 +183,7 @@ function RuleForm({ initial = BLANK_FORM, onSave, onCancel, saving }: RuleFormPr
           <select
             value={form.category}
             onChange={(e) => set("category", e.target.value)}
-            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-ink-primary focus:outline-none focus:border-honey/40 focus:bg-white/[0.06]"
+            className="hive-select w-full"
           >
             {ALL_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -195,7 +194,7 @@ function RuleForm({ initial = BLANK_FORM, onSave, onCancel, saving }: RuleFormPr
             value={form.subcategory}
             onChange={(e) => set("subcategory", e.target.value)}
             disabled={subcatOptions.length === 0}
-            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-ink-primary focus:outline-none focus:border-honey/40 focus:bg-white/[0.06] disabled:opacity-40"
+            className="hive-select w-full disabled:opacity-40"
           >
             <option value="">(none)</option>
             {subcatOptions.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -212,7 +211,7 @@ function RuleForm({ initial = BLANK_FORM, onSave, onCancel, saving }: RuleFormPr
           max="999"
           value={form.priority}
           onChange={(e) => set("priority", e.target.value)}
-          className="w-28 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-ink-primary focus:outline-none focus:border-honey/40 focus:bg-white/[0.06]"
+          className="hive-input w-28 font-mono"
         />
         <p className="text-[11px] text-ink-ghost mt-1">Lower number = checked first. Rules with same priority are ordered by creation date.</p>
       </div>
@@ -223,7 +222,7 @@ function RuleForm({ initial = BLANK_FORM, onSave, onCancel, saving }: RuleFormPr
           type="button"
           onClick={() => onSave(form)}
           disabled={saving}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-honey/15 border border-honey/30 text-honey hover:bg-honey/20 disabled:opacity-50 transition-colors"
+          className="hive-btn-primary disabled:opacity-50"
         >
           <Check className="w-3.5 h-3.5" />
           {saving ? "Saving…" : "Save rule"}
@@ -232,7 +231,7 @@ function RuleForm({ initial = BLANK_FORM, onSave, onCancel, saving }: RuleFormPr
           type="button"
           onClick={onCancel}
           disabled={saving}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-white/[0.04] border border-white/[0.08] text-ink-secondary hover:bg-white/[0.07] disabled:opacity-50 transition-colors"
+          className="hive-btn-secondary disabled:opacity-50"
         >
           <X className="w-3.5 h-3.5" />
           Cancel
@@ -462,7 +461,6 @@ export default function RulesPage() {
           </>
         }
         subtext="Auto-categorize transactions by merchant name, pattern, or amount range"
-        glowColor="amber"
         statStrip={[
           { label: "Total rules", value: String(rules.length), color: "default" },
           { label: "Active", value: String(activeCount), color: "green" },
@@ -474,7 +472,7 @@ export default function RulesPage() {
       <div className="flex items-center gap-3 flex-wrap">
         <button
           onClick={() => { setShowAdd(true); setEditingId(null); }}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-honey/15 border border-honey/30 text-honey hover:bg-honey/20 transition-colors"
+          className="hive-btn-primary"
         >
           <Plus className="w-4 h-4" />
           New rule
@@ -482,7 +480,7 @@ export default function RulesPage() {
         <button
           onClick={handleApplyRules}
           disabled={applying}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-white/[0.05] border border-white/[0.08] text-ink-secondary hover:bg-white/[0.08] disabled:opacity-50 transition-colors"
+          className="hive-btn-secondary disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${applying ? "animate-spin" : ""}`} />
           {applying ? "Applying…" : "Apply rules now"}
@@ -491,7 +489,7 @@ export default function RulesPage() {
 
       {/* Add form */}
       {showAdd && (
-        <GlassCard className="p-5">
+        <div className="hive-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <Plus className="w-4 h-4 text-honey" />
             <h3 className="text-sm font-semibold text-ink-primary">New rule</h3>
@@ -501,7 +499,7 @@ export default function RulesPage() {
             onCancel={() => setShowAdd(false)}
             saving={savingId === "new"}
           />
-        </GlassCard>
+        </div>
       )}
 
       {/* Rules list */}
@@ -510,11 +508,11 @@ export default function RulesPage() {
       )}
 
       {error && (
-        <GlassCard tint="expense" className="p-4 text-semantic-expense text-sm">{error}</GlassCard>
+        <div className="hive-card p-4 text-semantic-expense text-sm">{error}</div>
       )}
 
       {!loading && !error && rules.length === 0 && !showAdd && (
-        <GlassCard className="py-16 text-center">
+        <div className="hive-card py-16 text-center">
           <Shield className="w-10 h-10 text-honey/30 mx-auto mb-3" />
           <p className="text-ink-secondary font-medium">No custom rules yet</p>
           <p className="text-ink-tertiary text-sm mt-1 mb-4">
@@ -526,11 +524,11 @@ export default function RulesPage() {
           >
             Create your first rule →
           </button>
-        </GlassCard>
+        </div>
       )}
 
       {rules.length > 0 && (
-        <GlassCard className="overflow-hidden divide-y divide-white/[0.04]">
+        <div className="hive-card overflow-hidden divide-y divide-white/[0.04]">
           {rules.map((rule) =>
             editingId === rule.id ? (
               <div key={rule.id} className="p-5 bg-white/[0.02]">
@@ -556,11 +554,11 @@ export default function RulesPage() {
               />
             )
           )}
-        </GlassCard>
+        </div>
       )}
 
       {/* Help section */}
-      <GlassCard className="p-5">
+      <div className="hive-card p-5">
         <h3 className="text-sm font-semibold text-ink-primary mb-3">How rules work</h3>
         <div className="space-y-2 text-xs text-ink-tertiary">
           <p>• Rules are checked before AI categorization. The first matching rule wins.</p>
@@ -570,7 +568,7 @@ export default function RulesPage() {
           <p>• <strong className="text-ink-secondary">Amount range</strong>: matches based on transaction dollar amount, useful for utility bills.</p>
           <p>• After creating or editing rules, click <strong className="text-ink-secondary">"Apply rules now"</strong> to re-categorize existing transactions.</p>
         </div>
-      </GlassCard>
+      </div>
     </div>
   );
 }

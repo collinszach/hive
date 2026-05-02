@@ -5,7 +5,6 @@ import { Shield, Key, Clock, User, CheckCircle, AlertCircle, Eye, EyeOff, QrCode
 import { authedFetch, clearToken } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { GlassCard } from "@/components/GlassCard";
 import { toast } from "@/components/Toast";
 
 interface MeResponse {
@@ -193,7 +192,7 @@ export default function AccountPage() {
       </div>
 
       {/* Accounts */}
-      <GlassCard className="p-5">
+      <div className="hive-card p-5">
         <div className="flex items-center gap-2.5 mb-4">
           <Link2 className="w-4 h-4 text-ink-tertiary" />
           <h2 className="text-[13px] font-semibold text-ink-primary">Accounts</h2>
@@ -216,11 +215,11 @@ export default function AccountPage() {
             <ArrowRight className="w-3.5 h-3.5 text-ink-tertiary/50 group-hover:text-ink-tertiary transition-colors" />
           </Link>
         </div>
-      </GlassCard>
+      </div>
 
       {/* Profile */}
       {me && (
-        <GlassCard className="p-5">
+        <div className="hive-card-featured p-5">
           <div className="flex items-center gap-2.5 mb-4">
             <User className="w-4 h-4 text-ink-tertiary" />
             <h2 className="text-[13px] font-semibold text-ink-primary">Profile</h2>
@@ -257,11 +256,11 @@ export default function AccountPage() {
               Sign out
             </button>
           </div>
-        </GlassCard>
+        </div>
       )}
 
       {/* MFA Setup */}
-      <GlassCard className="p-5">
+      <div className="hive-card p-5">
         <div className="flex items-center gap-2.5 mb-4">
           <Shield className="w-4 h-4 text-honey" />
           <h2 className="text-[13px] font-semibold text-ink-primary">Two-Factor Authentication</h2>
@@ -358,10 +357,10 @@ export default function AccountPage() {
             )}
           </div>
         )}
-      </GlassCard>
+      </div>
 
       {/* Change Password */}
-      <GlassCard className="p-5">
+      <div className="hive-card p-5">
         <div className="flex items-center gap-2.5 mb-4">
           <Key className="w-4 h-4 text-ink-tertiary" />
           <h2 className="text-[13px] font-semibold text-ink-primary">Change Password</h2>
@@ -398,14 +397,14 @@ export default function AccountPage() {
             />
             <p className="text-[11px] text-ink-tertiary/60 mt-1">Minimum 12 characters</p>
           </div>
-          <button type="submit" disabled={loading} className="hive-btn-secondary">
+          <button type="submit" disabled={loading} className="hive-btn-primary">
             Update password
           </button>
         </form>
-      </GlassCard>
+      </div>
 
       {/* Audit Log */}
-      <GlassCard className="p-5">
+      <div className="hive-card p-5">
         <div className="flex items-center gap-2.5 mb-4">
           <Clock className="w-4 h-4 text-ink-tertiary" />
           <h2 className="text-[13px] font-semibold text-ink-primary">Access Audit Log</h2>
@@ -443,11 +442,11 @@ export default function AccountPage() {
             ))}
           </div>
         )}
-      </GlassCard>
+      </div>
 
       {/* Admin: User Management — only visible to admins */}
       {me?.role === "admin" && (
-        <GlassCard className="p-5">
+        <div className="hive-card p-5">
           <div className="flex items-center gap-2.5 mb-4">
             <Users className="w-4 h-4 text-ink-tertiary" />
             <h2 className="text-[13px] font-semibold text-ink-primary">User Management</h2>
@@ -541,7 +540,7 @@ export default function AccountPage() {
               </table>
             </div>
           )}
-        </GlassCard>
+        </div>
       )}
     </div>
   );

@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { Settings2, Plus, Trash2, Edit2, Check, X, Tag, Shield, Database, ChevronRight, CreditCard } from "lucide-react";
 import { toast } from "@/components/Toast";
 import { ALL_CATEGORIES, SUBCATEGORIES } from "@/lib/utils";
-import { GlassCard } from "@/components/GlassCard";
 
 const MATCH_TYPES = [
   { value: "contains", label: "Contains" },
@@ -165,7 +164,7 @@ function RulesTab() {
       </div>
 
       {showForm && (
-        <GlassCard className="p-5">
+        <div className="hive-card p-5">
           <h3 className="text-[14px] font-semibold text-ink-primary mb-4">New Rule</h3>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -232,10 +231,10 @@ function RulesTab() {
               <button type="button" onClick={() => setShowForm(false)} className="hive-btn-secondary">Cancel</button>
             </div>
           </form>
-        </GlassCard>
+        </div>
       )}
 
-      <GlassCard className="overflow-hidden">
+      <div className="hive-card overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-ink-tertiary text-[13px]">Loading…</div>
         ) : rules.length === 0 ? (
@@ -286,7 +285,7 @@ function RulesTab() {
             ))}
           </div>
         )}
-      </GlassCard>
+      </div>
     </div>
   );
 }
@@ -332,7 +331,7 @@ function TagsTab() {
 
   return (
     <div className="space-y-4">
-      <GlassCard className="p-5">
+      <div className="hive-card p-5">
         <p className="hive-label mb-3">Create Tag</p>
         <div className="flex gap-2">
           <input
@@ -340,7 +339,7 @@ function TagsTab() {
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
             placeholder="e.g. reimbursable, vacation-2025, business"
-            className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-ink-primary placeholder:text-ink-ghost focus:outline-none focus:border-honey/40 transition-colors"
+            className="hive-input flex-1 text-[13px]"
           />
           <button
             onClick={handleCreate}
@@ -351,9 +350,9 @@ function TagsTab() {
             {creating ? "Creating…" : "Create"}
           </button>
         </div>
-      </GlassCard>
+      </div>
 
-      <GlassCard>
+      <div className="hive-card">
         {loading ? (
           <div className="px-5 py-8 text-center text-[12px] text-ink-tertiary">Loading tags…</div>
         ) : tags.length === 0 ? (
@@ -378,7 +377,7 @@ function TagsTab() {
             ))}
           </div>
         )}
-      </GlassCard>
+      </div>
     </div>
   );
 }
@@ -386,7 +385,7 @@ function TagsTab() {
 function DataTab() {
   return (
     <div className="space-y-3">
-      <GlassCard className="divide-y divide-white/[0.04]">
+      <div className="hive-card divide-y divide-white/[0.04]">
         {[
           { label: "Export all transactions", description: "Download a CSV of your full transaction history", href: "/api/reports/tax-export" },
           { label: "Plaid connections", description: "Manage linked bank accounts and credentials", href: "/connect" },
@@ -403,7 +402,7 @@ function DataTab() {
             <ChevronRight className="w-4 h-4 text-ink-tertiary/40" />
           </a>
         ))}
-      </GlassCard>
+      </div>
     </div>
   );
 }
@@ -458,7 +457,7 @@ function CardsTab() {
   }
 
   return (
-    <GlassCard className="overflow-hidden">
+    <div className="hive-card overflow-hidden">
       <div className="px-5 py-3 border-b border-white/[0.04]">
         <p className="text-[13px] font-medium text-ink-primary">Card Billing Dates</p>
         <p className="text-[11px] text-ink-tertiary mt-0.5">
@@ -491,7 +490,7 @@ function CardsTab() {
                         value={v.close}
                         onChange={(e) => setVals((prev) => ({ ...prev, [acct.id]: { ...prev[acct.id], close: e.target.value } }))}
                         placeholder="day"
-                        className="w-16 bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-[12px] text-ink-primary text-center focus:outline-none focus:border-honey/40"
+                        className="hive-input w-16 text-[12px] text-center"
                       />
                     </div>
                     <div>
@@ -503,7 +502,7 @@ function CardsTab() {
                         value={v.due}
                         onChange={(e) => setVals((prev) => ({ ...prev, [acct.id]: { ...prev[acct.id], due: e.target.value } }))}
                         placeholder="day"
-                        className="w-16 bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-[12px] text-ink-primary text-center focus:outline-none focus:border-honey/40"
+                        className="hive-input w-16 text-[12px] text-center"
                       />
                     </div>
                     <div>
@@ -515,7 +514,7 @@ function CardsTab() {
                         value={v.limit}
                         onChange={(e) => setVals((prev) => ({ ...prev, [acct.id]: { ...prev[acct.id], limit: e.target.value } }))}
                         placeholder="amount"
-                        className="w-24 bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-[12px] text-ink-primary text-center focus:outline-none focus:border-honey/40"
+                        className="hive-input w-24 text-[12px] text-center"
                       />
                     </div>
                     <div className="mt-5">
@@ -537,7 +536,7 @@ function CardsTab() {
                     <button
                       onClick={() => handleSave(acct.id)}
                       disabled={saving === acct.id}
-                      className="mt-5 px-4 py-1.5 rounded-lg bg-honey/[0.12] border border-honey/25 text-honey text-[11px] font-semibold hover:bg-honey/[0.18] transition-colors disabled:opacity-50"
+                      className="hive-btn-primary mt-5 text-[11px] py-1.5 px-4 disabled:opacity-50"
                     >
                       {saving === acct.id ? "Saving…" : "Save"}
                     </button>
@@ -548,6 +547,6 @@ function CardsTab() {
           })}
         </div>
       )}
-    </GlassCard>
+    </div>
   );
 }

@@ -6,7 +6,6 @@ import {
   FileText, RefreshCw, ChevronDown, ChevronUp, Server, Globe,
 } from "lucide-react";
 import { authedFetch } from "@/lib/auth";
-import { GlassCard } from "@/components/GlassCard";
 import { toast } from "@/components/Toast";
 
 interface MeResponse {
@@ -404,24 +403,24 @@ export default function SecurityPage() {
 
       {/* Summary bar */}
       <div className="grid grid-cols-3 gap-3">
-        <GlassCard className="p-4 text-center">
+        <div className="hive-card p-4 text-center">
           <p className="text-[24px] font-bold text-semantic-income hive-number">{implementedCount}</p>
           <p className="text-[11px] text-ink-tertiary mt-0.5">Implemented</p>
-        </GlassCard>
-        <GlassCard className="p-4 text-center">
+        </div>
+        <div className="hive-card p-4 text-center">
           <p className="text-[24px] font-bold text-honey hive-number">{partialCount}</p>
           <p className="text-[11px] text-ink-tertiary mt-0.5">Partial</p>
-        </GlassCard>
-        <GlassCard className="p-4 text-center">
+        </div>
+        <div className="hive-card p-4 text-center">
           <p className="text-[24px] font-bold text-ink-secondary hive-number">{policies.length - implementedCount - partialCount}</p>
           <p className="text-[11px] text-ink-tertiary mt-0.5">Policy Only</p>
-        </GlassCard>
+        </div>
       </div>
 
       {/* Policy sections */}
       <div className="space-y-2">
         {policies.map((policy) => (
-          <GlassCard key={policy.id} className="overflow-hidden">
+          <div key={policy.id} className="hive-card overflow-hidden">
             <button
               onClick={() => toggle(policy.id)}
               className="w-full flex items-start gap-3 px-5 py-4 hover:bg-white/[0.02] transition-colors text-left"
@@ -444,7 +443,7 @@ export default function SecurityPage() {
                 {policy.content}
               </div>
             )}
-          </GlassCard>
+          </div>
         ))}
       </div>
     </div>
