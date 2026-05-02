@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # SnapTrade
     snaptrade_client_id: str = ""
     snaptrade_consumer_key: str = ""
-    app_base_url: str = "http://localhost:3000"
+    app_base_url: str = "https://hive.zacharyjcollins.com"
 
     # Encryption (Fernet key for access tokens at rest) — REQUIRED (no default)
     # Generate: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
