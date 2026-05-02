@@ -32,8 +32,8 @@ export async function authedFetch(path: string, init: RequestInit = {}): Promise
     // Clone so the caller can still read the body if needed
     const cloned = res.clone();
     try {
-      const body = await cloned.json() as { gate?: string };
-      const gate = body.gate ?? "plaid";
+      const body = await cloned.json() as { detail?: { gate?: string } | string; gate?: string };
+      const gate = (typeof body.detail === "object" ? body.detail?.gate : undefined) ?? body.gate ?? "plaid";
       window.dispatchEvent(new CustomEvent("upgrade-required", { detail: { gate } }));
     } catch {
       window.dispatchEvent(new CustomEvent("upgrade-required", { detail: { gate: "plaid" } }));

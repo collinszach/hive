@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "@/components/Toast";
 import { PageHeader } from "@/components/PageHero";
@@ -60,22 +60,32 @@ const PLANS = [
   },
 ];
 
-export default function BillingPage() {
-  const [status, setStatus] = useState<BillingStatus | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+// Separated so useSearchParams can be wrapped in Suspense
+function SuccessToast() {
   const searchParams = useSearchParams();
-
   useEffect(() => {
-    fetch("/api/billing/status", { credentials: "include" })
-      .then((r) => r.json())
-      .then(setStatus)
-      .catch(() => {})
-      .finally(() => setLoading(false));
     if (searchParams.get("success") === "true") {
       toast.success("Subscription activated! Welcome to your new plan.");
     }
   }, [searchParams]);
+  return null;
+}
+
+export default function BillingPage() {
+  const [status, setStatus] = useState<BillingStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/billing/status", { credentials: "include" })
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load billing status");
+        return r.json();
+      })
+      .then(setStatus)
+      .catch(() => toast.error("Failed to load billing status"))
+      .finally(() => setLoading(false));
+  }, []);
 
   async function handleCheckout(plan: string) {
     setActionLoading(plan);
@@ -121,6 +131,7 @@ export default function BillingPage() {
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
+      <Suspense><SuccessToast /></Suspense>
       <PageHeader
         title={planLabel}
         subtitle="Manage your subscription and feature access"
@@ -156,7 +167,7 @@ export default function BillingPage() {
           const isCurrent = status?.plan === plan.key;
           return (
             <div key={plan.key} className={isCurrent ? "hive-card-hero p-5" : "hive-card p-5"}>
-              {"badge" in plan && plan.badge && (
+              {plan.badge && (
                 <span className="inline-block text-[10px] font-semibold uppercase tracking-[0.08em] bg-blue-faint text-blue px-2 py-0.5 rounded mb-3">
                   {plan.badge}
                 </span>

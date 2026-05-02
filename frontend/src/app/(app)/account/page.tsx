@@ -510,7 +510,11 @@ export default function AccountPage() {
                         <div className="relative inline-flex items-center">
                           <select
                             value={user.plan ?? "free"}
-                            onChange={(e) => patchUser(user.id, { plan: e.target.value })}
+                            onChange={(e) => {
+                              const newPlan = e.target.value;
+                              if (!window.confirm(`Change ${user.username}'s plan to "${newPlan}"?`)) return;
+                              patchUser(user.id, { plan: newPlan });
+                            }}
                             className="appearance-none text-[11px] text-ink-secondary bg-transparent
                                        border border-white/[0.08] rounded-lg px-2 py-1 pr-5
                                        hover:border-white/[0.15] focus:outline-none cursor-pointer
