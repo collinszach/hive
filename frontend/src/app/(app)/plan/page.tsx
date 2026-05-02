@@ -301,7 +301,7 @@ function ProjectionTab() {
               <button
                 onClick={handleAddEvent}
                 disabled={saving || !newName || !newAmount || !newDate}
-                className="text-[12px] px-4 py-2 rounded-lg bg-honey/20 text-honey hover:bg-honey/30 transition-colors disabled:opacity-40 font-medium"
+                className="hive-btn-primary text-[12px] px-4 py-2 disabled:opacity-40"
               >
                 {saving ? "Saving…" : "Add Event"}
               </button>
@@ -485,7 +485,7 @@ function GoalsTab() {
             <button
               onClick={handleAddGoal}
               disabled={saving || !newName || !newTarget}
-              className="text-[12px] px-4 py-2 rounded-lg bg-honey/20 text-honey hover:bg-honey/30 transition-colors disabled:opacity-40 font-medium"
+              className="hive-btn-primary text-[12px] px-4 py-2 disabled:opacity-40"
             >
               {saving ? "Saving…" : "Create Goal"}
             </button>
@@ -629,7 +629,7 @@ function TrimTab() {
           </div>
           <button
             onClick={loadRecs}
-            className="text-[13px] px-5 py-2.5 rounded-xl bg-honey/20 text-honey hover:bg-honey/30 transition-colors font-medium"
+            className="hive-btn-primary text-[13px] px-5 py-2.5"
           >
             Analyze Spending
           </button>
@@ -961,7 +961,7 @@ export default function PlanPage() {
         eyebrow="Financial Planning"
         headline={<><span className="text-semantic-income">Plan</span> your future</>}
         subtext="Project your trajectory, set goals, trim the fat"
-        glowColor="sky"
+        glow="violet"
       />
 
       {/* Tab switcher */}

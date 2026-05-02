@@ -11,7 +11,6 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
   ComposedChart, Line,
 } from "recharts";
-import { GlassCard } from "@/components/GlassCard";
 import { FilterPills } from "@/components/FilterPills";
 import { PageHero } from "@/components/PageHero";
 
@@ -379,7 +378,7 @@ export default function ReportsPage() {
                 : <><span className="text-semantic-expense">{fmt(dailySpend.reduce((s,d)=>s+d.total,0))}</span> spent</>
             }
             subtext="spending analysis & data export"
-            glowColor="sky"
+            glow="blue"
             statStrip={
               report === "category" && catData.length > 0 ? [
                 { label: "Total Spend",   value: fmt(totalSpend),                                             color: "red"     },
@@ -408,7 +407,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Controls */}
-      <GlassCard className="p-4 flex items-center gap-4 flex-wrap">
+      <div className="hive-card p-4 flex items-center gap-4 flex-wrap">
         <div className="flex-1">
           <p className="hive-label mb-2">Report Type</p>
           <FilterPills
@@ -496,10 +495,10 @@ export default function ReportsPage() {
             </select>
           </div>
         )}
-      </GlassCard>
+      </div>
 
       {/* Report output */}
-      <GlassCard className="overflow-hidden">
+      <div className="hive-card overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-ink-tertiary text-[13px]">Loading…</div>
         ) : report === "category" ? (
@@ -1388,7 +1387,7 @@ export default function ReportsPage() {
             )}
           </>
         ) : null}
-      </GlassCard>
+      </div>
     </div>
   );
 }

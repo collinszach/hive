@@ -9,7 +9,6 @@ import {
   Bell, BellOff, TrendingUp, TrendingDown, AlertTriangle,
   RefreshCw, CheckCheck, X, Sparkles, Loader2, ArrowRight,
 } from "lucide-react";
-import { GlassCard } from "@/components/GlassCard";
 import { PageHero } from "@/components/PageHero";
 
 // ── Insight type metadata ────────────────────────────────────────────────────
@@ -83,9 +82,13 @@ function InsightCard({
   }
 
   return (
-    <GlassCard
-      className={cn("p-4 transition-opacity", insight.is_dismissed && "opacity-40", href && "cursor-pointer hover:bg-white/[0.02]")}
-      tint={insight.priority === "high" && isUnread ? "expense" : "none"}
+    <div
+      className={cn(
+        insight.priority === "high" && isUnread ? "hive-card-featured" : "hive-card",
+        "p-4 transition-opacity",
+        insight.is_dismissed && "opacity-40",
+        href && "cursor-pointer hover:bg-white/[0.02]"
+      )}
       onClick={href ? handleCardClick : undefined}
     >
       <div className="flex items-start gap-3">
@@ -161,7 +164,7 @@ function InsightCard({
           </button>
         </div>
       </div>
-    </GlassCard>
+    </div>
   );
 }
 
@@ -257,7 +260,7 @@ export default function InsightsPage() {
                 : <><span className="text-semantic-income">All caught up</span></>
             }
             subtext="AI-generated observations about your finances"
-            glowColor={unread.length > 0 ? "amber" : "green"}
+            glow="violet"
             statStrip={[
               { label: "Unread", value: String(unread.length), color: unread.length > 0 ? "amber" : "default" },
               { label: "Total",  value: String(visible.length), color: "default" },
@@ -304,17 +307,17 @@ export default function InsightsPage() {
       {loading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
-            <GlassCard key={i} className="p-4 h-20 animate-pulse">{null}</GlassCard>
+            <div key={i} className="hive-card p-4 h-20 animate-pulse" />
           ))}
         </div>
       ) : sorted.length === 0 ? (
-        <GlassCard className="py-16 text-center">
+        <div className="hive-card py-16 text-center">
           <Bell className="w-10 h-10 text-ink-tertiary/20 mx-auto mb-3" />
           <p className="text-[14px] font-medium text-ink-secondary">No insights yet</p>
           <p className="text-[12px] text-ink-tertiary mt-1">
             Run a sync and the AI will analyze your spending patterns.
           </p>
-        </GlassCard>
+        </div>
       ) : (
         <div className="space-y-3">
           {sorted.map(insight => (

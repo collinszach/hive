@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { api, type Anomaly } from "@/lib/api";
 import { AlertTriangle, CheckCircle, ShieldAlert, ExternalLink } from "lucide-react";
 import { PageHero } from "@/components/PageHero";
-import { GlassCard } from "@/components/GlassCard";
 import { toast } from "@/components/Toast";
 
 function fmt(n: number) {
@@ -77,7 +76,7 @@ export default function AnomaliesPage() {
           </>
         }
         subtext="ML-flagged unusual transactions"
-        glowColor="coral"
+        glow="red"
         statStrip={[
           { label: "Flagged", value: String(flaggedCount), color: "red" },
           { label: "Reviewed Today", value: String(reviewedToday), color: "green" },
@@ -90,15 +89,15 @@ export default function AnomaliesPage() {
       )}
 
       {error && (
-        <GlassCard tint="expense" className="p-4 text-semantic-expense text-sm">{error}</GlassCard>
+        <div className="hive-card p-4 text-semantic-expense text-sm">{error}</div>
       )}
 
       {!loading && !error && anomalies.length === 0 && (
-        <GlassCard className="py-16 text-center">
+        <div className="hive-card py-16 text-center">
           <CheckCircle className="w-10 h-10 text-semantic-income/40 mx-auto mb-3" />
           <p className="text-ink-secondary font-medium">All clear</p>
           <p className="text-ink-tertiary text-sm mt-1">No unreviewed anomalies at this time.</p>
-        </GlassCard>
+        </div>
       )}
 
       <div className="space-y-3">
@@ -107,10 +106,9 @@ export default function AnomaliesPage() {
           const pct = Math.round(Math.abs(anomaly.anomaly_score) * 100);
           const isHigh = pct > 70;
           return (
-            <GlassCard
+            <div
               key={anomaly.id}
-              tint={isHigh ? "expense" : "none"}
-              className="p-5"
+              className={isHigh ? "hive-card-featured p-5" : "hive-card p-5"}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -120,7 +118,7 @@ export default function AnomaliesPage() {
                       <span className="font-semibold text-ink-primary truncate">
                         {tx.merchant || tx.raw_description}
                       </span>
-                      <span className="text-lg font-bold text-ink-primary shrink-0 tabular-nums">
+                      <span className="text-lg font-bold font-mono text-ink-primary shrink-0 tabular-nums">
                         {fmt(tx.amount)}
                       </span>
                     </div>
@@ -154,7 +152,7 @@ export default function AnomaliesPage() {
                   <button
                     onClick={() => handleReview(anomaly.id, "ok")}
                     disabled={reviewing === anomaly.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/[0.05] border border-white/[0.08] text-ink-secondary hover:bg-white/[0.08] disabled:opacity-50 transition-colors"
+                    className="hive-btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-sm disabled:opacity-50"
                   >
                     <CheckCircle className="w-3.5 h-3.5" />
                     Looks OK
@@ -162,14 +160,14 @@ export default function AnomaliesPage() {
                   <button
                     onClick={() => handleReview(anomaly.id, "confirmed")}
                     disabled={reviewing === anomaly.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-semantic-expense/10 border border-semantic-expense/30 text-semantic-expense hover:bg-semantic-expense/20 disabled:opacity-50 transition-colors"
+                    className="hive-btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-sm text-semantic-expense disabled:opacity-50"
                   >
                     <AlertTriangle className="w-3.5 h-3.5" />
                     Flag It
                   </button>
                 </div>
               </div>
-            </GlassCard>
+            </div>
           );
         })}
       </div>

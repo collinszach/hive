@@ -9,7 +9,6 @@ import {
   Pencil, Trash2, Plus, Check,
 } from "lucide-react";
 import { PageHero } from "@/components/PageHero";
-import { GlassCard } from "@/components/GlassCard";
 import { toast } from "@/components/Toast";
 
 const FREQ_LABELS: Record<string, string> = {
@@ -225,7 +224,7 @@ export default function SubscriptionsPage() {
               </>
             }
             subtext="detected recurring charges"
-            glowColor="coral"
+            glow="red"
             statStrip={[
               { label: "Monthly", value: fmt(monthlyTotal), color: "amber" },
               { label: "Annual",  value: fmt(annualTotal),  color: "red"   },
@@ -259,7 +258,7 @@ export default function SubscriptionsPage() {
 
       {/* Total callout */}
       {data && (
-        <GlassCard tint="amber" className="p-5">
+        <div className="hive-card p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-ink-ghost mb-1">Monthly recurring</p>
@@ -274,12 +273,12 @@ export default function SubscriptionsPage() {
               </p>
             </div>
           </div>
-        </GlassCard>
+        </div>
       )}
 
       {/* Price alerts */}
       {priceAlerts.length > 0 && (
-        <GlassCard tint="expense" className="p-4">
+        <div className="hive-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-4 h-4 text-semantic-expense" />
             <p className="text-[13px] font-semibold text-semantic-expense">Price Changes Detected</p>
@@ -293,12 +292,12 @@ export default function SubscriptionsPage() {
               </div>
             ))}
           </div>
-        </GlassCard>
+        </div>
       )}
 
       {/* Add manually form */}
       {showAdd && (
-        <GlassCard className="p-4">
+        <div className="hive-card p-4">
           <p className="text-[13px] font-semibold text-ink-primary mb-3">Add Manual Subscription</p>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="col-span-2">
@@ -363,11 +362,11 @@ export default function SubscriptionsPage() {
               Add subscription
             </button>
           </div>
-        </GlassCard>
+        </div>
       )}
 
       {/* Subscription list */}
-      <GlassCard className="overflow-hidden">
+      <div className="hive-card overflow-hidden">
         <div className="px-5 py-3 border-b border-white/[0.04] flex items-center justify-between">
           <p className="text-[13px] font-medium text-ink-primary">Active Subscriptions</p>
           <p className="text-[11px] text-ink-tertiary">{subs.length} total</p>
@@ -537,7 +536,7 @@ export default function SubscriptionsPage() {
             })}
           </div>
         )}
-      </GlassCard>
+      </div>
     </div>
   );
 }

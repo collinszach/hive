@@ -7,7 +7,6 @@ import { api, MerchantSummary } from "@/lib/api";
 import { fmt } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Store, ChevronRight, ArrowLeft, Loader2, ExternalLink } from "lucide-react";
-import { GlassCard } from "@/components/GlassCard";
 import { PageHero } from "@/components/PageHero";
 import {
   BarChart,
@@ -182,7 +181,7 @@ function MerchantsPageInner() {
             eyebrow="Merchant Detail"
             headline={<span className="text-[#38BDF8]">{detail.merchant_name}</span>}
             subtext={`${detail.transaction_count} transactions · ${fmt(detail.total_spent)} total`}
-            glowColor="sky"
+            glow="blue"
             statStrip={[
               { label: "Total Spent", value: fmt(detail.total_spent), color: "red" },
               { label: "Transactions", value: String(detail.transaction_count), color: "default" },
@@ -194,7 +193,7 @@ function MerchantsPageInner() {
 
         {/* Monthly chart */}
         {detail.monthly.length > 0 && (
-          <GlassCard tint="sky" className="p-5">
+          <div className="hive-card p-5">
             <p className="text-[13px] font-medium text-ink-primary mb-4">Monthly Spend</p>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={detail.monthly.map((m) => ({ ...m, month: fmtMonth(m.month) }))}>
@@ -205,12 +204,12 @@ function MerchantsPageInner() {
                 <Bar dataKey="total" fill="#F5B942" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </GlassCard>
+          </div>
         )}
 
         {/* Bulk recategorize */}
         {detail.transactions.length > 1 && (
-          <GlassCard className="p-4">
+          <div className="hive-card p-4">
             <p className="text-[12px] font-medium text-ink-primary mb-3">
               Apply category to all {detail.transaction_count} transactions from this merchant
             </p>
@@ -256,11 +255,11 @@ function MerchantsPageInner() {
                 <span className="text-[11px] text-semantic-expense">Error — try again</span>
               )}
             </div>
-          </GlassCard>
+          </div>
         )}
 
         {/* Transaction list */}
-        <GlassCard className="overflow-hidden">
+        <div className="hive-card overflow-hidden">
           <div className="px-5 py-3 border-b border-white/[0.04]">
             <p className="text-[13px] font-medium text-ink-primary">All Transactions</p>
           </div>
@@ -333,7 +332,7 @@ function MerchantsPageInner() {
               </div>
             ))}
           </div>
-        </GlassCard>
+        </div>
       </div>
     );
   }
@@ -352,7 +351,7 @@ function MerchantsPageInner() {
                 : <><span className="text-[#38BDF8]">{merchants.length}</span> merchants</>
             }
             subtext="top merchants by spend"
-            glowColor="sky"
+            glow="blue"
             statStrip={merchants.length > 0 ? [
               { label: "Total Spend", value: fmt(totalSpend), color: "red" },
               { label: "Merchants", value: String(merchants.length), color: "default" },
@@ -376,7 +375,7 @@ function MerchantsPageInner() {
         </div>
       </div>
 
-      <GlassCard tint="sky" className="overflow-hidden">
+      <div className="hive-card overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-ink-tertiary text-[13px]">Loading…</div>
         ) : (
@@ -408,7 +407,7 @@ function MerchantsPageInner() {
             ))}
           </div>
         )}
-      </GlassCard>
+      </div>
     </div>
   );
 }

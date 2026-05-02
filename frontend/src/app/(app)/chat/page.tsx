@@ -229,7 +229,8 @@ export default function InsightsPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in">
+    <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in" style={{ position: "relative" }}>
+      <div className="glow-violet" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }} />
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between pb-5 border-b border-white/[0.05]">
@@ -352,21 +353,14 @@ export default function InsightsPage() {
               onKeyDown={handleKeyDown}
               placeholder="Ask about your finances…"
               rows={1}
-              className="w-full bg-surface border border-white/[0.08] rounded-xl px-4 py-3 text-[13px]
-                         text-ink-primary placeholder-ink-tertiary/50
-                         focus:outline-none focus:border-honey/40 focus:ring-1 focus:ring-honey/10
-                         transition-all duration-150"
+              className="hive-input w-full"
               style={{ resize: "none", overflowY: "auto", maxHeight: "120px" }}
             />
           </div>
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className={`flex items-center justify-center w-10 h-10 rounded-xl shrink-0 transition-all duration-150
-              ${loading || !input.trim()
-                ? "bg-elevated border border-white/[0.06] text-ink-tertiary"
-                : "bg-honey text-[#0B0B0C] shadow-honey-sm hover:bg-honey-deep"
-              }`}
+            className="hive-btn-primary flex items-center justify-center w-10 h-10 shrink-0 disabled:opacity-40"
           >
             {loading
               ? <div className="w-3.5 h-3.5 rounded-full border border-current border-t-transparent animate-spin" />
