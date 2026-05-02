@@ -7,7 +7,7 @@ import { fmt, cn } from "@/lib/utils";
 import { toast } from "@/components/Toast";
 import {
   Bell, BellOff, TrendingUp, TrendingDown, AlertTriangle,
-  CreditCard, Star, RefreshCw, CheckCheck, X, Sparkles, Loader2, ArrowRight,
+  RefreshCw, CheckCheck, X, Sparkles, Loader2, ArrowRight,
 } from "lucide-react";
 import { GlassCard } from "@/components/GlassCard";
 import { PageHero } from "@/components/PageHero";
@@ -19,7 +19,6 @@ const TYPE_META: Record<string, { icon: React.ElementType; color: string; label:
   large_transaction:       { icon: AlertTriangle, color: "text-honey",            label: "Large Transaction"   },
   budget_alert:            { icon: TrendingDown,  color: "text-semantic-expense", label: "Budget Alert"        },
   subscription_price_change:{ icon: RefreshCw,   color: "text-sky-400",          label: "Price Change"        },
-  reward_threshold:        { icon: Star,          color: "text-honey",            label: "Reward Ready"        },
 };
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
@@ -44,10 +43,6 @@ function insightHref(insight: Insight): string | null {
       return insight.linked_entity_id
         ? `/subscriptions?id=${insight.linked_entity_id}`
         : "/subscriptions";
-    case "reward_threshold":
-      return insight.linked_entity_id
-        ? `/points?program=${encodeURIComponent(insight.linked_entity_id)}`
-        : "/points";
     default:
       return null;
   }
@@ -237,8 +232,9 @@ export default function InsightsPage() {
     }
   }, [showDismissed, load]);
 
-  const unread = insights.filter(i => !i.is_read && !i.is_dismissed);
-  const visible = insights.filter(i => showDismissed || !i.is_dismissed);
+  const spending = insights.filter(i => i.insight_type !== "reward_threshold");
+  const unread = spending.filter(i => !i.is_read && !i.is_dismissed);
+  const visible = spending.filter(i => showDismissed || !i.is_dismissed);
 
   // Sort: unread first (by priority), then read (by date)
   const sorted = [...visible].sort((a, b) => {
