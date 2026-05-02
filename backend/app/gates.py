@@ -40,8 +40,7 @@ async def require_plaid(
     if user.plan not in (PlanTier.starter, PlanTier.pro):
         raise HTTPException(
             status_code=402,
-            detail="Plaid bank connections require a paid plan. Upgrade to Starter or Pro.",
-            headers={"X-Gate": "plaid"},
+            detail={"message": "Plaid bank sync requires Starter or Pro plan.", "gate": "plaid"},
         )
     return user
 
@@ -56,8 +55,7 @@ async def require_claude(
     if user.plan != PlanTier.pro:
         raise HTTPException(
             status_code=402,
-            detail="Claude AI requires the Pro plan.",
-            headers={"X-Gate": "claude"},
+            detail={"message": "Claude AI chat requires Pro plan.", "gate": "claude"},
         )
     return user
 
@@ -72,8 +70,7 @@ async def require_snaptrade(
     if user.plan != PlanTier.pro:
         raise HTTPException(
             status_code=402,
-            detail="Investment account tracking requires the Pro plan.",
-            headers={"X-Gate": "snaptrade"},
+            detail={"message": "Investment account tracking requires Pro plan.", "gate": "snaptrade"},
         )
     return user
 
@@ -87,10 +84,14 @@ async def check_plaid_limit(user: User, db: AsyncSession) -> None:
 
     count = await db.scalar(
         select(func.count()).select_from(PlaidLink).where(PlaidLink.is_active == True)  # noqa: E712
-    )
+    ) or 0
     if count >= limit:
         raise HTTPException(
             status_code=402,
-            detail=f"Your plan allows {limit} bank connection(s). Upgrade to connect more.",
-            headers={"X-Gate": "plaid_limit"},
+            detail={
+                "message": f"You've reached your limit of {limit} Plaid connections on the {user.plan} plan.",
+                "gate": "plaid_limit",
+                "limit": limit,
+                "used": count,
+            },
         )
