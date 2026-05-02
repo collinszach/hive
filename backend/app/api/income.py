@@ -2,6 +2,7 @@
 import logging
 from datetime import date
 from typing import Optional
+import statistics
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, func, select, text
@@ -129,3 +130,87 @@ async def income_monthly(
         }
         for row in result.all()
     ]
+
+
+@router.get("/forecast")
+async def income_forecast(
+    look_back: int = Query(12, ge=3, le=36, description="Months of history to use"),
+    forecast_months: int = Query(3, ge=1, le=6, description="Months to forecast ahead"),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Predict future monthly income based on historical paycheck patterns.
+
+    Uses a weighted rolling average (recent months weighted 2×) to project
+    the next N months. Returns predicted amounts plus a confidence band
+    derived from historical variance.
+    """
+    from datetime import date as _date
+    today = _date.today()
+
+    # Compute cutoff: first day of the month `look_back` months ago
+    year = today.year
+    mo = today.month - look_back
+    while mo <= 0:
+        mo += 12
+        year -= 1
+    cutoff = _date(year, mo, 1)
+
+    _month_trunc = func.date_trunc(text("'month'"), Transaction.date)
+    result = await db.execute(
+        select(
+            func.to_char(_month_trunc, "YYYY-MM").label("month"),
+            func.sum(func.abs(Transaction.amount)).label("income"),
+        )
+        .where(
+            and_(
+                Transaction.amount < 0,
+                Transaction.category == "Income",
+                Transaction.is_excluded == False,  # noqa: E712
+                Transaction.pending == False,  # noqa: E712
+                Transaction.date >= cutoff,
+            )
+        )
+        .group_by(_month_trunc)
+        .order_by(_month_trunc)
+    )
+    history = [{"month": r[0], "income": float(r[1])} for r in result.all()]
+
+    # Drop the current (partial) month from the history used for projection
+    current_month_str = f"{today.year}-{today.month:02d}"
+    complete = [h for h in history if h["month"] < current_month_str]
+
+    if len(complete) < 2:
+        return {"history": history, "forecast": [], "avg": 0, "confidence_band": 0}
+
+    # Weighted average: last 3 months get weight 2, older get weight 1
+    recency_cutoff = 3
+    weights = [2 if i >= len(complete) - recency_cutoff else 1 for i in range(len(complete))]
+    total_weight = sum(weights)
+    weighted_avg = sum(h["income"] * w for h, w in zip(complete, weights)) / total_weight
+
+    # Confidence band = 1 standard deviation of monthly amounts
+    incomes = [h["income"] for h in complete]
+    band = statistics.stdev(incomes) if len(incomes) >= 2 else 0.0
+
+    # Project forward
+    forecast = []
+    for i in range(1, forecast_months + 1):
+        m = today.month + i
+        y = today.year
+        while m > 12:
+            m -= 12
+            y += 1
+        forecast.append({
+            "month": f"{y}-{m:02d}",
+            "income": round(weighted_avg, 2),
+            "low": round(max(0, weighted_avg - band), 2),
+            "high": round(weighted_avg + band, 2),
+        })
+
+    return {
+        "history": history,
+        "forecast": forecast,
+        "avg": round(weighted_avg, 2),
+        "confidence_band": round(band, 2),
+    }

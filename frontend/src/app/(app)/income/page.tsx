@@ -5,11 +5,12 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { toast } from "@/components/Toast";
 import { fmt, cn } from "@/lib/utils";
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
 import { PageHero } from "@/components/PageHero";
 import { GlassCard } from "@/components/GlassCard";
 import { ChartTooltip, CHART_AXIS_PROPS } from "@/components/ChartTooltip";
 import { MonthPicker } from "@/components/MonthPicker";
+import { Sparkles } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -25,10 +26,14 @@ function monthLabel(m: string) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+type ForecastPoint = { month: string; income: number; low: number; high: number };
+type ChartPoint = { month: string; income?: number; predicted?: number; count?: number; isForecast?: boolean };
+
 export default function IncomePage() {
   const [month, setMonth] = useState(currentMonth());
   const [summary, setSummary] = useState<{ total_income: number; sources: { source: string; amount: number; count: number; pct: number }[] } | null>(null);
   const [monthly, setMonthly] = useState<{ month: string; income: number; count: number }[]>([]);
+  const [forecast, setForecast] = useState<{ forecast: ForecastPoint[]; avg: number; confidence_band: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const months: string[] = [];
@@ -44,12 +49,14 @@ export default function IncomePage() {
     Promise.allSettled([
       api.income.summary(month),
       api.income.monthly(12),
+      api.income.forecast(),
     ])
-      .then(([sumR, monR]) => {
+      .then(([sumR, monR, fcastR]) => {
         if (sumR.status === "fulfilled") setSummary(sumR.value);
         else toast.error("Failed to load income summary");
         if (monR.status === "fulfilled") setMonthly(monR.value);
         else toast.error("Failed to load income history");
+        if (fcastR.status === "fulfilled") setForecast(fcastR.value);
       })
       .finally(() => setLoading(false));
   }, [month]);
@@ -59,6 +66,21 @@ export default function IncomePage() {
   const ytdIncome = monthly
     .filter((m) => m.month.startsWith(new Date().getFullYear().toString()))
     .reduce((s, m) => s + m.income, 0);
+
+  const nextMonth = (() => {
+    const now = new Date();
+    const m = now.getMonth() + 2; // +1 for next month, +1 because getMonth() is 0-based
+    const y = m > 12 ? now.getFullYear() + 1 : now.getFullYear();
+    return `${y}-${String(m > 12 ? m - 12 : m).padStart(2, "0")}`;
+  })();
+  const nextMonthForecast = forecast?.forecast.find(f => f.month === nextMonth);
+
+  // Merge actual history + forecast into a single chart dataset
+  const chartData: ChartPoint[] = [
+    ...monthly.map(m => ({ month: m.month, income: m.income, count: m.count, isForecast: false })),
+    ...(forecast?.forecast ?? []).map(f => ({ month: f.month, predicted: f.income, isForecast: true })),
+  ];
+  const maxChart = Math.max(...chartData.map(d => d.income ?? d.predicted ?? 0), 1);
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -78,6 +100,7 @@ export default function IncomePage() {
               { label: monthLabel(month),  value: summary ? fmt(summary.total_income) : "—", color: "green"   },
               { label: "Monthly avg",      value: avgIncome > 0 ? fmt(avgIncome) : "—",        color: "default" },
               { label: `${new Date().getFullYear()} YTD`, value: ytdIncome > 0 ? fmt(ytdIncome) : "—", color: "amber" },
+              ...(nextMonthForecast ? [{ label: `${monthLabel(nextMonth)} est.`, value: fmt(nextMonthForecast.income), color: "default" as const }] : []),
             ]}
           />
         </div>
@@ -85,29 +108,61 @@ export default function IncomePage() {
         <MonthPicker month={month} onChange={setMonth} maxMonth={currentMonth()} className="mt-2 shrink-0" />
       </div>
 
-      {/* 12-month trend chart */}
+      {/* 12-month trend chart + forecast */}
       <GlassCard className="p-5">
-        <p className="text-[13px] font-medium text-ink-primary mb-4">12-Month Income Trend</p>
-        {monthly.length > 0 ? (
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[13px] font-medium text-ink-primary">Income Trend & Forecast</p>
+          {forecast && forecast.forecast.length > 0 && (
+            <div className="flex items-center gap-1.5 text-[11px] text-ink-ghost">
+              <Sparkles className="w-3 h-3 text-honey/60" />
+              <span>{forecast.forecast.length}-month prediction</span>
+            </div>
+          )}
+        </div>
+        {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={monthly} margin={{ top: 4, right: 4, left: 4, bottom: 4 }} barSize={16}>
+            <BarChart data={chartData} margin={{ top: 4, right: 4, left: 4, bottom: 4 }} barSize={14}>
               <XAxis
                 dataKey="month"
                 tickFormatter={monthLabel}
                 {...CHART_AXIS_PROPS}
               />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+              <Tooltip
+                content={<ChartTooltip />}
+                cursor={{ fill: "rgba(255,255,255,0.03)" }}
+              />
+              {forecast?.avg && (
+                <ReferenceLine
+                  y={forecast.avg}
+                  stroke="rgba(255,255,255,0.12)"
+                  strokeDasharray="4 3"
+                />
+              )}
               <Bar
                 dataKey="income"
                 name="Income"
                 radius={[3, 3, 0, 0]}
                 cursor="pointer"
-                onClick={(data: { month: string }) => setMonth(data.month)}
+                onClick={(data: ChartPoint) => { if (!data.isForecast && data.month) setMonth(data.month); }}
               >
-                {monthly.map((entry) => (
+                {chartData.map((entry) => (
                   <Cell
                     key={entry.month}
                     fill={entry.month === month ? "#059669" : "rgba(5,150,105,0.3)"}
+                  />
+                ))}
+              </Bar>
+              <Bar
+                dataKey="predicted"
+                name="Predicted"
+                radius={[3, 3, 0, 0]}
+              >
+                {chartData.map((entry) => (
+                  <Cell
+                    key={`p-${entry.month}`}
+                    fill="rgba(251,191,36,0.25)"
+                    stroke="rgba(251,191,36,0.5)"
+                    strokeWidth={1}
                   />
                 ))}
               </Bar>
@@ -118,12 +173,20 @@ export default function IncomePage() {
             No income data yet
           </div>
         )}
-        {avgIncome > 0 && (
-          <div className="flex items-center gap-2 mt-2">
-            <div className="w-8 border-t border-dashed border-white/20" />
-            <span className="text-[11px] text-ink-ghost">avg {fmt(avgIncome)}/mo</span>
-          </div>
-        )}
+        <div className="flex items-center gap-4 mt-2">
+          {avgIncome > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="w-8 border-t border-dashed border-white/20" />
+              <span className="text-[11px] text-ink-ghost">avg {fmt(avgIncome)}/mo</span>
+            </div>
+          )}
+          {forecast && forecast.forecast.length > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm bg-honey/25 border border-honey/50" />
+              <span className="text-[11px] text-ink-ghost">predicted</span>
+            </div>
+          )}
+        </div>
       </GlassCard>
 
       {/* Income sources breakdown */}
@@ -193,8 +256,35 @@ export default function IncomePage() {
             <p className="text-[13px] font-medium text-ink-primary">Month-by-Month</p>
           </div>
           <div className="divide-y divide-white/[0.04]">
+            {/* Forecast rows (future months, newest first) */}
+            {forecast && [...forecast.forecast].reverse().map((f) => {
+              const barW = Math.min(100, (f.income / maxChart) * 100);
+              return (
+                <div
+                  key={f.month}
+                  className="w-full flex items-center gap-3 px-5 py-2.5"
+                >
+                  <span className="text-[12px] font-mono w-14 shrink-0 text-honey/60">
+                    {monthLabel(f.month)}
+                  </span>
+                  <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-honey/20 border border-honey/30 transition-all duration-300"
+                      style={{ width: `${barW}%` }}
+                    />
+                  </div>
+                  <span className="text-[13px] font-mono font-semibold tabular-nums w-24 text-right shrink-0 text-honey/60">
+                    ~{fmt(f.income)}
+                  </span>
+                  <div className="flex items-center justify-end w-10 shrink-0">
+                    <Sparkles className="w-3 h-3 text-honey/40" />
+                  </div>
+                </div>
+              );
+            })}
+            {/* Actual rows */}
             {[...monthly].reverse().map((m) => {
-              const barW = Math.min(100, (m.income / maxMonthly) * 100);
+              const barW = Math.min(100, (m.income / maxChart) * 100);
               const isSelected = m.month === month;
               return (
                 <button

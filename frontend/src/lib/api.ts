@@ -840,6 +840,8 @@ export const api = {
       get<{ month: string; total_income: number; sources: { source: string; amount: number; count: number; pct: number }[] }>("/api/income/summary", month ? { month } : undefined),
     monthly: (months?: number) =>
       get<{ month: string; income: number; count: number }[]>("/api/income/monthly", months ? { months } : undefined),
+    forecast: () =>
+      get<{ history: { month: string; income: number }[]; forecast: { month: string; income: number; low: number; high: number }[]; avg: number; confidence_band: number }>("/api/income/forecast"),
   },
   cashFlow: {
     monthly: (months?: number) =>
