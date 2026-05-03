@@ -16,6 +16,7 @@ from app.models.points_ledger import PointsLedger
 from app.points.tracker import (
     EARN_RULES,
     POINT_VALUES_CPP,
+    REDEMPTION_THRESHOLDS,
     CardOption,
     get_best_card_for_purchase,
 )
@@ -424,3 +425,38 @@ async def points_leakage(
         transaction_count=len(entries),
         days=days,
     )
+
+
+@router.get("/monthly-trend")
+async def points_monthly_trend(
+    months: int = Query(12, ge=3, le=24),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Monthly points earned by program over the last N months."""
+    from sqlalchemy import text
+
+    result = await db.execute(
+        text("""
+            SELECT
+                TO_CHAR(t.date, 'YYYY-MM') AS month,
+                pl.program,
+                SUM(pl.points_earned)::int AS points
+            FROM points_ledger pl
+            JOIN transactions t ON pl.transaction_id = t.id
+            WHERE t.date >= (CURRENT_DATE - INTERVAL '1 month' * :months)
+              AND NOT t.pending
+            GROUP BY 1, 2
+            ORDER BY 1, 2
+        """),
+        {"months": months},
+    )
+    return [{"month": r.month, "program": r.program, "points": r.points} for r in result.fetchall()]
+
+
+@router.get("/thresholds")
+async def points_thresholds() -> dict:
+    """Return redemption thresholds and point valuations for all programs."""
+    return {
+        "thresholds": REDEMPTION_THRESHOLDS,
+        "valuations_cpp": POINT_VALUES_CPP,
+    }

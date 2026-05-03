@@ -10,9 +10,10 @@ interface ProgramCardProps {
   program: ProgramSummary;
   onBalanceUpdate: (program: string, balance: number) => void;
   onViewActivity?: (program: string) => void;
+  threshold?: number;
 }
 
-export function ProgramCard({ program: p, onBalanceUpdate, onViewActivity }: ProgramCardProps) {
+export function ProgramCard({ program: p, onBalanceUpdate, onViewActivity, threshold }: ProgramCardProps) {
   const [editing, setEditing]     = useState(false);
   const [inputVal, setInputVal]   = useState(String(p.manual_balance ?? ""));
   const [saving, setSaving]       = useState(false);
@@ -59,6 +60,16 @@ export function ProgramCard({ program: p, onBalanceUpdate, onViewActivity }: Pro
           {fmt(p.estimated_value_dollars)}
         </div>
       </div>
+
+      {/* Redemption threshold badge */}
+      {threshold && p.manual_balance !== null && p.manual_balance >= threshold && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-semantic-income/10 border border-semantic-income/20">
+          <span className="text-[11px] font-medium text-semantic-income">Ready to redeem</span>
+          <span className="text-[10px] text-ink-tertiary font-mono">
+            {p.manual_balance.toLocaleString()} / {threshold.toLocaleString()} pts
+          </span>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="space-y-2">

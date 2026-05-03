@@ -6,6 +6,7 @@ import { Star } from "lucide-react";
 import { api, PointsSummary, LedgerEntry, LeakageResponse } from "@/lib/api";
 import { fmt, cn } from "@/lib/utils";
 import { POINT_VALUES_CPP } from "@/lib/pointsConstants";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { TimeWindowPicker } from "./_components/TimeWindowPicker";
 import { ProgramCard } from "./_components/ProgramCard";
 import { EarnActivity } from "./_components/EarnActivity";
@@ -30,6 +31,9 @@ export default function PointsPage() {
   const [ledgerError, setLedgerError]       = useState(false);
   const [leakageError, setLeakageError]     = useState(false);
   const [earnFilter, setEarnFilter]         = useState<string[]>(programParam ? [programParam] : []);
+  const [trendData, setTrendData]           = useState<{ month: string; [program: string]: string | number }[]>([]);
+  const [thresholds, setThresholds]         = useState<Record<string, number>>({});
+  const [trendPrograms, setTrendPrograms]   = useState<string[]>([]);
   const earnActivityRef                     = useRef<HTMLDivElement>(null);
 
   // Scroll to earn activity section when arriving via ?program= deep link
@@ -47,10 +51,12 @@ export default function PointsPage() {
     setLedgerError(false);
     setLeakageError(false);
 
-    const [summaryResult, ledgerResult, leakageResult] = await Promise.allSettled([
+    const [summaryResult, ledgerResult, leakageResult, trendResult, threshResult] = await Promise.allSettled([
       api.points.summary(d),
       api.points.ledger({ days: d }),
       api.points.leakage(d),
+      api.points.monthlyTrend(12),
+      api.points.thresholds(),
     ]);
 
     if (summaryResult.status === "fulfilled") {
@@ -73,6 +79,27 @@ export default function PointsPage() {
       setLeakageError(true);
     }
     setLeakageLoading(false);
+
+    // Process trend data: pivot from [{month, program, points}] to [{month, "Amex MR": N, "Chase UR": N, ...}]
+    if (trendResult.status === "fulfilled") {
+      const raw = trendResult.value;
+      const programs = [...new Set(raw.map((r) => r.program))].sort();
+      setTrendPrograms(programs);
+      const byMonth: Record<string, Record<string, number>> = {};
+      for (const r of raw) {
+        if (!byMonth[r.month]) byMonth[r.month] = {};
+        byMonth[r.month][r.program] = r.points;
+      }
+      setTrendData(
+        Object.entries(byMonth)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([month, vals]) => ({ month, ...vals }))
+      );
+    }
+
+    if (threshResult.status === "fulfilled") {
+      setThresholds(threshResult.value.thresholds);
+    }
   }, []);
 
   useEffect(() => {
@@ -188,8 +215,45 @@ export default function PointsPage() {
           {!summaryLoading && summary && summary.programs.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {summary.programs.map((p) => (
-                <ProgramCard key={p.program} program={p} onBalanceUpdate={handleBalanceUpdate} onViewActivity={handleViewActivity} />
+                <ProgramCard key={p.program} program={p} onBalanceUpdate={handleBalanceUpdate} onViewActivity={handleViewActivity} threshold={thresholds[p.program]} />
               ))}
+            </div>
+          )}
+
+          {/* Points Earning Trend */}
+          {trendData.length > 1 && (
+            <div className="hive-card p-5">
+              <p className="text-[13px] font-medium text-ink-primary mb-4">Monthly Points Earned</p>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11, fill: "#6B7280" }}
+                    tickFormatter={(v: string) => {
+                      const [, m] = v.split("-");
+                      return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(m, 10) - 1] ?? v;
+                    }}
+                  />
+                  <YAxis tick={{ fontSize: 11, fill: "#6B7280" }} width={50} tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
+                  <Tooltip
+                    contentStyle={{ background: "#1A1B23", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: "#9CA3AF" }}
+                    formatter={(value: number, name: string) => [`${value.toLocaleString()} pts`, name]}
+                  />
+                  {trendPrograms.map((prog, i) => (
+                    <Line
+                      key={prog}
+                      type="monotone"
+                      dataKey={prog}
+                      name={prog}
+                      stroke={["#10B981", "#38BDF8", "#F59E0B", "#A78BFA", "#EC4899"][i % 5]}
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           )}
 

@@ -768,6 +768,10 @@ export const api = {
       put<PointsBalanceResponse>("/api/points/balance", { program, balance }),
     leakage: (days: number) =>
       get<LeakageResponse>("/api/points/leakage", { days }),
+    monthlyTrend: (months?: number) =>
+      get<{ month: string; program: string; points: number }[]>("/api/points/monthly-trend", months ? { months } : undefined),
+    thresholds: () =>
+      get<{ thresholds: Record<string, number>; valuations_cpp: Record<string, number> }>("/api/points/thresholds"),
   },
   netWorth: {
     history: (days?: number) => get<NetWorthSnapshot[]>("/api/net-worth/history", days ? { days } : undefined),
