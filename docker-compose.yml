@@ -108,29 +108,6 @@ services:
         max-size: "20m"
         max-file: "5"
 
-  frontend:
-    build:
-      context: ./frontend
-      args:
-        DOCKER_BUILD: "true"
-    network_mode: host
-    environment:
-      NODE_ENV: production
-      PORT: "3001"
-      NEXT_PUBLIC_API_URL: "http://127.0.0.1:8005"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-
   nginx:
     image: nginx:alpine
     network_mode: host
@@ -139,7 +116,6 @@ services:
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - backend
-      - frontend
     restart: unless-stopped
     logging:
       driver: "json-file"

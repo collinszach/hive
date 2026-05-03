@@ -88,3 +88,4 @@ STABILITY.md
 *.gif
 *.webp
 screenshots/
+.vercel

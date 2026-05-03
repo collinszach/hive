@@ -384,3 +384,4 @@ def _get_bearer_token(request: Request) -> str:
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing authorization token")
     return auth[7:]
+

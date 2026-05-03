@@ -10,9 +10,12 @@ interface MonthPickerProps {
   className?: string;
 }
 
-function formatLabel(yyyyMm: string): string {
+function formatLabel(yyyyMm: string, short = false): string {
   const [y, m] = yyyyMm.split("-").map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return new Date(y, m - 1, 1).toLocaleDateString("en-US", {
+    month: short ? "short" : "long",
+    year: "numeric",
+  });
 }
 
 function shift(yyyyMm: string, delta: number): string {
@@ -36,8 +39,9 @@ export function MonthPicker({ month, onChange, maxMonth, className }: MonthPicke
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
-      <span className="text-[13px] font-medium text-ink-primary w-32 text-center select-none">
-        {formatLabel(month)}
+      <span className="text-[13px] font-medium text-ink-primary w-20 md:w-32 text-center select-none">
+        <span className="hidden md:inline">{formatLabel(month)}</span>
+        <span className="md:hidden">{formatLabel(month, true)}</span>
       </span>
       <button
         onClick={() => onChange(shift(month, 1))}
