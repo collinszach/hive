@@ -267,7 +267,9 @@ export default function ConnectPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("snaptrade_connected") !== "1") return;
+    // SnapTrade redirects back with ?connectionId=... or we add ?snaptrade_connected=1
+    const isSnaptradeReturn = params.get("snaptrade_connected") === "1" || params.has("connectionId");
+    if (!isSnaptradeReturn) return;
     window.history.replaceState({}, "", "/connect");
     api.snaptrade.callback()
       .then((data) => {
