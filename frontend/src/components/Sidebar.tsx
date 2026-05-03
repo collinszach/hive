@@ -426,6 +426,34 @@ export default function Sidebar() {
             Account
           </span>
         </Link>
+
+        {/* Sign out */}
+        <button
+          onClick={async () => {
+            await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+            window.location.href = "/login";
+          }}
+          className="sidebar-sign-out"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            height: 34,
+            padding: "0 10px",
+            marginLeft: 6,
+            borderRadius: 7,
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            width: "calc(100% - 12px)",
+            transition: "background 120ms ease",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span style={{ fontSize: 13, fontWeight: 500, color: "#6B7280" }}>Sign out</span>
+        </button>
       </div>
 
       {/* Spin keyframe */}
