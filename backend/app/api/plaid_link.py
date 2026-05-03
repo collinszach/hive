@@ -230,7 +230,9 @@ async def exchange_token(
 
     # Trigger an immediate sync — no need to wait for the nightly cron
     from app.tasks.ingestion import sync_single_link
+    from app.tasks.maintenance import snapshot_net_worth
     sync_single_link.delay(item_id)
-    logger.info("Queued immediate sync for item %s", item_id)
+    snapshot_net_worth.delay()
+    logger.info("Queued immediate sync + net worth snapshot for item %s", item_id)
 
     return ExchangeTokenResponse(item_id=item_id, accounts_created=accounts_created)

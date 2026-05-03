@@ -191,6 +191,7 @@ class ManualAccountCreate(BaseModel):
 async def create_manual_account(
     body: ManualAccountCreate,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> AccountOut:
     """Create a manually-managed account (no Plaid connection)."""
     acct = Account(
@@ -201,10 +202,15 @@ async def create_manual_account(
         current_balance=body.current_balance,
         currency=body.currency,
         is_manual=True,
+        user_id=user.id,
     )
     db.add(acct)
     await db.commit()
     await db.refresh(acct)
+
+    from app.tasks.maintenance import snapshot_net_worth
+    snapshot_net_worth.delay()
+
     return AccountOut.model_validate(acct)
 
 
@@ -213,10 +219,11 @@ async def update_manual_account(
     account_id: uuid.UUID,
     body: ManualAccountCreate,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> AccountOut:
     """Update a manually-managed account's details or balance."""
     result = await db.execute(
-        select(Account).where(Account.id == account_id, Account.is_manual == True)  # noqa: E712
+        select(Account).where(Account.id == account_id, Account.is_manual == True, Account.user_id == user.id)  # noqa: E712
     )
     acct = result.scalar_one_or_none()
     if not acct:
@@ -231,6 +238,9 @@ async def update_manual_account(
     db.add(acct)
     await db.commit()
     await db.refresh(acct)
+
+    from app.tasks.maintenance import snapshot_net_worth
+    snapshot_net_worth.delay()
     return AccountOut.model_validate(acct)
 
 

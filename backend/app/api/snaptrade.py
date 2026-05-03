@@ -122,4 +122,9 @@ async def snaptrade_callback(db: AsyncSession = Depends(get_db)) -> CallbackResp
 
     await db.commit()
     logger.info("snaptrade_callback: added=%d total=%d", added, len(snaptrade_accounts))
+
+    # Update net worth snapshot with new account balances
+    from app.tasks.maintenance import snapshot_net_worth
+    snapshot_net_worth.delay()
+
     return CallbackResponse(accounts_added=added)
