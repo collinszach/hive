@@ -30,7 +30,10 @@ def snapshot_net_worth(self) -> dict:
     db = get_sync_db()
     try:
         accounts = db.execute(
-            select(Account).where(Account.is_active == True)  # noqa: E712
+            select(Account).where(
+                Account.is_active == True,  # noqa: E712
+                Account.is_excluded == False,  # noqa: E712
+            )
         ).scalars().all()
 
         total_assets = 0.0
@@ -41,7 +44,7 @@ def snapshot_net_worth(self) -> dict:
             balance = float(acct.current_balance or 0)
             acct_type = acct.type.lower()
 
-            if acct_type in ("depository", "investment", "brokerage"):
+            if acct_type in ("depository", "investment", "brokerage", "other"):
                 total_assets += balance
                 breakdown[f"{acct.name} (asset)"] = round(balance, 2)
             elif acct_type in ("credit", "loan", "mortgage"):

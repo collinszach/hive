@@ -26,14 +26,14 @@ class SnapTradeConnector:
     ) -> str:
         """Return the SnapTrade OAuth URL to redirect the user to."""
         resp = self._client.authentication.login_snap_trade_user(
-            query_params={
-                "userId": snaptrade_user_id,
-                "userSecret": user_secret,
-                "redirectURI": redirect_uri,
-            }
+            user_id=snaptrade_user_id,
+            user_secret=user_secret,
+            custom_redirect=redirect_uri,
         )
-        # SDK returns the URL string directly in .body
-        return resp.body if isinstance(resp.body, str) else resp.body.get("redirectURI", str(resp.body))
+        # SDK returns the URL string directly in .body or nested in a dict
+        if isinstance(resp.body, str):
+            return resp.body
+        return resp.body.get("redirectURI") or resp.body.get("loginLink") or str(resp.body)
 
     def get_accounts(self, snaptrade_user_id: str, user_secret: str) -> list[dict]:
         """Return normalized account dicts: {id, name, institution, balance}."""
