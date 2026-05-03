@@ -14,7 +14,7 @@ import {
 import { FilterPills } from "@/components/FilterPills";
 import { PageHero } from "@/components/PageHero";
 
-type ReportType = "category" | "monthly" | "yoy" | "weekday" | "budget-history" | "calendar" | "card" | "merchants";
+type ReportType = "category" | "monthly" | "yoy" | "weekday" | "budget-history" | "calendar" | "card" | "merchants" | "tax-export";
 type CatPeriod = "this-month" | "last-month" | "last-3" | "last-6" | "ytd" | "full-year" | "custom";
 
 const CAT_PERIOD_OPTIONS: { label: string; value: CatPeriod }[] = [
@@ -118,6 +118,7 @@ const REPORT_OPTIONS = [
   { label: "Year-over-Year", value: "yoy"            },
   { label: "By Day of Week", value: "weekday"        },
   { label: "Budget History", value: "budget-history" },
+  { label: "Tax Export",     value: "tax-export"     },
 ];
 
 const CATEGORIES = [
@@ -183,6 +184,9 @@ export default function ReportsPage() {
   const [catTrend, setCatTrend]     = useState<{ month: string; total: number; count: number }[]>([]);
   const [cardData, setCardData]     = useState<SpendByCard[]>([]);
   const [merchantData, setMerchantData] = useState<{ merchant: string; category: string; subcategory: string | null; transaction_count: number; total_spend: number; avg_transaction: number; pct_of_total: number; last_seen: string | null }[]>([]);
+  const [taxYear, setTaxYear]           = useState(new Date().getFullYear());
+  const [taxData, setTaxData]           = useState<{ date: string; amount: number; merchant: string; category: string; subcategory: string | null }[]>([]);
+  const [taxLoading, setTaxLoading]     = useState(false);
 
   // Which category row is expanded
   const [drill, setDrill]     = useState<DrillState | null>(null);
@@ -230,13 +234,21 @@ export default function ReportsPage() {
       } else if (report === "calendar") {
         const d = await api.reports.dailySpend(year);
         setDailySpend(d);
+      } else if (report === "tax-export") {
+        setTaxLoading(true);
+        try {
+          const d = await api.reports.taxExport(taxYear);
+          setTaxData(d);
+        } finally {
+          setTaxLoading(false);
+        }
       }
     } catch {
       toast.error("Failed to load report");
     } finally {
       setLoading(false);
     }
-  }, [report, year, yoyCategory, catPeriod, catCustomStart, catCustomEnd, catAccountId]);
+  }, [report, year, taxYear, yoyCategory, catPeriod, catCustomStart, catCustomEnd, catAccountId]);
 
   useEffect(() => { loadReport(); }, [loadReport]);
 
@@ -331,6 +343,12 @@ export default function ReportsPage() {
       rows = [
         ["Month", "Income", "Expenses", "Net"],
         ...monthlyData.map((r) => [r.month, String(r.income), String(r.expenses), String(r.net)]),
+      ];
+    } else if (report === "tax-export") {
+      filename = `hive-tax-export-${taxYear}.csv`;
+      rows = [
+        ["Date", "Merchant", "Amount", "Category", "Subcategory"],
+        ...taxData.map((r) => [r.date, r.merchant, r.amount.toFixed(2), r.category, r.subcategory ?? ""]),
       ];
     }
 
@@ -1386,6 +1404,70 @@ export default function ReportsPage() {
               </div>
             )}
           </>
+        ) : report === "tax-export" ? (
+          <div className="hive-card p-5">
+            <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+              <div>
+                <p className="text-ink-primary font-semibold text-sm">Tax Year Export</p>
+                <p className="text-ink-tertiary text-xs mt-0.5">All non-excluded transactions for the selected calendar year</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={taxYear}
+                  onChange={(e) => setTaxYear(Number(e.target.value))}
+                  className="hive-input text-sm py-1.5 px-3"
+                >
+                  {[0, 1, 2].map((offset) => {
+                    const y = new Date().getFullYear() - offset;
+                    return <option key={y} value={y}>{y}</option>;
+                  })}
+                </select>
+                <button
+                  onClick={downloadCSV}
+                  disabled={taxLoading || taxData.length === 0}
+                  className="hive-btn-primary text-sm py-1.5 px-4 flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {taxLoading ? "Loading…" : `Download CSV (${taxData.length} rows)`}
+                </button>
+              </div>
+            </div>
+            {taxLoading ? (
+              <p className="text-ink-tertiary text-sm py-10 text-center">Loading…</p>
+            ) : taxData.length === 0 ? (
+              <p className="text-ink-tertiary text-sm py-10 text-center">No transactions found for {taxYear}.</p>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-ink-tertiary text-[11px] uppercase tracking-wide border-b border-surface-border">
+                        <th className="text-left pb-2 pr-4 font-medium">Date</th>
+                        <th className="text-left pb-2 pr-4 font-medium">Merchant</th>
+                        <th className="text-right pb-2 pr-4 font-medium">Amount</th>
+                        <th className="text-left pb-2 pr-4 font-medium">Category</th>
+                        <th className="text-left pb-2 font-medium">Subcategory</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-surface-border">
+                      {taxData.slice(0, 50).map((r, i) => (
+                        <tr key={i} className="text-ink-secondary">
+                          <td className="py-2 pr-4 text-ink-tertiary font-mono text-xs">{r.date}</td>
+                          <td className="py-2 pr-4 text-ink-primary">{r.merchant}</td>
+                          <td className="py-2 pr-4 text-right font-mono tabular-nums">${r.amount.toFixed(2)}</td>
+                          <td className="py-2 pr-4">{r.category}</td>
+                          <td className="py-2 text-ink-tertiary">{r.subcategory ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {taxData.length > 50 && (
+                  <p className="text-ink-tertiary text-xs mt-3 text-center">Showing first 50 of {taxData.length} rows — download CSV for full data.</p>
+                )}
+              </>
+            )}
+          </div>
         ) : null}
       </div>
     </div>
