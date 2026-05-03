@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, FormEvent } from "react";
 import { usePlaidLink, PlaidLinkOptions, PlaidLinkOnSuccess } from "react-plaid-link";
 import Link from "next/link";
 import {
@@ -74,6 +74,8 @@ export default function ConnectPage() {
   const [manualLoading, setManualLoading]             = useState(false);
   const [snaptradeLoading, setSnaptradeLoading]       = useState(false);
   const [snaptradeMessage, setSnaptradeMessage]       = useState<string>("");
+  const [investLinkToken, setInvestLinkToken]         = useState<string | null>(null);
+  const [investLinkLoading, setInvestLinkLoading]     = useState(false);
   const [showGraph, setShowGraph]                     = useState(false);
   const [plaidGated, setPlaidGated]                   = useState(false);
 
@@ -228,6 +230,36 @@ export default function ConnectPage() {
     if (ready && receivedRedirectUri) open();
   }, [ready, receivedRedirectUri, open]);
 
+  const onInvestSuccess = useCallback<PlaidLinkOnSuccess>(async (public_token) => {
+    setInvestLinkLoading(true);
+    setInvestLinkToken(null);
+    try {
+      await authedFetch("/api/plaid/exchange-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ public_token }),
+      });
+      toast.success("Investment account connected!");
+      fetchLinked();
+    } catch {
+      toast.error("Failed to link investment account");
+    } finally {
+      setInvestLinkLoading(false);
+    }
+  }, [fetchLinked]);
+
+  const investConfig: PlaidLinkOptions = useMemo(() => ({
+    token: investLinkToken,
+    onSuccess: onInvestSuccess,
+    onExit: () => { setInvestLinkToken(null); setInvestLinkLoading(false); },
+  }), [investLinkToken, onInvestSuccess]);
+
+  const { open: openInvestments, ready: investmentsReady } = usePlaidLink(investConfig);
+
+  useEffect(() => {
+    if (investLinkToken && investmentsReady) openInvestments();
+  }, [investLinkToken, investmentsReady, openInvestments]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -282,6 +314,17 @@ export default function ConnectPage() {
     } catch {
       setSnaptradeMessage("Failed to connect to SnapTrade. Check server configuration.");
       setSnaptradeLoading(false);
+    }
+  }
+
+  async function handleInvestmentsConnect() {
+    setInvestLinkLoading(true);
+    try {
+      const data = await api.plaid.investmentsLinkToken();
+      setInvestLinkToken(data.link_token);
+    } catch {
+      toast.error("Failed to start brokerage connection");
+      setInvestLinkLoading(false);
     }
   }
 
@@ -499,6 +542,32 @@ export default function ConnectPage() {
           >
             <Link2 className="w-4 h-4" />
             {!linkToken ? "Loading…" : status === "syncing" ? "Connecting…" : "Connect Bank Account"}
+          </button>
+        )}
+      </div>
+
+      {/* ── Investment Accounts (Plaid) ─────────────────────────────── */}
+      <div className="hive-card p-5">
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp className="w-4 h-4 text-honey" />
+          <h2 className="text-[14px] font-semibold text-ink-primary">Investment Accounts</h2>
+        </div>
+        <p className="text-[12px] text-ink-tertiary mb-4">
+          Connect brokerages and IRAs to track balances — Vanguard, Fidelity, Schwab, and 8,000+ more.
+        </p>
+        {plaidGated ? (
+          <div className="hive-card p-5 text-center">
+            <p className="text-ink-primary font-semibold mb-2">Requires Starter or Pro Plan</p>
+            <a href="/billing" className="hive-btn-primary inline-block">View Plans →</a>
+          </div>
+        ) : (
+          <button
+            onClick={handleInvestmentsConnect}
+            disabled={investLinkLoading}
+            className="hive-btn-secondary"
+          >
+            <TrendingUp className="w-4 h-4" />
+            {investLinkLoading ? "Loading…" : "Connect Brokerage →"}
           </button>
         )}
       </div>

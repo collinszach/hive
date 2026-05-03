@@ -62,6 +62,28 @@ class PlaidConnector:
         logger.info("Created link token for user %s (redirect_uri=%s)", user_id, settings.plaid_redirect_uri or "none")
         return response["link_token"]
 
+    def get_investments_link_token(self, user_id: str) -> str:
+        """Create a Plaid Link token scoped to investment accounts (brokerages, IRAs, etc.).
+
+        Use this instead of get_link_token() when the user wants to connect
+        Vanguard, Fidelity, Schwab (via Plaid), or other brokerage accounts.
+        The investments product surfaces holdings and positions data.
+        """
+        kwargs: dict = dict(
+            products=[Products("investments")],
+            client_name="Hive Finance",
+            country_codes=[CountryCode("US")],
+            language="en",
+            user=LinkTokenCreateRequestUser(client_user_id=user_id),
+        )
+        if settings.plaid_redirect_uri:
+            kwargs["redirect_uri"] = settings.plaid_redirect_uri
+
+        request = LinkTokenCreateRequest(**kwargs)
+        response = self._client.link_token_create(request)
+        logger.info("Created investments link token for user %s", user_id)
+        return response["link_token"]
+
     def exchange_public_token(self, public_token: str) -> tuple[str, str]:
         """Exchange a public token for an access_token + item_id."""
         request = ItemPublicTokenExchangeRequest(public_token=public_token)

@@ -51,6 +51,21 @@ async def create_link_token(
         raise HTTPException(status_code=502, detail="Failed to create link token. Please try again.") from exc
 
 
+@router.post("/investments-link-token", response_model=LinkTokenResponse)
+async def create_investments_link_token(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_plaid),
+) -> LinkTokenResponse:
+    """Create a Plaid Link token scoped to investment accounts (Vanguard, Fidelity, Schwab, etc.)."""
+    try:
+        link_token = plaid_connector.get_investments_link_token(user_id="local-user")
+        return LinkTokenResponse(link_token=link_token)
+    except Exception as exc:
+        logger.error("Failed to create investments link token: %s", exc)
+        raise HTTPException(status_code=502, detail="Failed to create link token. Please try again.") from exc
+
+
 @router.post("/sync-now", status_code=202)
 async def trigger_sync_now(
     db: AsyncSession = Depends(get_db),

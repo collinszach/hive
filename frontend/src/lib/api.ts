@@ -929,6 +929,7 @@ export const api = {
   },
   plaid: {
     applyRules: () => post<{ status: string; message: string }>("/api/plaid/apply-rules", {}),
+    investmentsLinkToken: () => post<{ link_token: string }>("/api/plaid/investments-link-token", {}),
   },
   snaptrade: {
     connect: () => post<{ redirect_url: string }>("/api/snaptrade/connect", {}),
