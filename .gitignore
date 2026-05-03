@@ -89,3 +89,6 @@ STABILITY.md
 *.webp
 screenshots/
 .vercel
+frontend/www/
+frontend/ios/App/Pods/
+frontend/ios/App/build/
