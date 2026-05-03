@@ -155,7 +155,7 @@ export default function ConnectPage() {
     try {
       if (editingManual) {
         const res = await authedFetch(`/api/accounts/manual/${editingManual.id}`, {
-          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+          method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error("Update failed");
         toast.success("Account updated");
