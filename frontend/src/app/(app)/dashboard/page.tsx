@@ -378,11 +378,17 @@ export default function Dashboard() {
     setInsights((prev) => prev.filter((i) => i.id !== id));
   }
 
-  const creditCards = accts.filter((a) => a.type === "credit");
-  const bankAccts   = accts.filter((a) => a.type !== "credit");
-  const totalAssets = bankAccts.reduce((s, a) => s + (a.current_balance ?? 0), 0);
-  const totalCredit = creditCards.reduce((s, a) => s + (a.current_balance ?? 0), 0);
-  const netCash     = totalAssets - totalCredit;
+  const creditCards  = accts.filter((a) => a.type === "credit");
+  const liquidAccts  = accts.filter((a) => a.type === "depository" && ["checking", "savings"].includes(a.subtype ?? ""));
+  const investAccts  = accts.filter((a) => a.type === "investment" || a.type === "brokerage");
+  const otherAssets  = accts.filter((a) => {
+    if (a.type === "credit" || a.type === "investment" || a.type === "brokerage") return false;
+    if (a.type === "depository" && ["checking", "savings"].includes(a.subtype ?? "")) return false;
+    return true; // CDs, money market, manual accounts, "other" type, depository with no subtype
+  });
+  const totalLiquid  = liquidAccts.reduce((s, a) => s + (a.current_balance ?? 0), 0);
+  const totalCredit  = creditCards.reduce((s, a) => s + (a.current_balance ?? 0), 0);
+  const totalAssets  = accts.filter((a) => a.type !== "credit").reduce((s, a) => s + (a.current_balance ?? 0), 0);
   const pointsValue = pts?.total_estimated_value_dollars ?? 0;
   const alerts      = pts?.programs.filter((p) => p.above_threshold) ?? [];
   const noAccounts  = !loading && accts.length === 0;
@@ -417,7 +423,7 @@ export default function Dashboard() {
         const totalSpent  = bdgts.reduce((s, b) => s + b.actual_spend, 0);
         const pctBurned   = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
         const budgetOk    = totalBudget === 0 || pctBurned <= pctMonth + 5;
-        const nwVal       = nwHistory.length > 0 ? nwHistory[nwHistory.length - 1].net_worth : netCash;
+        const nwVal       = nwHistory.length > 0 ? nwHistory[nwHistory.length - 1].net_worth : (totalAssets - totalCredit);
         const nwDelta     = nwHistory.length >= 2
           ? nwVal - nwHistory[Math.max(0, nwHistory.length - 31)].net_worth
           : null;
@@ -440,8 +446,8 @@ export default function Dashboard() {
             sub:   { text: totalBudget > 0 ? `${pctMonth}% of month elapsed` : "no budgets set", color: "var(--color-ink-tertiary)" },
           },
           {
-            label: "Cash",
-            value: fmt(totalAssets),
+            label: "Liquid Cash",
+            value: fmt(totalLiquid),
             href:  "/cash-flow",
             color: undefined as string | undefined,
             sub:   { text: `${fmt(totalCredit)} credit balance`, color: "var(--color-ink-tertiary)" },
@@ -674,6 +680,42 @@ export default function Dashboard() {
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* Account Balances */}
+            {accts.filter((a) => a.type !== "credit").length > 0 && (
+              <div className="hive-card overflow-hidden p-4">
+                <div className="hive-section-header mb-3">
+                  <SectionLabel>Account Balances</SectionLabel>
+                  <Link href="/connect" className="flex items-center gap-1 text-[12px] text-honey/80 hover:text-honey transition-colors">
+                    Manage <ChevronRight className="w-3 h-3" />
+                  </Link>
+                </div>
+                {[
+                  { label: "Liquid", items: liquidAccts },
+                  { label: "Investments", items: investAccts },
+                  { label: "Other", items: otherAssets },
+                ].filter((g) => g.items.length > 0).map((group) => (
+                  <div key={group.label} className="mb-3 last:mb-0">
+                    <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-ink-ghost mb-1.5">{group.label}</p>
+                    <div className="space-y-1.5">
+                      {group.items.map((a) => (
+                        <div key={a.id} className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[12px] text-ink-secondary truncate">{a.name}</p>
+                            {a.institution && (
+                              <p className="text-[10px] text-ink-ghost truncate">{a.institution}{a.subtype ? ` · ${a.subtype}` : ""}</p>
+                            )}
+                          </div>
+                          <span className="text-[12px] font-mono tabular-nums text-ink-primary shrink-0">
+                            {fmt(a.current_balance ?? 0)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
