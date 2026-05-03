@@ -96,6 +96,29 @@ async def list_linked_institutions(db: AsyncSession = Depends(get_db)) -> list[L
             last_sync_error=link.last_sync_error,
             accounts=[AccountOut.model_validate(a) for a in accts],
         ))
+
+    # Include SnapTrade-connected accounts (not linked via Plaid)
+    snap_result = await db.execute(
+        select(Account)
+        .where(Account.snaptrade_account_id.isnot(None), Account.is_active == True)  # noqa: E712
+        .order_by(Account.institution, Account.name)
+    )
+    snap_accts = snap_result.scalars().all()
+    if snap_accts:
+        # Group by institution
+        by_inst: dict[str, list] = {}
+        for a in snap_accts:
+            by_inst.setdefault(a.institution or "SnapTrade", []).append(a)
+        for inst_name, accts_list in by_inst.items():
+            out.append(LinkedInstitutionOut(
+                item_id=f"snaptrade-{inst_name.lower().replace(' ', '-')}",
+                institution_name=inst_name,
+                institution_id=None,
+                last_sync_at=accts_list[0].last_synced.isoformat() if accts_list[0].last_synced else None,
+                last_sync_error=None,
+                accounts=[AccountOut.model_validate(a) for a in accts_list],
+            ))
+
     return out
 
 
