@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Numeric, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,7 @@ class Account(Base):
     __tablename__ = "accounts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
     plaid_account_id: Mapped[Optional[str]] = mapped_column(Text, unique=True, nullable=True)
     plaid_item_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)

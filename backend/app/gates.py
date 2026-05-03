@@ -11,6 +11,13 @@ from app.models.user import PlanTier, User, UserRole
 
 logger = logging.getLogger(__name__)
 
+async def get_current_user(
+    request: Request, db: AsyncSession = Depends(get_db)
+) -> User:
+    """FastAPI dependency: extract authenticated user from JWT. Use in any endpoint that needs user scoping."""
+    return await _get_request_user(request, db)
+
+
 PLAID_LIMITS: dict[str, int] = {
     PlanTier.free: 0,
     PlanTier.starter: 3,

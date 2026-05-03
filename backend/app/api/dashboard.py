@@ -9,7 +9,9 @@ from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
+from app.gates import get_current_user
 from app.models.account import Account
+from app.models.user import User
 from app.models.anomaly import Anomaly
 from app.models.budget import Budget
 from app.models.goal import Goal
@@ -52,6 +54,7 @@ class DashboardSummary(BaseModel):
 async def dashboard_summary(
     month: Optional[str] = Query(None, description="YYYY-MM, defaults to current month"),
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> DashboardSummary:
     """
     Combined dashboard data: spend totals, account balances, anomaly count.
@@ -70,6 +73,7 @@ async def dashboard_summary(
         .join(Account, Transaction.account_id == Account.id)
         .where(
             and_(
+                Account.user_id == user.id,
                 Transaction.date >= start,
                 Transaction.date < end,
                 Transaction.is_excluded == False,  # noqa: E712
@@ -93,7 +97,7 @@ async def dashboard_summary(
 
     # Accounts
     acct_result = await db.execute(
-        select(Account).where(Account.is_active == True)  # noqa: E712
+        select(Account).where(Account.is_active == True, Account.user_id == user.id)  # noqa: E712
     )
     accounts = [
         AccountSummary(
@@ -143,7 +147,7 @@ class SafeToSpend(BaseModel):
 
 
 @router.get("/safe-to-spend", response_model=SafeToSpend)
-async def safe_to_spend(db: AsyncSession = Depends(get_db)) -> SafeToSpend:
+async def safe_to_spend(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)) -> SafeToSpend:
     """
     Safe to Spend: how much you can comfortably spend for the rest of the month.
 
@@ -182,9 +186,9 @@ async def safe_to_spend(db: AsyncSession = Depends(get_db)) -> SafeToSpend:
               AND category = 'Income'
               AND is_excluded = FALSE
               AND pending = FALSE
-              AND account_id IN (SELECT id FROM accounts WHERE is_active = TRUE)
+              AND account_id IN (SELECT id FROM accounts WHERE is_active = TRUE AND user_id = :uid)
         """),
-        {"cutoff": three_months_ago, "month_start": month_start},
+        {"cutoff": three_months_ago, "month_start": month_start, "uid": user.id},
     )
     monthly_income = float(income_row.scalar_one() or 0)
 
@@ -398,7 +402,7 @@ def _color(score: int) -> str:
 
 
 @router.get("/health-score", response_model=HealthScore)
-async def health_score(db: AsyncSession = Depends(get_db)) -> HealthScore:
+async def health_score(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)) -> HealthScore:
     """
     Composite financial health score (0-100) across five dimensions:
       - Budget adherence (25 pts): fraction of budgeted categories on track
@@ -637,7 +641,7 @@ class WeeklyComparison(BaseModel):
 
 
 @router.get("/weekly-comparison", response_model=WeeklyComparison)
-async def weekly_comparison(db: AsyncSession = Depends(get_db)) -> WeeklyComparison:
+async def weekly_comparison(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)) -> WeeklyComparison:
     """
     Compare spending this week vs last week.
     Week boundaries are Mon–Sun. Today's partial day is included.

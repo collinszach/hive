@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,7 @@ class PlaidLink(Base):
     __tablename__ = "plaid_links"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
     item_id: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     access_token: Mapped[str] = mapped_column(EncryptedString(500), nullable=False)
     institution_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

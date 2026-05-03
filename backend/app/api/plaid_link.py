@@ -174,6 +174,7 @@ async def exchange_token(
             access_token=access_token,
             institution_id=body.institution_id,
             institution_name=body.institution_name or "Unknown",
+            user_id=user.id,
         )
         db.add(link)
 
@@ -219,6 +220,7 @@ async def exchange_token(
                 available_balance=balances.get("available"),
                 credit_limit=balances.get("limit"),
                 mask=acct.get("mask"),
+                user_id=user.id,
             )
             db.add(new_acct)
             accounts_created += 1

@@ -9,9 +9,11 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
+from app.gates import get_current_user
 from app.models.account import Account
 from app.models.plaid_link import PlaidLink
 from app.models.transaction import Transaction
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -59,11 +61,11 @@ class UnlinkResponse(BaseModel):
 
 
 @router.get("", response_model=list[AccountOut])
-async def list_accounts(db: AsyncSession = Depends(get_db)) -> list[AccountOut]:
-    """Return all active accounts with current balances."""
+async def list_accounts(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)) -> list[AccountOut]:
+    """Return all active accounts for the current user."""
     result = await db.execute(
         select(Account)
-        .where(Account.is_active == True)  # noqa: E712
+        .where(Account.is_active == True, Account.user_id == user.id)  # noqa: E712
         .order_by(Account.institution, Account.name)
     )
     accounts = result.scalars().all()
@@ -71,11 +73,11 @@ async def list_accounts(db: AsyncSession = Depends(get_db)) -> list[AccountOut]:
 
 
 @router.get("/linked", response_model=list[LinkedInstitutionOut])
-async def list_linked_institutions(db: AsyncSession = Depends(get_db)) -> list[LinkedInstitutionOut]:
-    """Return active Plaid links grouped with their accounts."""
+async def list_linked_institutions(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)) -> list[LinkedInstitutionOut]:
+    """Return active Plaid links grouped with their accounts for the current user."""
     links_result = await db.execute(
         select(PlaidLink)
-        .where(PlaidLink.is_active == True)  # noqa: E712
+        .where(PlaidLink.is_active == True, PlaidLink.user_id == user.id)  # noqa: E712
         .order_by(PlaidLink.institution_name)
     )
     links = links_result.scalars().all()
@@ -100,7 +102,7 @@ async def list_linked_institutions(db: AsyncSession = Depends(get_db)) -> list[L
     # Include SnapTrade-connected accounts (not linked via Plaid)
     snap_result = await db.execute(
         select(Account)
-        .where(Account.snaptrade_account_id.isnot(None), Account.is_active == True)  # noqa: E712
+        .where(Account.snaptrade_account_id.isnot(None), Account.is_active == True, Account.user_id == user.id)  # noqa: E712
         .order_by(Account.institution, Account.name)
     )
     snap_accts = snap_result.scalars().all()

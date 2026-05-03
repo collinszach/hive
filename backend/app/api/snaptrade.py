@@ -112,6 +112,7 @@ async def snaptrade_callback(db: AsyncSession = Depends(get_db)) -> CallbackResp
                 current_balance=acct["balance"],
                 available_balance=acct["balance"],
                 currency="USD",
+                user_id=user.id,
                 is_manual=False,
                 is_active=True,
                 last_synced=datetime.now(timezone.utc),
