@@ -230,14 +230,18 @@ export default function ConnectPage() {
     if (ready && receivedRedirectUri) open();
   }, [ready, receivedRedirectUri, open]);
 
-  const onInvestSuccess = useCallback<PlaidLinkOnSuccess>(async (public_token) => {
+  const onInvestSuccess = useCallback<PlaidLinkOnSuccess>(async (public_token, metadata) => {
     setInvestLinkLoading(true);
     setInvestLinkToken(null);
     try {
       await authedFetch("/api/plaid/exchange-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ public_token }),
+        body: JSON.stringify({
+          public_token,
+          institution_id: metadata.institution?.institution_id ?? null,
+          institution_name: metadata.institution?.name ?? null,
+        }),
       });
       toast.success("Investment account connected!");
       fetchLinked();

@@ -118,6 +118,17 @@ async def exchange_token(
         logger.error("Failed to exchange public token: %s", exc)
         raise HTTPException(status_code=502, detail="Failed to exchange token. Please try again.") from exc
 
+    # If frontend didn't send institution info, look it up from Plaid
+    if not body.institution_name or not body.institution_id:
+        try:
+            item_info = plaid_connector.get_item(access_token)
+            if not body.institution_id:
+                body.institution_id = item_info.get("institution_id")
+            if not body.institution_name and item_info.get("institution_id"):
+                body.institution_name = plaid_connector.get_institution_name(item_info["institution_id"])
+        except Exception as exc:
+            logger.warning("Failed to look up institution for item %s: %s", item_id, exc)
+
     # Check if this item_id already exists (re-link / update scenario)
     existing = await db.execute(
         select(PlaidLink).where(PlaidLink.item_id == item_id)

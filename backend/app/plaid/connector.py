@@ -90,6 +90,23 @@ class PlaidConnector:
         response = self._client.item_public_token_exchange(request)
         return response["access_token"], response["item_id"]
 
+    def get_item(self, access_token: str) -> dict:
+        """Return item metadata including institution_id."""
+        from plaid.model.item_get_request import ItemGetRequest
+        request = ItemGetRequest(access_token=access_token)
+        response = self._client.item_get(request)
+        return {"institution_id": response["item"]["institution_id"]}
+
+    def get_institution_name(self, institution_id: str) -> str:
+        """Look up institution display name by ID."""
+        from plaid.model.institutions_get_by_id_request import InstitutionsGetByIdRequest
+        request = InstitutionsGetByIdRequest(
+            institution_id=institution_id,
+            country_codes=[CountryCode("US")],
+        )
+        response = self._client.institutions_get_by_id(request)
+        return response["institution"]["name"]
+
     def get_accounts(self, access_token: str) -> list:
         """Return all accounts for a given access token."""
         request = AccountsGetRequest(access_token=access_token)
