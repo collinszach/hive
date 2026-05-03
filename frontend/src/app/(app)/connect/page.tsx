@@ -546,14 +546,14 @@ export default function ConnectPage() {
         )}
       </div>
 
-      {/* ── Investment Accounts (Plaid) ─────────────────────────────── */}
+      {/* ── Investment Accounts ────────────────────────────────────── */}
       <div className="hive-card p-5">
         <div className="flex items-center gap-2 mb-2">
           <TrendingUp className="w-4 h-4 text-honey" />
           <h2 className="text-[14px] font-semibold text-ink-primary">Investment Accounts</h2>
         </div>
         <p className="text-[12px] text-ink-tertiary mb-4">
-          Connect brokerages and IRAs to track balances — Vanguard, Fidelity, Schwab, and 8,000+ more.
+          Connect brokerages and IRAs to track balances and holdings.
         </p>
         {plaidGated ? (
           <div className="hive-card p-5 text-center">
@@ -561,14 +561,37 @@ export default function ConnectPage() {
             <a href="/billing" className="hive-btn-primary inline-block">View Plans →</a>
           </div>
         ) : (
-          <button
-            onClick={handleInvestmentsConnect}
-            disabled={investLinkLoading}
-            className="hive-btn-secondary"
-          >
-            <TrendingUp className="w-4 h-4" />
-            {investLinkLoading ? "Loading…" : "Connect Brokerage →"}
-          </button>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <div className="min-w-0">
+                <p className="text-[13px] text-ink-primary font-medium">Schwab, Robinhood, Wealthfront…</p>
+                <p className="text-[11px] text-ink-tertiary">via SnapTrade OAuth</p>
+              </div>
+              <button
+                onClick={handleSnaptradeConnect}
+                disabled={snaptradeLoading}
+                className="hive-btn-secondary text-sm shrink-0"
+              >
+                {snaptradeLoading ? "Loading…" : "Connect →"}
+              </button>
+            </div>
+            <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <div className="min-w-0">
+                <p className="text-[13px] text-ink-primary font-medium">Vanguard, Fidelity, and 8,000+ more</p>
+                <p className="text-[11px] text-ink-tertiary">via Plaid Investments</p>
+              </div>
+              <button
+                onClick={handleInvestmentsConnect}
+                disabled={investLinkLoading}
+                className="hive-btn-secondary text-sm shrink-0"
+              >
+                {investLinkLoading ? "Loading…" : "Connect →"}
+              </button>
+            </div>
+          </div>
+        )}
+        {snaptradeMessage && (
+          <p className="text-[12px] text-semantic-income mt-3">{snaptradeMessage}</p>
         )}
       </div>
 
