@@ -229,14 +229,19 @@ export default function Sidebar() {
           flexShrink: 0,
         }}
       >
-        {/* Hive hex mark */}
-        <div style={{ width: 26, height: 26, borderRadius: 6, background: "#F5B942", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <polygon points="8,1 14,4.5 14,11.5 8,15 2,11.5 2,4.5" stroke="#0B0C0F" strokeWidth="1.5" fill="none" />
-            <polygon points="8,4 11.5,6 11.5,10 8,12 4.5,10 4.5,6" stroke="#0B0C0F" strokeWidth="1" fill="#0B0C0F" opacity="0.35" />
-            <circle cx="8" cy="8" r="1.2" fill="#0B0C0F" />
-          </svg>
-        </div>
+        {/* Hive tessellated H mark — Direction 03 from design spec */}
+        <svg width="28" height="26" viewBox="0 0 57 50" fill="none" style={{ flexShrink: 0 }}>
+          {/* Left column (3 hexes) */}
+          <polygon points="10,2 18,6.5 18,15.5 10,20 2,15.5 2,6.5" fill="#F5B942"/>
+          <polygon points="10,18 18,22.5 18,31.5 10,36 2,31.5 2,22.5" fill="#F5B942"/>
+          <polygon points="10,34 18,38.5 18,47.5 10,52 2,47.5 2,38.5" fill="#F5B942"/>
+          {/* Center crossbar (1 hex — honey accent) */}
+          <polygon points="28,18 36,22.5 36,31.5 28,36 20,31.5 20,22.5" fill="#F5B942"/>
+          {/* Right column (3 hexes) */}
+          <polygon points="46,2 54,6.5 54,15.5 46,20 38,15.5 38,6.5" fill="#F5B942"/>
+          <polygon points="46,18 54,22.5 54,31.5 46,36 38,31.5 38,22.5" fill="#F5B942"/>
+          <polygon points="46,34 54,38.5 54,47.5 46,52 38,47.5 38,38.5" fill="#F5B942"/>
+        </svg>
         <span style={{ fontSize: 15, fontWeight: 700, color: "#F0F2F5", letterSpacing: "-0.02em" }}>
           Hive
         </span>

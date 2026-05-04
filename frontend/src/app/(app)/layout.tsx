@@ -19,7 +19,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             style={{ flex: 1, minWidth: 0, overflow: "auto" }}
             className="md:pl-[220px] pb-16 md:pb-0"
           >
-            <div className="px-4 md:px-6 py-4 max-w-[1400px] mx-auto">
+            <div className="px-4 md:px-8 py-4">
               <ErrorBoundary>{children}</ErrorBoundary>
             </div>
           </main>
