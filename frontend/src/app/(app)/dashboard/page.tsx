@@ -427,6 +427,10 @@ export default function Dashboard() {
           ? nwVal - nwHistory[Math.max(0, nwHistory.length - 31)].net_worth
           : null;
 
+        const monthSaved = position ? position.available_to_save : 0;
+        const monthIncome = safeToSpend ? safeToSpend.breakdown.monthly_income : 0;
+        const monthSpent = safeToSpend ? safeToSpend.breakdown.spent_this_month : 0;
+
         const KPIS = [
           {
             label: "Net Worth",
@@ -438,11 +442,11 @@ export default function Dashboard() {
               : { text: "updated daily", color: "var(--color-ink-tertiary)" },
           },
           {
-            label: "Budget",
-            value: totalBudget > 0 ? `${pctBurned}%` : "—",
-            href:  "/budgets",
-            color: !budgetOk ? "var(--color-expense)" : undefined,
-            sub:   { text: totalBudget > 0 ? `${pctMonth}% of month elapsed` : "no budgets set", color: "var(--color-ink-tertiary)" },
+            label: "Saved",
+            value: monthSaved >= 0 ? fmt(monthSaved) : `−${fmt(Math.abs(monthSaved))}`,
+            href:  "/cash-flow",
+            color: monthSaved >= 0 ? "var(--color-income)" : "var(--color-expense)",
+            sub:   { text: monthIncome > 0 ? `${fmt(monthIncome)} in · ${fmt(monthSpent)} out` : `${pctMonth}% of month elapsed`, color: "var(--color-ink-tertiary)" },
           },
           {
             label: "Liquid Cash",
