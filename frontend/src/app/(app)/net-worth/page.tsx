@@ -125,8 +125,8 @@ export default function NetWorthPage() {
 
   // Account breakdown from latest snapshot (if available)
   const breakdown = (latest as (NetWorthSnapshot & { breakdown?: Record<string, number> }))?.breakdown ?? {};
-  const assetRows = Object.entries(breakdown).filter(([, v]) => v >= 0).sort(([, a], [, b]) => b - a);
-  const liabRows  = Object.entries(breakdown).filter(([, v]) => v <  0).sort(([, a], [, b]) => a - b);
+  const assetRows = Object.entries(breakdown).filter(([k]) => k.includes("(asset)")).sort(([, a], [, b]) => b - a);
+  const liabRows  = Object.entries(breakdown).filter(([k]) => k.includes("(liability)")).sort(([, a], [, b]) => b - a);
 
   return (
     <>
