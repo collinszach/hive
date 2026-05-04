@@ -17,14 +17,14 @@ function Cell({ val, isHive }: { val: boolean | string; isHive?: boolean }) {
     return (
       <span
         className="text-[13px] font-semibold font-geist-mono"
-        style={{ color: isHive ? "#F5B942" : "#5A6475" }}
+        style={{ color: isHive ? "#7AB88A" : "#5A6475" }}
       >
         {val}
       </span>
     );
   }
   if (val) {
-    return <Check className="w-4 h-4 mx-auto" style={{ color: isHive ? "#F5B942" : "#34D399" }} strokeWidth={2.5} />;
+    return <Check className="w-4 h-4 mx-auto" style={{ color: isHive ? "#7AB88A" : "#34D399" }} strokeWidth={2.5} />;
   }
   return <Minus className="w-4 h-4 mx-auto text-ink-ghost opacity-30" strokeWidth={1.5} />;
 }
@@ -60,13 +60,13 @@ export default function ComparisonTable() {
                 key={label}
                 className="p-4 text-center"
                 style={{
-                  background: highlight ? "rgba(245,185,66,0.06)" : "transparent",
-                  borderLeft: highlight ? "1px solid rgba(245,185,66,0.18)" : "1px solid rgba(255,255,255,0.06)",
+                  background: highlight ? "rgba(122,184,138,0.06)" : "transparent",
+                  borderLeft: highlight ? "1px solid rgba(122,184,138,0.18)" : "1px solid rgba(255,255,255,0.06)",
                 }}
               >
                 <span
                   className="text-[13px] font-bold"
-                  style={{ color: highlight ? "#F5B942" : "#5A6475" }}
+                  style={{ color: highlight ? "#7AB88A" : "#5A6475" }}
                 >
                   {label}
                 </span>
@@ -89,10 +89,10 @@ export default function ComparisonTable() {
                   key={co}
                   className="p-4 flex items-center justify-center"
                   style={{
-                    background: co === "hive" ? "rgba(245,185,66,0.04)" : "transparent",
+                    background: co === "hive" ? "rgba(122,184,138,0.04)" : "transparent",
                     borderLeft:
                       co === "hive"
-                        ? "1px solid rgba(245,185,66,0.18)"
+                        ? "1px solid rgba(122,184,138,0.18)"
                         : "1px solid rgba(255,255,255,0.06)",
                   }}
                 >

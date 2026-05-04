@@ -51,7 +51,7 @@ export default function InstallPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 flex items-center justify-between gap-3 px-4 py-3 bg-[rgba(245,185,66,0.08)] border-t border-[rgba(245,185,66,0.20)] backdrop-blur-sm">
+    <div className="fixed bottom-0 inset-x-0 z-50 flex items-center justify-between gap-3 px-4 py-3 bg-[rgba(122,184,138,0.08)] border-t border-[rgba(122,184,138,0.20)] backdrop-blur-sm">
       <p className="text-sm text-ink-secondary leading-snug">
         Add{" "}
         <span className="font-semibold text-ink-primary">Hive</span> to your
@@ -60,7 +60,7 @@ export default function InstallPrompt() {
       <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={handleInstall}
-          className="px-3 py-1.5 rounded-md bg-[#F5B942] text-[#09090E] text-sm font-semibold hover:bg-[#e0a832] transition-colors"
+          className="px-3 py-1.5 rounded-md bg-[#7AB88A] text-[#09090E] text-sm font-semibold hover:bg-[#e0a832] transition-colors"
         >
           Install
         </button>

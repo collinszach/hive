@@ -55,7 +55,7 @@ function currentYearMonth(): string {
 
 // Category color palette — cycles through a set of accent colors
 const CAT_COLORS = [
-  "#F5B942", // honey
+  "#7AB88A", // honey
   "#7C6AFA", // violet
   "#32D583", // income green
   "#38BDF8", // sky

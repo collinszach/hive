@@ -22,9 +22,9 @@ export default function ChatMockup() {
         <span
           className="ml-auto text-[9px] px-2 py-0.5 rounded-full font-semibold"
           style={{
-            background: "rgba(245,185,66,0.08)",
-            color: "#F5B942",
-            border: "1px solid rgba(245,185,66,0.18)",
+            background: "rgba(122,184,138,0.08)",
+            color: "#7AB88A",
+            border: "1px solid rgba(122,184,138,0.18)",
           }}
         >
           Claude Sonnet
@@ -38,8 +38,8 @@ export default function ChatMockup() {
               <div
                 className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5"
                 style={{
-                  background: "rgba(245,185,66,0.08)",
-                  border: "1px solid rgba(245,185,66,0.18)",
+                  background: "rgba(122,184,138,0.08)",
+                  border: "1px solid rgba(122,184,138,0.18)",
                 }}
               >
                 <Bot className="w-3 h-3 text-honey" />
@@ -49,8 +49,8 @@ export default function ChatMockup() {
               className="rounded-2xl px-3.5 py-2.5 text-[12px] leading-relaxed whitespace-pre-line"
               style={{
                 maxWidth: "82%",
-                background: role === "user" ? "rgba(245,185,66,0.07)" : "rgba(255,255,255,0.04)",
-                border: `1px solid ${role === "user" ? "rgba(245,185,66,0.18)" : "rgba(255,255,255,0.07)"}`,
+                background: role === "user" ? "rgba(122,184,138,0.07)" : "rgba(255,255,255,0.04)",
+                border: `1px solid ${role === "user" ? "rgba(122,184,138,0.18)" : "rgba(255,255,255,0.07)"}`,
                 color: role === "user" ? "#EEEEF0" : "#A0A8B8",
               }}
             >

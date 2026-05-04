@@ -12,7 +12,7 @@ export function Sparkline({
   data,
   width = 64,
   height = 24,
-  color = "#C9920E",
+  color = "#4A7A5A",
   fill = true,
 }: SparklineProps) {
   if (data.length < 2) return null;

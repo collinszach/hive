@@ -379,7 +379,7 @@ export function CommandPalette() {
                             className={cn(
                               "w-full flex items-center gap-3 px-5 py-2 text-left transition-colors duration-100",
                               isSelected
-                                ? "bg-[rgba(245,185,66,0.07)]"
+                                ? "bg-[rgba(122,184,138,0.07)]"
                                 : "hover:bg-white/[0.03]"
                             )}
                           >
@@ -387,7 +387,7 @@ export function CommandPalette() {
                               className={cn(
                                 "flex items-center justify-center w-6 h-6 rounded-[7px] shrink-0 transition-colors duration-100",
                                 isSelected
-                                  ? "bg-[rgba(245,185,66,0.14)] text-[#F5B942]"
+                                  ? "bg-[rgba(122,184,138,0.14)] text-[#7AB88A]"
                                   : "bg-white/[0.04] text-[#4A4640]"
                               )}
                             >
@@ -396,7 +396,7 @@ export function CommandPalette() {
                             <span
                               className={cn(
                                 "text-[13px] font-medium transition-colors duration-100",
-                                isSelected ? "text-[#F5B942]" : "text-[#8A8278]"
+                                isSelected ? "text-[#7AB88A]" : "text-[#8A8278]"
                               )}
                             >
                               {nav.label}
@@ -431,19 +431,19 @@ export function CommandPalette() {
                       onMouseEnter={() => setSelected(i)}
                       className={cn(
                         "w-full flex items-center gap-3 px-5 py-2 text-left transition-colors duration-100",
-                        isSelected ? "bg-[rgba(245,185,66,0.07)]" : "hover:bg-white/[0.03]"
+                        isSelected ? "bg-[rgba(122,184,138,0.07)]" : "hover:bg-white/[0.03]"
                       )}
                     >
                       <span className={cn(
                         "flex items-center justify-center w-6 h-6 rounded-[7px] shrink-0 transition-colors duration-100",
-                        isSelected ? "bg-[rgba(245,185,66,0.14)] text-[#F5B942]" : "bg-white/[0.04] text-[#4A4640]"
+                        isSelected ? "bg-[rgba(122,184,138,0.14)] text-[#7AB88A]" : "bg-white/[0.04] text-[#4A4640]"
                       )}>
                         <Icon className="w-[13px] h-[13px]" strokeWidth={1.8} />
                       </span>
                       <div className="flex-1 min-w-0">
                         <span className={cn(
                           "text-[13px] font-medium transition-colors duration-100",
-                          isSelected ? "text-[#F5B942]" : "text-[#8A8278]"
+                          isSelected ? "text-[#7AB88A]" : "text-[#8A8278]"
                         )}>
                           {action.label}
                         </span>
@@ -473,18 +473,18 @@ export function CommandPalette() {
                       onMouseEnter={() => setSelected(i)}
                       className={cn(
                         "w-full flex items-center gap-3 px-5 py-2 text-left transition-colors duration-100",
-                        isSelected ? "bg-[rgba(245,185,66,0.07)]" : "hover:bg-white/[0.03]"
+                        isSelected ? "bg-[rgba(122,184,138,0.07)]" : "hover:bg-white/[0.03]"
                       )}
                     >
                       <span className={cn(
                         "flex items-center justify-center w-6 h-6 rounded-[7px] shrink-0 transition-colors duration-100",
-                        isSelected ? "bg-[rgba(245,185,66,0.14)] text-[#F5B942]" : "bg-white/[0.04] text-[#4A4640]"
+                        isSelected ? "bg-[rgba(122,184,138,0.14)] text-[#7AB88A]" : "bg-white/[0.04] text-[#4A4640]"
                       )}>
                         <Icon className="w-[13px] h-[13px]" strokeWidth={1.8} />
                       </span>
                       <span className={cn(
                         "text-[13px] font-medium transition-colors duration-100",
-                        isSelected ? "text-[#F5B942]" : "text-[#8A8278]"
+                        isSelected ? "text-[#7AB88A]" : "text-[#8A8278]"
                       )}>
                         {nav.label}
                       </span>
@@ -513,19 +513,19 @@ export function CommandPalette() {
                       onMouseEnter={() => setSelected(i)}
                       className={cn(
                         "w-full flex items-center gap-3 px-5 py-2 text-left transition-colors duration-100",
-                        isSelected ? "bg-[rgba(245,185,66,0.07)]" : "hover:bg-white/[0.03]"
+                        isSelected ? "bg-[rgba(122,184,138,0.07)]" : "hover:bg-white/[0.03]"
                       )}
                     >
                       <span className={cn(
                         "flex items-center justify-center w-6 h-6 rounded-[7px] shrink-0 transition-colors duration-100",
-                        isSelected ? "bg-[rgba(245,185,66,0.14)] text-[#F5B942]" : "bg-white/[0.04] text-[#4A4640]"
+                        isSelected ? "bg-[rgba(122,184,138,0.14)] text-[#7AB88A]" : "bg-white/[0.04] text-[#4A4640]"
                       )}>
                         <Icon className="w-[13px] h-[13px]" strokeWidth={1.8} />
                       </span>
                       <div className="flex-1 min-w-0">
                         <span className={cn(
                           "text-[13px] font-medium transition-colors duration-100",
-                          isSelected ? "text-[#F5B942]" : "text-[#8A8278]"
+                          isSelected ? "text-[#7AB88A]" : "text-[#8A8278]"
                         )}>
                           {action.label}
                         </span>
@@ -541,7 +541,7 @@ export function CommandPalette() {
             {/* Loading spinner */}
             {!isQuickNav && loading && (
               <div className="flex items-center justify-center py-8">
-                <div className="w-4 h-4 rounded-full border-2 border-[#F5B942]/20 border-t-[#F5B942] animate-spin" />
+                <div className="w-4 h-4 rounded-full border-2 border-[#7AB88A]/20 border-t-[#7AB88A] animate-spin" />
               </div>
             )}
 
@@ -565,7 +565,7 @@ export function CommandPalette() {
                       className={cn(
                         "w-full flex items-center gap-3 px-5 py-2.5 text-left transition-colors duration-100",
                         isSelected
-                          ? "bg-[rgba(245,185,66,0.07)]"
+                          ? "bg-[rgba(122,184,138,0.07)]"
                           : "hover:bg-white/[0.03]"
                       )}
                     >

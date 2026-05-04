@@ -21,22 +21,22 @@ const config: Config = {
         overlay:  '#252830',
 
         honey: {
-          DEFAULT: '#F5B942',
-          deep:    '#C9920E',
-          bright:  '#FFD166',
-          faint:   'rgba(245, 185, 66, 0.08)',
-          subtle:  'rgba(245, 185, 66, 0.05)',
-          glow:    'rgba(245, 185, 66, 0.22)',
-          border:  'rgba(245, 185, 66, 0.18)',
+          DEFAULT: '#4A7A5A',
+          deep:    '#2E5A3E',
+          bright:  '#7AB88A',
+          faint:   'rgba(74, 122, 90, 0.08)',
+          subtle:  'rgba(74, 122, 90, 0.05)',
+          glow:    'rgba(74, 122, 90, 0.22)',
+          border:  'rgba(74, 122, 90, 0.18)',
         },
 
         blue: {
-          DEFAULT: '#3B82F6',
-          hover:   '#2563EB',
-          faint:   'rgba(59, 130, 246, 0.08)',
-          subtle:  'rgba(59, 130, 246, 0.05)',
-          glow:    'rgba(59, 130, 246, 0.22)',
-          border:  'rgba(59, 130, 246, 0.20)',
+          DEFAULT: '#4A7A5A',
+          hover:   '#3D6B4D',
+          faint:   'rgba(74, 122, 90, 0.08)',
+          subtle:  'rgba(74, 122, 90, 0.05)',
+          glow:    'rgba(74, 122, 90, 0.22)',
+          border:  'rgba(74, 122, 90, 0.20)',
         },
 
         ink: {
@@ -47,10 +47,10 @@ const config: Config = {
         },
 
         semantic: {
-          income:  '#22C55E',
-          expense: '#EF4444',
-          warning: '#F59E0B',
-          info:    '#3B82F6',
+          income:  '#5AA86A',
+          expense: '#C85A5A',
+          warning: '#D4921A',
+          info:    '#4A7A5A',
         },
 
         border: {
@@ -58,7 +58,7 @@ const config: Config = {
           subtle:  '#22252E',
           strong:  '#3A3E4A',
           white:   'rgba(255, 255, 255, 0.09)',
-          honey:   'rgba(245, 185, 66, 0.18)',
+          honey:   'rgba(74, 122, 90, 0.18)',
         },
       },
       animation: {

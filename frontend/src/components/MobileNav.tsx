@@ -54,8 +54,8 @@ export default function MobileNav() {
                     onClick={() => setShowMore(false)}
                     className="flex items-center justify-center py-3 px-2 rounded-xl text-[12px] font-medium"
                     style={{
-                      color: active ? "#3B82F6" : "var(--color-ink-secondary)",
-                      background: active ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.02)",
+                      color: active ? "#4A7A5A" : "var(--color-ink-secondary)",
+                      background: active ? "rgba(74,122,90,0.08)" : "rgba(255,255,255,0.02)",
                     }}
                   >
                     {label}
@@ -83,7 +83,7 @@ export default function MobileNav() {
               key={href}
               href={href}
               className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px]"
-              style={{ color: active ? "#3B82F6" : "var(--color-ink-ghost)" }}
+              style={{ color: active ? "#4A7A5A" : "var(--color-ink-ghost)" }}
             >
               <Icon size={20} strokeWidth={active ? 2.1 : 1.8} />
               <span style={{ fontSize: 9, fontWeight: 500, letterSpacing: "0.03em" }}>{label}</span>
@@ -93,7 +93,7 @@ export default function MobileNav() {
         <button
           onClick={() => setShowMore((s) => !s)}
           className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px]"
-          style={{ color: showMore ? "#3B82F6" : "var(--color-ink-ghost)" }}
+          style={{ color: showMore ? "#4A7A5A" : "var(--color-ink-ghost)" }}
         >
           <MoreHorizontal size={20} strokeWidth={1.8} />
           <span style={{ fontSize: 9, fontWeight: 500, letterSpacing: "0.03em" }}>More</span>

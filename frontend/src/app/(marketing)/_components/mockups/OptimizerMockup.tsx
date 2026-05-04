@@ -24,14 +24,14 @@ export default function OptimizerMockup() {
             key={card}
             className="flex items-center justify-between px-3 py-2.5 rounded-xl"
             style={{
-              background: best ? "rgba(245,185,66,0.07)" : "rgba(255,255,255,0.025)",
-              border: `1px solid ${best ? "rgba(245,185,66,0.2)" : "transparent"}`,
+              background: best ? "rgba(122,184,138,0.07)" : "rgba(255,255,255,0.025)",
+              border: `1px solid ${best ? "rgba(122,184,138,0.2)" : "transparent"}`,
             }}
           >
             <div className="flex items-center gap-3">
               <span
                 className="text-[11px] font-mono w-4 text-center"
-                style={{ color: best ? "#F5B942" : "#3D4257" }}
+                style={{ color: best ? "#7AB88A" : "#3D4257" }}
               >
                 {rank}
               </span>
@@ -40,7 +40,7 @@ export default function OptimizerMockup() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-[11px] font-mono" style={{ color: best ? "#F5B942" : "#3D4257" }}>
+              <span className="text-[11px] font-mono" style={{ color: best ? "#7AB88A" : "#3D4257" }}>
                 {earn}
               </span>
               <span
@@ -52,7 +52,7 @@ export default function OptimizerMockup() {
               {best && (
                 <span
                   className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                  style={{ background: "rgba(245,185,66,0.15)", color: "#F5B942" }}
+                  style={{ background: "rgba(122,184,138,0.15)", color: "#7AB88A" }}
                 >
                   BEST
                 </span>

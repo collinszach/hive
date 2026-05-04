@@ -97,13 +97,13 @@ select {
 
 .hive-card-hero {
   background: #252830;
-  border: 1px solid rgba(59,130,246,0.20);
+  border: 1px solid rgba(74,122,90,0.20);
   border-radius: 12px;
 }
 
 .hive-card-rewards {
   background: #252830;
-  border: 1px solid rgba(245,185,66,0.18);
+  border: 1px solid rgba(122,184,138,0.18);
   border-radius: 10px;
 }
 
@@ -122,9 +122,9 @@ select {
 
 /* ── Page hero glow backgrounds ────────────────────────────── */
 
-.glow-blue   { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(59,130,246,0.14) 0%, transparent 70%); }
+.glow-blue   { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(74,122,90,0.14) 0%, transparent 70%); }
 .glow-green  { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(34,197,94,0.14) 0%, transparent 70%); }
-.glow-amber  { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(245,185,66,0.14) 0%, transparent 70%); }
+.glow-amber  { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(122,184,138,0.14) 0%, transparent 70%); }
 .glow-red    { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(239,68,68,0.12) 0%, transparent 70%); }
 .glow-violet { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(167,139,250,0.14) 0%, transparent 70%); }
 

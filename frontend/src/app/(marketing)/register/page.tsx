@@ -140,8 +140,8 @@ export default function RegisterPage() {
           className="pointer-events-none absolute inset-0"
           style={{
             background: `
-              radial-gradient(ellipse 80% 60% at 20% 10%, rgba(245,185,66,0.12) 0%, transparent 65%),
-              radial-gradient(ellipse 60% 50% at 80% 80%, rgba(245,185,66,0.06) 0%, transparent 60%)
+              radial-gradient(ellipse 80% 60% at 20% 10%, rgba(122,184,138,0.12) 0%, transparent 65%),
+              radial-gradient(ellipse 60% 50% at 80% 80%, rgba(122,184,138,0.06) 0%, transparent 60%)
             `,
           }}
         />
@@ -208,7 +208,7 @@ export default function RegisterPage() {
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 50% 50% at 50% 0%, rgba(245,185,66,0.04) 0%, transparent 70%)",
+              "radial-gradient(ellipse 50% 50% at 50% 0%, rgba(122,184,138,0.04) 0%, transparent 70%)",
           }}
         />
 

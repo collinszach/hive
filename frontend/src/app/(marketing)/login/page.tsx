@@ -88,11 +88,11 @@ function TotpBoxes({
             onFocus={(e) => e.target.select()}
             className="w-11 h-14 text-center text-[22px] font-mono font-medium rounded-xl outline-none transition-all duration-150"
             style={{
-              background: filled ? "rgba(245,185,66,0.07)" : "rgba(255,255,255,0.03)",
-              border: `1.5px solid ${filled ? "rgba(245,185,66,0.35)" : "rgba(255,255,255,0.08)"}`,
+              background: filled ? "rgba(122,184,138,0.07)" : "rgba(255,255,255,0.03)",
+              border: `1.5px solid ${filled ? "rgba(122,184,138,0.35)" : "rgba(255,255,255,0.08)"}`,
               color: "#EEEEF0",
               caretColor: "transparent",
-              boxShadow: filled ? "0 0 14px rgba(245,185,66,0.07)" : "none",
+              boxShadow: filled ? "0 0 14px rgba(122,184,138,0.07)" : "none",
             }}
           />
         );
@@ -125,7 +125,7 @@ function Field({
     <div className="mb-5">
       <label
         className="block text-[10px] font-semibold uppercase tracking-[0.18em] mb-2 transition-colors duration-150"
-        style={{ color: focused ? "rgba(245,185,66,0.65)" : "rgba(255,255,255,0.22)" }}
+        style={{ color: focused ? "rgba(122,184,138,0.65)" : "rgba(255,255,255,0.22)" }}
       >
         {label}
       </label>
@@ -142,7 +142,7 @@ function Field({
           className="w-full bg-transparent text-[15px] py-2 outline-none transition-all duration-150"
           style={{
             color: "#EEEEF0",
-            borderBottom: `1.5px solid ${focused ? "rgba(245,185,66,0.50)" : "rgba(255,255,255,0.10)"}`,
+            borderBottom: `1.5px solid ${focused ? "rgba(122,184,138,0.50)" : "rgba(255,255,255,0.10)"}`,
             paddingRight: suffix ? 36 : 0,
             fontFamily: "inherit",
           }}
@@ -268,7 +268,7 @@ export default function LoginPage() {
         className="absolute inset-x-0 top-0 h-[480px] pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 70% 50% at 50% -5%, rgba(245,185,66,0.07) 0%, transparent 70%)",
+            "radial-gradient(ellipse 70% 50% at 50% -5%, rgba(122,184,138,0.07) 0%, transparent 70%)",
         }}
       />
       {/* Hex grid */}

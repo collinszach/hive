@@ -59,9 +59,9 @@ export default function PricingSection() {
                   onClick={() => setAnnual(label === "Annual")}
                   className="px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150"
                   style={{
-                    background: isActive ? "rgba(245,185,66,0.10)" : "transparent",
-                    color: isActive ? "#F5B942" : "#5A6475",
-                    border: isActive ? "1px solid rgba(245,185,66,0.20)" : "1px solid transparent",
+                    background: isActive ? "rgba(122,184,138,0.10)" : "transparent",
+                    color: isActive ? "#7AB88A" : "#5A6475",
+                    border: isActive ? "1px solid rgba(122,184,138,0.20)" : "1px solid transparent",
                   }}
                 >
                   {label}
@@ -118,14 +118,14 @@ export default function PricingSection() {
           <div
             className="rounded-2xl p-7 flex flex-col gap-6 relative"
             style={{
-              background: "linear-gradient(145deg, rgba(245,185,66,0.08), rgba(245,185,66,0.03))",
-              border: "1px solid rgba(245,185,66,0.22)",
+              background: "linear-gradient(145deg, rgba(122,184,138,0.08), rgba(122,184,138,0.03))",
+              border: "1px solid rgba(122,184,138,0.22)",
             }}
           >
             {/* Badge */}
             <div
               className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[9px] font-bold tracking-widest"
-              style={{ background: "#F5B942", color: "#09090E" }}
+              style={{ background: "#7AB88A", color: "#09090E" }}
             >
               MOST POPULAR
             </div>
@@ -145,7 +145,7 @@ export default function PricingSection() {
                 <li key={f} className="flex items-start gap-2.5">
                   <Check
                     className="w-3.5 h-3.5 mt-0.5 shrink-0"
-                    style={{ color: "#F5B942" }}
+                    style={{ color: "#7AB88A" }}
                     strokeWidth={2.5}
                   />
                   <span className="text-[13px] text-ink-secondary">{f}</span>
@@ -166,8 +166,8 @@ export default function PricingSection() {
         <div
           className="rounded-2xl p-6 mb-4 text-center"
           style={{
-            background: "rgba(245,185,66,0.04)",
-            border: "1px solid rgba(245,185,66,0.14)",
+            background: "rgba(122,184,138,0.04)",
+            border: "1px solid rgba(122,184,138,0.14)",
           }}
         >
           <p className="text-[14px] font-bold text-ink-primary mb-1">
