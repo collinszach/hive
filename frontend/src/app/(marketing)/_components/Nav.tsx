@@ -13,9 +13,17 @@ export default function Nav() {
         borderBottom: "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      {/* Logo */}
+      {/* Logo — tessellated H mark */}
       <Link href="/" className="flex items-center gap-2.5 shrink-0">
-        <HiveHex size={28} />
+        <svg width="22" height="20" viewBox="0 0 57 50" fill="none" style={{ flexShrink: 0 }}>
+          <polygon points="10,2 18,6.5 18,15.5 10,20 2,15.5 2,6.5" fill="#F5B942"/>
+          <polygon points="10,18 18,22.5 18,31.5 10,36 2,31.5 2,22.5" fill="#F5B942"/>
+          <polygon points="10,34 18,38.5 18,47.5 10,52 2,47.5 2,38.5" fill="#F5B942"/>
+          <polygon points="28,18 36,22.5 36,31.5 28,36 20,31.5 20,22.5" fill="#F5B942"/>
+          <polygon points="46,2 54,6.5 54,15.5 46,20 38,15.5 38,6.5" fill="#F5B942"/>
+          <polygon points="46,18 54,22.5 54,31.5 46,36 38,31.5 38,22.5" fill="#F5B942"/>
+          <polygon points="46,34 54,38.5 54,47.5 46,52 38,47.5 38,38.5" fill="#F5B942"/>
+        </svg>
         <span className="text-[13px] font-bold tracking-[0.1em] text-ink-primary">HIVE</span>
       </Link>
 

@@ -157,7 +157,7 @@ export default function RegisterPage() {
 
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
-          <HiveHex size={38} />
+          <svg width="38" height="34" viewBox="0 0 57 50" fill="none"><polygon points="10,2 18,6.5 18,15.5 10,20 2,15.5 2,6.5" fill="#F5B942"/><polygon points="10,18 18,22.5 18,31.5 10,36 2,31.5 2,22.5" fill="#F5B942"/><polygon points="10,34 18,38.5 18,47.5 10,52 2,47.5 2,38.5" fill="#F5B942"/><polygon points="28,18 36,22.5 36,31.5 28,36 20,31.5 20,22.5" fill="#F5B942"/><polygon points="46,2 54,6.5 54,15.5 46,20 38,15.5 38,6.5" fill="#F5B942"/><polygon points="46,18 54,22.5 54,31.5 46,36 38,31.5 38,22.5" fill="#F5B942"/><polygon points="46,34 54,38.5 54,47.5 46,52 38,47.5 38,38.5" fill="#F5B942"/></svg>
           <span className="text-[17px] font-bold tracking-[-0.01em] text-ink-primary">HIVE</span>
         </div>
 
@@ -215,7 +215,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-[400px] relative z-10">
           {/* Mobile logo */}
           <div className="flex flex-col items-center mb-10 lg:hidden">
-            <HiveHex size={48} />
+            <svg width="48" height="44" viewBox="0 0 57 50" fill="none"><polygon points="10,2 18,6.5 18,15.5 10,20 2,15.5 2,6.5" fill="#F5B942"/><polygon points="10,18 18,22.5 18,31.5 10,36 2,31.5 2,22.5" fill="#F5B942"/><polygon points="10,34 18,38.5 18,47.5 10,52 2,47.5 2,38.5" fill="#F5B942"/><polygon points="28,18 36,22.5 36,31.5 28,36 20,31.5 20,22.5" fill="#F5B942"/><polygon points="46,2 54,6.5 54,15.5 46,20 38,15.5 38,6.5" fill="#F5B942"/><polygon points="46,18 54,22.5 54,31.5 46,36 38,31.5 38,22.5" fill="#F5B942"/><polygon points="46,34 54,38.5 54,47.5 46,52 38,47.5 38,38.5" fill="#F5B942"/></svg>
             <h1 className="text-2xl font-bold text-ink-primary mt-3">HIVE</h1>
             <p className="text-[13px] text-ink-tertiary mt-1">Your money, your data, your rules.</p>
           </div>

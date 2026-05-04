@@ -283,18 +283,26 @@ export default function LoginPage() {
       />
 
       <div className="w-full max-w-[320px] relative z-10">
-        {/* Brand */}
+        {/* Brand — tessellated H mark */}
         <div className="text-center mb-12">
-          <div className="flex justify-center mb-4">
-            <HiveHex size={46} />
+          <div className="flex justify-center mb-5">
+            <svg width="52" height="48" viewBox="0 0 57 50" fill="none">
+              <polygon points="10,2 18,6.5 18,15.5 10,20 2,15.5 2,6.5" fill="#F5B942"/>
+              <polygon points="10,18 18,22.5 18,31.5 10,36 2,31.5 2,22.5" fill="#F5B942"/>
+              <polygon points="10,34 18,38.5 18,47.5 10,52 2,47.5 2,38.5" fill="#F5B942"/>
+              <polygon points="28,18 36,22.5 36,31.5 28,36 20,31.5 20,22.5" fill="#F5B942"/>
+              <polygon points="46,2 54,6.5 54,15.5 46,20 38,15.5 38,6.5" fill="#F5B942"/>
+              <polygon points="46,18 54,22.5 54,31.5 46,36 38,31.5 38,22.5" fill="#F5B942"/>
+              <polygon points="46,34 54,38.5 54,47.5 46,52 38,47.5 38,38.5" fill="#F5B942"/>
+            </svg>
           </div>
           <p
-            className="text-[36px] font-bold tracking-[0.3em]"
-            style={{ color: "#F2EDE8", fontFamily: "var(--font-geist, inherit)" }}
+            className="text-[28px] font-bold tracking-[0.2em]"
+            style={{ color: "#F0F2F5" }}
           >
             HIVE
           </p>
-          <p className="text-[10px] font-semibold tracking-[0.2em] uppercase mt-1" style={{ color: "rgba(255,255,255,0.18)" }}>
+          <p className="text-[10px] font-medium tracking-[0.2em] uppercase mt-1.5" style={{ color: "rgba(255,255,255,0.22)" }}>
             Personal Finance Intelligence
           </p>
         </div>
