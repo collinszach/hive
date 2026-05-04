@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, FormEvent } from "react";
 import { usePlaidLink, PlaidLinkOptions, PlaidLinkOnSuccess } from "react-plaid-link";
 import Link from "next/link";
 import {
@@ -226,9 +226,16 @@ export default function ConnectPage() {
   };
   const { open, ready } = usePlaidLink(config);
 
+  // Auto-open Plaid Link when token is set (new connection or reauth)
+  const prevTokenRef = useRef<string | null>(null);
   useEffect(() => {
-    if (ready && receivedRedirectUri) open();
-  }, [ready, receivedRedirectUri, open]);
+    if (ready && receivedRedirectUri) { open(); return; }
+    // Open when token changes (e.g. reauth button clicked)
+    if (ready && linkToken && linkToken !== prevTokenRef.current) {
+      prevTokenRef.current = linkToken;
+      open();
+    }
+  }, [ready, linkToken, receivedRedirectUri, open]);
 
   const onInvestSuccess = useCallback<PlaidLinkOnSuccess>(async (public_token, metadata) => {
     setInvestLinkLoading(true);
