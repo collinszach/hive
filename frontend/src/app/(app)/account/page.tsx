@@ -151,9 +151,9 @@ export default function AccountPage() {
     setNewPw("");
   }
 
-  function handleLogout() {
-    clearToken();
-    router.push("/login");
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    window.location.href = "/login";
   }
 
   async function patchUser(id: string, patch: Partial<{ role: "admin" | "viewer"; plan: string; is_active: boolean }>) {

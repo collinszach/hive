@@ -37,36 +37,19 @@ import { toast } from "@/components/Toast";
 const NAV_SECTIONS = [
   {
     items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/chat",      label: "Chat",      icon: MessageSquare },
-    ],
-  },
-  {
-    label: "MONEY IN / OUT",
-    items: [
-      { href: "/transactions",  label: "Transactions",  icon: Receipt },
-      { href: "/income",        label: "Income",        icon: ArrowDownLeft },
-      { href: "/bills",         label: "Bills",         icon: CalendarClock },
-      { href: "/subscriptions", label: "Subscriptions", icon: RefreshCw },
-      { href: "/cash-flow",     label: "Cash Flow",     icon: TrendingDown },
-    ],
-  },
-  {
-    label: "PLANNING",
-    items: [
-      { href: "/budgets", label: "Budgets", icon: Target },
-      { href: "/goals",   label: "Goals",   icon: Flag },
-      { href: "/debt",    label: "Debt",    icon: TrendingDown },
-      { href: "/plan",    label: "Plan",    icon: Calendar },
+      { href: "/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
+      { href: "/transactions", label: "Transactions", icon: Receipt },
+      { href: "/budgets",      label: "Budgets",      icon: Target },
+      { href: "/cash-flow",    label: "Cash Flow",    icon: TrendingDown },
     ],
   },
   {
     label: "WEALTH",
     items: [
       { href: "/net-worth", label: "Net Worth", icon: TrendingUp },
-      { href: "/position",  label: "Position",  icon: Wallet },
+      { href: "/income",    label: "Income",    icon: ArrowDownLeft },
+      { href: "/bills",     label: "Bills",     icon: CalendarClock },
       { href: "/reports",   label: "Reports",   icon: BarChart2 },
-      { href: "/insights",  label: "Insights",  icon: Bell },
     ],
   },
   {
@@ -79,10 +62,9 @@ const NAV_SECTIONS = [
 ] as const;
 
 const NAV_BOTTOM = [
-  { href: "/merchants", label: "Merchants", icon: Store },
-  { href: "/rules",     label: "Rules",     icon: Filter },
-  { href: "/anomalies", label: "Anomalies", icon: AlertTriangle },
-  { href: "/connect",   label: "Connect",   icon: LinkIcon },
+  { href: "/connect",   label: "Accounts",  icon: LinkIcon },
+  { href: "/insights",  label: "Insights",  icon: Bell },
+  { href: "/chat",      label: "Chat",      icon: MessageSquare },
 ] as const;
 
 // ── NavItem ───────────────────────────────────────────────────
@@ -258,8 +240,7 @@ export default function Sidebar() {
               const active = href === "/dashboard"
                 ? pathname === href
                 : pathname.startsWith(href);
-              const badge =
-                href === "/insights" && unreadCount > 0 ? unreadCount : undefined;
+              const badge = undefined;
               return (
                 <NavItem
                   key={href}
@@ -282,7 +263,7 @@ export default function Sidebar() {
       <div style={{ paddingTop: 4, paddingBottom: 4 }}>
         {NAV_BOTTOM.map(({ href, label, icon }) => {
           const active = pathname.startsWith(href);
-          const badge = href === "/anomalies" && anomalyCount > 0 ? anomalyCount : undefined;
+          const badge = href === "/insights" && unreadCount > 0 ? unreadCount : undefined;
           return (
             <NavItem key={href} href={href} label={label} icon={icon} active={active} badge={badge} />
           );
@@ -423,33 +404,7 @@ export default function Sidebar() {
           </span>
         </Link>
 
-        {/* Sign out */}
-        <button
-          onClick={async () => {
-            await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-            window.location.href = "/login";
-          }}
-          className="sidebar-sign-out"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            height: 34,
-            padding: "0 10px",
-            marginLeft: 6,
-            borderRadius: 7,
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-            width: "calc(100% - 12px)",
-            transition: "background 120ms ease",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          <span style={{ fontSize: 13, fontWeight: 500, color: "#6B7280" }}>Sign out</span>
-        </button>
+        {/* Sign out moved to /account page */}
       </div>
 
       {/* Spin keyframe */}
