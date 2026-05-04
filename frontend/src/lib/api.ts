@@ -131,6 +131,8 @@ export interface LinkedInstitution {
   item_id: string;
   institution_name: string;
   institution_id: string | null;
+  last_sync_at: string | null;
+  last_sync_error: string | null;
   accounts: Account[];
 }
 

@@ -424,9 +424,16 @@ export default function ConnectPage() {
                     <Building2 className="w-4 h-4 text-ink-tertiary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-ink-primary truncate">
-                      {inst.institution_name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[13px] font-medium text-ink-primary truncate">
+                        {inst.institution_name}
+                      </p>
+                      {inst.last_sync_error && (
+                        <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider bg-semantic-expense/10 text-semantic-expense border border-semantic-expense/20">
+                          Needs reauth
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[11px] text-ink-tertiary font-mono">
                       {inst.accounts.length} account{inst.accounts.length !== 1 ? "s" : ""}
                       <span className="mx-1.5 opacity-40">·</span>
