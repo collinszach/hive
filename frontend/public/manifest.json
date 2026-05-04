@@ -1,6 +1,6 @@
 {
-  "name": "Saplyn",
-  "short_name": "Saplyn",
+  "name": "Hive",
+  "short_name": "Hive",
   "description": "Self-hosted personal finance intelligence platform",
   "start_url": "/",
   "display": "standalone",

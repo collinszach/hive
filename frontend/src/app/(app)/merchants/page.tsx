@@ -200,7 +200,7 @@ function MerchantsPageInner() {
                 <XAxis dataKey="month" {...CHART_AXIS_PROPS} />
                 <YAxis {...CHART_AXIS_PROPS} tickFormatter={(v) => `$${v}`} />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="total" fill="#7AB88A" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="total" fill="#F5B942" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

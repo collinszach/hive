@@ -48,7 +48,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Saplyn API",
+    title="Hive API",
     description="Self-hosted personal finance intelligence platform",
     version="0.1.0",
     docs_url=None,
@@ -89,7 +89,7 @@ async def require_auth(request: Request, call_next):
         return await call_next(request)
 
     # Try cookie first, then Bearer header
-    token = request.cookies.get("saplyn_auth")
+    token = request.cookies.get("hive_auth")
     if not token:
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer "):

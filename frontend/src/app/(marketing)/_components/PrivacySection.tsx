@@ -37,7 +37,7 @@ export default function PrivacySection() {
           PRIVATE BY DESIGN
         </p>
         <h2 className="text-[34px] sm:text-[42px] font-bold tracking-[-0.02em] leading-tight text-ink-primary mb-4">
-          Saplyn can&apos;t pull a Mint.
+          Hive can&apos;t pull a Mint.
           <br />
           <span className="text-ink-secondary">The code is yours.</span>
         </h2>
@@ -77,7 +77,7 @@ export default function PrivacySection() {
             <ArrowRight className="w-4 h-4" />
           </Link>
           <a
-            href="https://github.com/collinszach/saplyn"
+            href="https://github.com/collinszach/hive"
             target="_blank"
             rel="noopener noreferrer"
             className="hive-btn-secondary w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 text-[15px] rounded-[10px]"

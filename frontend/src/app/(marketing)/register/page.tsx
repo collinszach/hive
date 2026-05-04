@@ -140,8 +140,8 @@ export default function RegisterPage() {
           className="pointer-events-none absolute inset-0"
           style={{
             background: `
-              radial-gradient(ellipse 80% 60% at 20% 10%, rgba(122,184,138,0.12) 0%, transparent 65%),
-              radial-gradient(ellipse 60% 50% at 80% 80%, rgba(122,184,138,0.06) 0%, transparent 60%)
+              radial-gradient(ellipse 80% 60% at 20% 10%, rgba(245,185,66,0.12) 0%, transparent 65%),
+              radial-gradient(ellipse 60% 50% at 80% 80%, rgba(245,185,66,0.06) 0%, transparent 60%)
             `,
           }}
         />
@@ -158,7 +158,7 @@ export default function RegisterPage() {
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
           <HiveHex size={38} />
-          <span className="text-[17px] font-bold tracking-[-0.01em] text-ink-primary">SAPLYN</span>
+          <span className="text-[17px] font-bold tracking-[-0.01em] text-ink-primary">HIVE</span>
         </div>
 
         {/* Center hero */}
@@ -208,7 +208,7 @@ export default function RegisterPage() {
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 50% 50% at 50% 0%, rgba(122,184,138,0.04) 0%, transparent 70%)",
+              "radial-gradient(ellipse 50% 50% at 50% 0%, rgba(245,185,66,0.04) 0%, transparent 70%)",
           }}
         />
 
@@ -216,7 +216,7 @@ export default function RegisterPage() {
           {/* Mobile logo */}
           <div className="flex flex-col items-center mb-10 lg:hidden">
             <HiveHex size={48} />
-            <h1 className="text-2xl font-bold text-ink-primary mt-3">SAPLYN</h1>
+            <h1 className="text-2xl font-bold text-ink-primary mt-3">HIVE</h1>
             <p className="text-[13px] text-ink-tertiary mt-1">Your money, your data, your rules.</p>
           </div>
 

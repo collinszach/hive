@@ -46,7 +46,7 @@ const TYPE_CONFIG: Record<
   success: { color: "#34D399", Icon: CheckCircle2 },
   error:   { color: "#F87171", Icon: XCircle },
   info:    { color: "#38BDF8", Icon: Info },
-  warning: { color: "#7AB88A", Icon: AlertTriangle },
+  warning: { color: "#F5B942", Icon: AlertTriangle },
 };
 
 interface ToastCardProps {

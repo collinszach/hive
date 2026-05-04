@@ -13,14 +13,14 @@ export default function PrivacyPage() {
           <h1 className="text-xl font-semibold text-white">Privacy Policy</h1>
         </div>
         <p className="text-sm text-slate-500">
-          Last updated: {lastUpdated} · Saplyn (self-hosted personal finance platform)
+          Last updated: {lastUpdated} · Hive (self-hosted personal finance platform)
         </p>
       </div>
 
       <section className="rounded-xl bg-slate-900 border border-slate-800 p-6 space-y-4">
         <h2 className="text-base font-semibold text-white">1. Overview</h2>
         <p className="text-sm text-slate-400 leading-relaxed">
-          Saplyn is a self-hosted, single-user personal finance platform. It is operated
+          Hive is a self-hosted, single-user personal finance platform. It is operated
           exclusively by and for the individual who deployed this instance on their own infrastructure.
           No data is shared with any third party except as necessary to operate the service (e.g.,
           Plaid for bank connectivity, Anthropic/Ollama for AI features).
@@ -36,7 +36,7 @@ export default function PrivacyPage() {
         <h2 className="text-base font-semibold text-white">2. Data We Collect</h2>
         <div className="space-y-3 text-sm text-slate-400 leading-relaxed">
           <p><strong className="text-slate-200">Financial data via Plaid:</strong> Transaction history, account balances, institution names, and account identifiers retrieved from your linked bank and credit card accounts. Plaid access tokens are stored encrypted at rest using AES-256 (Fernet).</p>
-          <p><strong className="text-slate-200">Account credentials:</strong> Your Saplyn login username and bcrypt-hashed password. Plaintext passwords are never stored.</p>
+          <p><strong className="text-slate-200">Account credentials:</strong> Your Hive login username and bcrypt-hashed password. Plaintext passwords are never stored.</p>
           <p><strong className="text-slate-200">Authentication events:</strong> An audit log of login attempts, MFA events, and administrative actions, including IP address and timestamp.</p>
           <p><strong className="text-slate-200">AI chat history:</strong> Messages sent to the AI chat interface are processed by Anthropic Claude or a local Ollama model. Anthropic may process these according to their privacy policy. Local Ollama processing stays entirely on-device.</p>
         </div>
@@ -106,7 +106,7 @@ export default function PrivacyPage() {
       <section className="rounded-xl bg-slate-900 border border-slate-800 p-6 space-y-4">
         <h2 className="text-base font-semibold text-white">7. Your Rights</h2>
         <ul className="space-y-2 text-sm text-slate-400 list-disc list-inside leading-relaxed">
-          <li><strong className="text-slate-200">Access:</strong> All your data is visible within the Saplyn interface</li>
+          <li><strong className="text-slate-200">Access:</strong> All your data is visible within the Hive interface</li>
           <li><strong className="text-slate-200">Deletion:</strong> Delete all financial data at any time from Security Settings</li>
           <li><strong className="text-slate-200">Portability:</strong> Transaction data can be exported from the Transactions page</li>
           <li><strong className="text-slate-200">Correction:</strong> Transaction categories can be manually corrected inline</li>
@@ -119,7 +119,7 @@ export default function PrivacyPage() {
         <p className="text-sm text-slate-400">
           This is a self-hosted personal deployment. The data controller is the individual operating
           this instance. For questions about this privacy policy, refer to the system administrator
-          of this Saplyn instance.
+          of this Hive instance.
         </p>
       </section>
     </div>

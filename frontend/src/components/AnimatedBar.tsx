@@ -38,7 +38,7 @@ export function AnimatedBar({
         className="h-full rounded-full"
         style={{
           width: `${width}%`,
-          background: color ?? "linear-gradient(90deg, #4A7A5A, #60A5FA)",
+          background: color ?? "linear-gradient(90deg, #3B82F6, #60A5FA)",
           transition: `width 800ms cubic-bezier(0.16, 1, 0.3, 1)`,
           transitionDelay: `${delay}ms`,
         }}

@@ -225,7 +225,7 @@ function BudgetCard({
                       data={trendData}
                       width={56}
                       height={20}
-                      color={isOver ? "#ef4444" : isWarning ? "#7AB88A" : "#2d9e72"}
+                      color={isOver ? "#ef4444" : isWarning ? "#F5B942" : "#2d9e72"}
                     />
                   </span>
                 )}

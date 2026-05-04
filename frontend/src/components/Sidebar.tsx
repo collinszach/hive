@@ -110,8 +110,8 @@ function NavItem({
         height: 34,
         padding: "0 10px",
         borderRadius: 7,
-        borderLeft: active ? "2px solid #4A7A5A" : "2px solid transparent",
-        background: active ? "rgba(74,122,90,0.10)" : "transparent",
+        borderLeft: active ? "2px solid #3B82F6" : "2px solid transparent",
+        background: active ? "rgba(59,130,246,0.10)" : "transparent",
         color: active ? "#F0F2F5" : "#6B7280",
         fontSize: 13,
         fontWeight: 500,
@@ -142,7 +142,7 @@ function NavItem({
           minWidth: 16,
           height: 16,
           borderRadius: 8,
-          background: "#4A7A5A",
+          background: "#3B82F6",
           color: "#fff",
           fontSize: 9,
           fontWeight: 700,
@@ -229,14 +229,16 @@ export default function Sidebar() {
           flexShrink: 0,
         }}
       >
-        {/* Saplyn sprout mark */}
-        <svg width="24" height="24" viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
-          <path d="M16 28 L16 14" stroke="var(--color-honey-bright)" strokeWidth="2" strokeLinecap="round"/>
-          <path d="M16 14 C 16 8, 20 5, 26 5 C 26 11, 22 14, 16 14 Z" fill="var(--color-honey-bright)"/>
-          <path d="M16 18 C 16 14, 13 11, 8 11 C 8 16, 11 18, 16 18 Z" fill="var(--color-honey-bright)" opacity="0.55"/>
-        </svg>
+        {/* Hive hex mark */}
+        <div style={{ width: 26, height: 26, borderRadius: 6, background: "#F5B942", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <polygon points="8,1 14,4.5 14,11.5 8,15 2,11.5 2,4.5" stroke="#0B0C0F" strokeWidth="1.5" fill="none" />
+            <polygon points="8,4 11.5,6 11.5,10 8,12 4.5,10 4.5,6" stroke="#0B0C0F" strokeWidth="1" fill="#0B0C0F" opacity="0.35" />
+            <circle cx="8" cy="8" r="1.2" fill="#0B0C0F" />
+          </svg>
+        </div>
         <span style={{ fontSize: 15, fontWeight: 700, color: "#F0F2F5", letterSpacing: "-0.02em" }}>
-          Saplyn
+          Hive
         </span>
       </Link>
 
@@ -289,7 +291,7 @@ export default function Sidebar() {
       <div style={{ padding: "6px 8px 14px" }}>
         {/* Search */}
         <button
-          onClick={() => window.dispatchEvent(new CustomEvent("saplyn:cmd-k"))}
+          onClick={() => window.dispatchEvent(new CustomEvent("hive:cmd-k"))}
           style={{
             display: "flex",
             alignItems: "center",
@@ -335,7 +337,7 @@ export default function Sidebar() {
             borderRadius: 7,
             border: "none",
             background: "transparent",
-            color: syncing ? "#7AB88A" : "#4B5563",
+            color: syncing ? "#F5B942" : "#4B5563",
             fontSize: 13,
             fontWeight: 500,
             cursor: syncing ? "not-allowed" : "pointer",
@@ -392,15 +394,15 @@ export default function Sidebar() {
             borderRadius: 7,
             textDecoration: "none",
             transition: "background 120ms ease",
-            background: pathname.startsWith("/account") ? "rgba(74,122,90,0.10)" : "transparent",
-            borderLeft: pathname.startsWith("/account") ? "2px solid #4A7A5A" : "2px solid transparent",
+            background: pathname.startsWith("/account") ? "rgba(59,130,246,0.10)" : "transparent",
+            borderLeft: pathname.startsWith("/account") ? "2px solid #3B82F6" : "2px solid transparent",
           }}
         >
           <div style={{
             width: 22,
             height: 22,
             borderRadius: "50%",
-            background: "#7AB88A",
+            background: "#F5B942",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

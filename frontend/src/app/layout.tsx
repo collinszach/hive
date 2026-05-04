@@ -33,13 +33,13 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Saplyn",
+  title: "Hive",
   description: "Your money, your data, your rules.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Saplyn",
+    title: "Hive",
   },
   viewport: {
     width: "device-width",

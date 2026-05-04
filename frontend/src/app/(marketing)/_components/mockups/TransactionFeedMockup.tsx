@@ -3,9 +3,9 @@
 const TRANSACTIONS = [
   { merchant: "Whole Foods Market",   category: "Groceries",   amount: "-$94.32",  time: "2h ago",  color: "#34D399" },
   { merchant: "Amex Gold",            category: "Payment",     amount: "+$1,200",  time: "5h ago",  color: "#60A5FA" },
-  { merchant: "Nobu Restaurant",      category: "Dining",      amount: "-$180.00", time: "Yesterday",color: "#7AB88A" },
+  { merchant: "Nobu Restaurant",      category: "Dining",      amount: "-$180.00", time: "Yesterday",color: "#F5B942" },
   { merchant: "Netflix",              category: "Streaming",   amount: "-$15.99",  time: "2 days",  color: "#A78BFA" },
-  { merchant: "Lyft",                 category: "Rideshare",   amount: "-$24.10",  time: "3 days",  color: "#7AB88A" },
+  { merchant: "Lyft",                 category: "Rideshare",   amount: "-$24.10",  time: "3 days",  color: "#F5B942" },
 ];
 
 export default function TransactionFeedMockup() {

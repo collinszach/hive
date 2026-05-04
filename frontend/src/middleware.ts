@@ -16,7 +16,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Check for auth cookie
-  const token = request.cookies.get("saplyn_auth");
+  const token = request.cookies.get("hive_auth");
   if (!token) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);

@@ -49,7 +49,7 @@ class PlaidConnector:
         """
         kwargs: dict = dict(
             products=[Products("transactions")],
-            client_name="Saplyn",
+            client_name="Hive",
             country_codes=[CountryCode("US")],
             language="en",
             user=LinkTokenCreateRequestUser(client_user_id=user_id),
@@ -71,7 +71,7 @@ class PlaidConnector:
         """
         kwargs: dict = dict(
             products=[Products("investments")],
-            client_name="Saplyn",
+            client_name="Hive",
             country_codes=[CountryCode("US")],
             language="en",
             user=LinkTokenCreateRequestUser(client_user_id=user_id),

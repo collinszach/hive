@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Github } from "lucide-react";
 
 const KPI_CARDS = [
-  { label: "Net Cash",     value: "$8,240",  color: "#7AB88A" },
+  { label: "Net Cash",     value: "$8,240",  color: "#F5B942" },
   { label: "Total Assets", value: "$142,100", color: "#34D399" },
   { label: "Points Value", value: "$1,842",  color: "#60A5FA" },
   { label: "Monthly Spend",value: "$3,210",  color: "#A0A8B8" },
@@ -18,7 +18,7 @@ export default function Hero() {
         className="absolute inset-x-0 top-0 h-[640px] pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 80% 55% at 50% -5%, rgba(122,184,138,0.10) 0%, transparent 70%)",
+            "radial-gradient(ellipse 80% 55% at 50% -5%, rgba(245,185,66,0.10) 0%, transparent 70%)",
         }}
       />
       {/* Hex grid texture */}
@@ -46,7 +46,7 @@ export default function Hero() {
           Your money,{" "}
           <span
             style={{
-              background: "linear-gradient(135deg, #FFD166 0%, #7AB88A 55%, #4A7A5A 100%)",
+              background: "linear-gradient(135deg, #FFD166 0%, #F5B942 55%, #3B82F6 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -60,7 +60,7 @@ export default function Hero() {
 
         {/* Subhead */}
         <p className="text-[18px] sm:text-[20px] leading-relaxed text-ink-secondary max-w-[580px] mx-auto mb-10">
-          Saplyn syncs every account, categorizes every transaction with AI, and tells you
+          Hive syncs every account, categorizes every transaction with AI, and tells you
           which credit card earns the most on every purchase — automatically.
         </p>
 
@@ -74,7 +74,7 @@ export default function Hero() {
             <ArrowRight className="w-4 h-4" />
           </Link>
           <a
-            href="https://github.com/collinszach/saplyn"
+            href="https://github.com/collinszach/hive"
             target="_blank"
             rel="noopener noreferrer"
             className="hive-btn-secondary w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 text-[15px] rounded-[10px]"

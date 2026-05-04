@@ -11,17 +11,17 @@
   --color-elevated: #1F2229;
   --color-overlay:  #252830;
 
-  /* Brand accent — sage green (Saplyn) */
-  --color-honey:        oklch(0.55 0.10 150);
-  --color-honey-bright: oklch(0.75 0.10 150);
-  --color-honey-dim:    oklch(0.30 0.06 150);
-  --color-honey-border: oklch(0.40 0.07 150);
+  /* Brand accent — honey gold */
+  --color-honey:        #C9920E;
+  --color-honey-bright: #F5B942;
+  --color-honey-dim:    rgba(245,185,66,0.08);
+  --color-honey-border: rgba(245,185,66,0.18);
 
-  /* Sage — primary interactive */
-  --color-blue:        oklch(0.55 0.10 150);
-  --color-blue-hover:  oklch(0.48 0.10 150);
-  --color-blue-dim:    oklch(0.30 0.06 150);
-  --color-blue-border: oklch(0.40 0.07 150);
+  /* Blue — primary interactive */
+  --color-blue:        #3B82F6;
+  --color-blue-hover:  #2563EB;
+  --color-blue-dim:    rgba(59,130,246,0.08);
+  --color-blue-border: rgba(59,130,246,0.20);
 
   /* Text */
   --color-ink-primary:   #F0F2F5;
@@ -29,11 +29,11 @@
   --color-ink-tertiary:  #6B7280;
   --color-ink-ghost:     #4B5563;
 
-  /* Semantic — Saplyn palette */
-  --color-income:  oklch(0.72 0.14 150);   /* sage-green for income */
-  --color-expense: oklch(0.72 0.14 25);    /* coral for expenses */
-  --color-warning: oklch(0.82 0.12 60);    /* apricot for warnings */
-  --color-info:    oklch(0.55 0.10 150);   /* sage for info */
+  /* Semantic */
+  --color-income:  #22C55E;
+  --color-expense: #EF4444;
+  --color-warning: #F59E0B;
+  --color-info:    #3B82F6;
 
   /* Borders */
   --border-default: #2A2D35;
@@ -98,13 +98,13 @@ select {
 
 .hive-card-hero {
   background: #252830;
-  border: 1px solid rgba(74,122,90,0.20);
+  border: 1px solid rgba(59,130,246,0.20);
   border-radius: 12px;
 }
 
 .hive-card-rewards {
   background: #252830;
-  border: 1px solid rgba(122,184,138,0.18);
+  border: 1px solid rgba(245,185,66,0.18);
   border-radius: 10px;
 }
 
@@ -123,9 +123,9 @@ select {
 
 /* ── Page hero glow backgrounds ────────────────────────────── */
 
-.glow-blue   { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(74,122,90,0.14) 0%, transparent 70%); }
+.glow-blue   { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(59,130,246,0.14) 0%, transparent 70%); }
 .glow-green  { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(34,197,94,0.14) 0%, transparent 70%); }
-.glow-amber  { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(122,184,138,0.14) 0%, transparent 70%); }
+.glow-amber  { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(245,185,66,0.14) 0%, transparent 70%); }
 .glow-red    { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(239,68,68,0.12) 0%, transparent 70%); }
 .glow-violet { background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(167,139,250,0.14) 0%, transparent 70%); }
 
@@ -172,8 +172,8 @@ select {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: oklch(0.55 0.10 150);
-  color: #EFEDE3;
+  background: #3B82F6;
+  color: #ffffff;
   font-size: 13px;
   font-weight: 600;
   border-radius: 10px;
@@ -182,8 +182,8 @@ select {
   cursor: pointer;
   transition: background 150ms ease;
 }
-.hive-btn-primary:hover   { background: oklch(0.48 0.10 150); }
-.hive-btn-primary:active  { background: oklch(0.42 0.09 150); }
+.hive-btn-primary:hover   { background: #2563EB; }
+.hive-btn-primary:active  { background: #1D4ED8; }
 .hive-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Gold CTA for rewards pages (points, optimize) only */

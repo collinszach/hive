@@ -184,8 +184,8 @@ function ProjectionTab() {
                 <stop offset="95%" stopColor="#32D583" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="projGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#7AB88A" stopOpacity={0.20} />
-                <stop offset="95%" stopColor="#7AB88A" stopOpacity={0} />
+                <stop offset="5%" stopColor="#F5B942" stopOpacity={0.20} />
+                <stop offset="95%" stopColor="#F5B942" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
@@ -216,7 +216,7 @@ function ProjectionTab() {
             <Area
               type="monotone"
               dataKey="projected"
-              stroke="#7AB88A"
+              stroke="#F5B942"
               strokeWidth={2}
               strokeDasharray="5 3"
               fill="url(#projGrad)"
@@ -535,7 +535,7 @@ function GoalsTab() {
                   className="h-full rounded-full transition-all duration-700"
                   style={{
                     width: `${pct}%`,
-                    background: pct >= 80 ? "#32D583" : pct >= 40 ? "#7AB88A" : "#F97066",
+                    background: pct >= 80 ? "#32D583" : pct >= 40 ? "#F5B942" : "#F97066",
                   }}
                 />
               </div>
@@ -889,7 +889,7 @@ function ForecastTab() {
                   stroke="rgba(201,146,14,0.9)"
                   strokeWidth={2}
                   dot={false}
-                  activeDot={{ r: 4, fill: "#4A7A5A" }}
+                  activeDot={{ r: 4, fill: "#3B82F6" }}
                 />
               </ComposedChart>
             </ResponsiveContainer>

@@ -16,7 +16,7 @@ export default function Nav() {
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2.5 shrink-0">
         <HiveHex size={28} />
-        <span className="text-[13px] font-bold tracking-[0.1em] text-ink-primary">SAPLYN</span>
+        <span className="text-[13px] font-bold tracking-[0.1em] text-ink-primary">HIVE</span>
       </Link>
 
       {/* Center links — desktop only */}
@@ -25,7 +25,7 @@ export default function Nav() {
           [
             ["#features", "Features"],
             ["#pricing", "Pricing"],
-            ["https://github.com/collinszach/saplyn", "GitHub"],
+            ["https://github.com/collinszach/hive", "GitHub"],
           ] as [string, string][]
         ).map(([href, label]) => {
           const isExternal = href.startsWith("http");

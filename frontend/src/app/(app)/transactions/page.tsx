@@ -1070,12 +1070,12 @@ function TransactionsPageInner() {
           <div className="flex items-center gap-3 ml-1">
             <label className="flex items-center gap-1.5 text-[12px] text-ink-tertiary cursor-pointer select-none hover:text-ink-secondary transition-colors">
               <input type="checkbox" checked={includePending} onChange={(e) => setIncludePending(e.target.checked)}
-                className="rounded accent-[#7AB88A] w-3 h-3" />
+                className="rounded accent-[#F5B942] w-3 h-3" />
               Pending
             </label>
             <label className="flex items-center gap-1.5 text-[12px] text-ink-tertiary cursor-pointer select-none hover:text-ink-secondary transition-colors">
               <input type="checkbox" checked={includeExcluded} onChange={(e) => setIncludeExcluded(e.target.checked)}
-                className="rounded accent-[#7AB88A] w-3 h-3" />
+                className="rounded accent-[#F5B942] w-3 h-3" />
               Excluded
             </label>
           </div>
@@ -1148,7 +1148,7 @@ function TransactionsPageInner() {
               <th className="pl-4 pr-2 py-3 w-8">
                 <input
                   type="checkbox"
-                  className="rounded accent-[#7AB88A] w-3.5 h-3.5 cursor-pointer"
+                  className="rounded accent-[#F5B942] w-3.5 h-3.5 cursor-pointer"
                   checked={!!data && data.items.length > 0 && data.items.every((t) => selectedIds.has(t.id))}
                   onChange={toggleSelectAll}
                 />
@@ -1205,7 +1205,7 @@ function TransactionsPageInner() {
                     <td className="pl-4 pr-2 py-2.5" onClick={(e) => { e.stopPropagation(); toggleSelect(tx.id); }}>
                       <input
                         type="checkbox"
-                        className="rounded accent-[#7AB88A] w-3.5 h-3.5 cursor-pointer"
+                        className="rounded accent-[#F5B942] w-3.5 h-3.5 cursor-pointer"
                         checked={isChecked}
                         onChange={() => toggleSelect(tx.id)}
                       />
@@ -1298,7 +1298,7 @@ function TransactionsPageInner() {
               onClick={() => setBulkCatOpen((v) => !v)}
               style={{
                 display: "flex", alignItems: "center", gap: 6,
-                background: "rgba(122,184,138,0.10)", border: "1px solid rgba(122,184,138,0.25)",
+                background: "rgba(245,185,66,0.10)", border: "1px solid rgba(245,185,66,0.25)",
                 borderRadius: 8, padding: "6px 12px", cursor: "pointer",
                 fontSize: 12, fontWeight: 500, color: "var(--color-honey)",
               }}

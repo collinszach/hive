@@ -68,7 +68,7 @@ export function UpgradeModal({ gate, onClose }: UpgradeModalProps) {
         {/* Icon */}
         <div
           className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
-          style={{ background: "rgba(122,184,138,0.12)", border: "1px solid rgba(122,184,138,0.2)" }}
+          style={{ background: "rgba(245,185,66,0.12)", border: "1px solid rgba(245,185,66,0.2)" }}
         >
           <Icon className="w-5 h-5 text-honey" />
         </div>
@@ -85,7 +85,7 @@ export function UpgradeModal({ gate, onClose }: UpgradeModalProps) {
             className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl
                        text-[13px] font-semibold text-[#0A0C10]
                        transition-all duration-150 hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #7AB88A 0%, #4A7A5A 100%)" }}
+            style={{ background: "linear-gradient(135deg, #F5B942 0%, #3B82F6 100%)" }}
           >
             View Plans →
           </Link>

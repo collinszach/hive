@@ -52,17 +52,17 @@ const CAT_DOT: Record<string, string> = {
 
 const STS_BG: Record<string, string> = {
   green: "rgba(34,197,94,0.08)",
-  amber: "rgba(122,184,138,0.08)",
+  amber: "rgba(245,185,66,0.08)",
   red:   "rgba(239,68,68,0.08)",
 };
 const STS_BORDER: Record<string, string> = {
   green: "rgba(34,197,94,0.20)",
-  amber: "rgba(122,184,138,0.20)",
+  amber: "rgba(245,185,66,0.20)",
   red:   "rgba(239,68,68,0.20)",
 };
 const STS_COLOR: Record<string, string> = {
   green: "var(--color-income, #2d9e72)",
-  amber: "var(--color-honey, #4A7A5A)",
+  amber: "var(--color-honey, #3B82F6)",
   red:   "var(--color-expense, #ef4444)",
 };
 

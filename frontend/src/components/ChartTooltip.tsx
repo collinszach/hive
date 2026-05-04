@@ -29,7 +29,7 @@ export function ChartTooltip({ active, payload, label, formatValue }: ChartToolt
           <div className="flex items-center gap-1.5">
             <span
               className="w-2 h-2 rounded-full"
-              style={{ background: entry.color ?? "#4A7A5A" }}
+              style={{ background: entry.color ?? "#3B82F6" }}
             />
             <span className="text-ink-secondary">{entry.name}</span>
           </div>

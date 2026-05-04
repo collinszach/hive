@@ -16,7 +16,7 @@ export default function MarketingFooter() {
         {/* Logo */}
         <div className="flex items-center gap-2.5">
           <HiveHex size={22} />
-          <span className="text-[11px] font-bold tracking-widest text-ink-ghost">SAPLYN</span>
+          <span className="text-[11px] font-bold tracking-widest text-ink-ghost">HIVE</span>
         </div>
 
         {/* Links */}
@@ -42,7 +42,7 @@ export default function MarketingFooter() {
             );
           })}
           <a
-            href="https://github.com/collinszach/saplyn"
+            href="https://github.com/collinszach/hive"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[12px] text-ink-ghost hover:text-ink-secondary transition-colors duration-150"
