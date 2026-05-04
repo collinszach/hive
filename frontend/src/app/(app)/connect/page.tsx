@@ -206,15 +206,6 @@ export default function ConnectPage() {
         setReceivedRedirectUri(undefined);
         setStatus("success");
         setMessage(`Connected ${metadata.institution?.name ?? "your bank"} — ${data.accounts_created} account(s) linked. Syncing now…`);
-        // If this was a reauth, clear the sync error
-        if (reauthItemId) {
-          await authedFetch("/api/plaid/clear-error", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ item_id: reauthItemId }),
-          }).catch(() => {});
-          setReauthItemId(null);
-        }
         fetchLinked();
         if (window.location.search.includes("oauth_state_id")) {
           window.history.replaceState({}, "", "/connect");
@@ -240,15 +231,36 @@ export default function ConnectPage() {
     if (ready && receivedRedirectUri) open();
   }, [ready, receivedRedirectUri, open]);
 
-  // Open Plaid Link when reauth is triggered (not on initial page load)
-  const [reauthPending, setReauthPending] = useState(false);
+  // Separate Plaid Link instance for reauth (needs its own token)
+  const [reauthToken, setReauthToken] = useState<string | null>(null);
   const [reauthItemId, setReauthItemId] = useState<string | null>(null);
+
+  const reauthConfig: PlaidLinkOptions = useMemo(() => ({
+    token: reauthToken,
+    onSuccess: async () => {
+      // Clear the sync error after successful reauth
+      if (reauthItemId) {
+        await authedFetch("/api/plaid/clear-error", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ item_id: reauthItemId }),
+        }).catch(() => {});
+      }
+      setReauthToken(null);
+      setReauthItemId(null);
+      toast.success("Connection restored! Syncing now…");
+      fetchLinked();
+      // Trigger a sync
+      authedFetch("/api/plaid/sync-now", { method: "POST" }).catch(() => {});
+    },
+    onExit: () => { setReauthToken(null); setReauthItemId(null); },
+  }), [reauthToken, reauthItemId, fetchLinked]);
+
+  const { open: openReauth, ready: reauthReady } = usePlaidLink(reauthConfig);
+
   useEffect(() => {
-    if (ready && reauthPending && linkToken) {
-      setReauthPending(false);
-      open();
-    }
-  }, [ready, reauthPending, linkToken, open]);
+    if (reauthToken && reauthReady) openReauth();
+  }, [reauthToken, reauthReady, openReauth]);
 
   const onInvestSuccess = useCallback<PlaidLinkOnSuccess>(async (public_token, metadata) => {
     setInvestLinkLoading(true);
@@ -460,9 +472,8 @@ export default function ConnectPage() {
                               });
                               if (!res.ok) throw new Error("Failed to start reauth");
                               const data = await res.json();
-                              setLinkToken(data.link_token);
-                              setReauthPending(true);
                               setReauthItemId(inst.item_id);
+                              setReauthToken(data.link_token);
                             } catch {
                               toast.error("Failed to start re-authorization");
                             }
