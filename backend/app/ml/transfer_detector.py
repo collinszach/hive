@@ -17,7 +17,9 @@ _BANK_TRANSFER_PATTERNS = re.compile(
     r"transfer to |transfer from |deposit transfer|"
     r"external transfer|internal transfer|"
     r"withdrawal to savings|deposit from (?:checking|savings|emergency)|"
-    r"autopilot transfer",
+    r"autopilot transfer|recurring transfer|"
+    r"savings transfer|transfer to savings|transfer from savings|"
+    r"transfer to checking|transfer from checking",
     re.IGNORECASE,
 )
 
