@@ -130,14 +130,8 @@ async def setup_required(db: AsyncSession = Depends(get_db)) -> dict:
 @router.post("/register", response_model=LoginResponse)
 async def register(body: RegisterRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)) -> LoginResponse:
     """
-    Create the first (admin) account.
-    Permanently disabled once any user exists — cannot be used to add extra accounts.
+    Create a new user account. First user gets admin role; subsequent users get viewer role.
     """
-    # Only allowed when no users exist
-    existing = await db.execute(select(User).limit(1))
-    if existing.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=409, detail="Setup already complete. Use the login page.")
-
     # Username: 3–32 chars, letters/digits/underscore/hyphen only
     import re
     if not re.fullmatch(r"[A-Za-z0-9_\-]{3,32}", body.username):
@@ -146,12 +140,21 @@ async def register(body: RegisterRequest, request: Request, response: Response, 
             detail="Username must be 3–32 characters and contain only letters, digits, underscores, or hyphens.",
         )
 
+    # Check for duplicate username
+    existing_user = await db.execute(select(User).where(User.username == body.username))
+    if existing_user.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="Username already taken.")
+
     # Password: minimum 10 characters
     if len(body.password) < 10:
         raise HTTPException(status_code=422, detail="Password must be at least 10 characters.")
 
+    # First user is admin, subsequent users are viewers on the free plan
+    any_user = await db.execute(select(User).limit(1))
+    role = UserRole.admin if any_user.scalar_one_or_none() is None else UserRole.viewer
+
     password_hash = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
-    user = User(username=body.username, password_hash=password_hash, role=UserRole.admin)
+    user = User(username=body.username, password_hash=password_hash, role=role)
     db.add(user)
     await db.commit()
     await db.refresh(user)

@@ -83,18 +83,9 @@ export default function RegisterPage() {
   // Bug fix: use /api/auth/me to check auth state, not getToken()
   // getToken() always returns truthy on the client so it can't be used for auth checks
   useEffect(() => {
-    Promise.all([
-      fetch("/api/auth/me", { credentials: "include" }),
-      fetch("/api/auth/setup-required").then(async (r) => {
-        if (!r.ok) throw new Error("setup-required check failed");
-        return r.json() as Promise<{ setup_required: boolean }>;
-      }),
-    ])
-      .then(([meRes, setupData]) => {
-        if (meRes.ok) { router.replace("/dashboard"); return; }
-        if (!setupData.setup_required) { router.replace("/login"); return; }
-        setChecking(false);
-      })
+    // If already logged in, go to dashboard
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => { if (r.ok) router.replace("/dashboard"); else setChecking(false); })
       .catch(() => setChecking(false));
   }, [router]);
 
@@ -235,7 +226,7 @@ export default function RegisterPage() {
               Create your account
             </h2>
             <p className="text-[14px] text-ink-tertiary mt-1.5">
-              First-time setup — choose your admin credentials.
+              Start tracking your finances in minutes.
             </p>
           </div>
           <div className="mb-6 lg:hidden">
