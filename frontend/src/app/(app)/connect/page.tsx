@@ -429,9 +429,26 @@ export default function ConnectPage() {
                         {inst.institution_name}
                       </p>
                       {inst.last_sync_error && (
-                        <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider bg-semantic-expense/10 text-semantic-expense border border-semantic-expense/20">
-                          Needs reauth
-                        </span>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const res = await authedFetch("/api/plaid/reauth-link-token", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ item_id: inst.item_id }),
+                              });
+                              if (!res.ok) throw new Error("Failed to start reauth");
+                              const data = await res.json();
+                              setLinkToken(data.link_token);
+                            } catch {
+                              toast.error("Failed to start re-authorization");
+                            }
+                          }}
+                          className="shrink-0 px-2 py-0.5 rounded text-[10px] font-semibold bg-semantic-expense/10 text-semantic-expense border border-semantic-expense/20 hover:bg-semantic-expense/20 transition-colors cursor-pointer"
+                        >
+                          Fix connection
+                        </button>
                       )}
                     </div>
                     <p className="text-[11px] text-ink-tertiary font-mono">

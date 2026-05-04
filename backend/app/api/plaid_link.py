@@ -51,6 +51,35 @@ async def create_link_token(
         raise HTTPException(status_code=502, detail="Failed to create link token. Please try again.") from exc
 
 
+class ReauthRequest(BaseModel):
+    item_id: str
+
+
+@router.post("/reauth-link-token", response_model=LinkTokenResponse)
+async def create_reauth_link_token(
+    body: ReauthRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_plaid),
+) -> LinkTokenResponse:
+    """Create a Plaid Link token in update mode to re-authorize an existing connection."""
+    result = await db.execute(
+        select(PlaidLink).where(PlaidLink.item_id == body.item_id, PlaidLink.is_active == True)  # noqa: E712
+    )
+    link = result.scalar_one_or_none()
+    if not link:
+        raise HTTPException(status_code=404, detail="Linked account not found")
+    try:
+        link_token = plaid_connector.get_update_link_token(
+            user_id="local-user",
+            access_token=link.access_token,
+        )
+        return LinkTokenResponse(link_token=link_token)
+    except Exception as exc:
+        logger.error("Failed to create reauth link token for item %s: %s", body.item_id, exc)
+        raise HTTPException(status_code=502, detail="Failed to start re-authorization. Please try again.") from exc
+
+
 @router.post("/investments-link-token", response_model=LinkTokenResponse)
 async def create_investments_link_token(
     request: Request,
