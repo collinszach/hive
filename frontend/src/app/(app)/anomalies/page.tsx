@@ -76,7 +76,6 @@ export default function AnomaliesPage() {
           </>
         }
         subtext="ML-flagged unusual transactions"
-        glow="red"
         statStrip={[
           { label: "Flagged", value: String(flaggedCount), color: "red" },
           { label: "Reviewed Today", value: String(reviewedToday), color: "green" },

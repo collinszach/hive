@@ -224,7 +224,6 @@ export default function SubscriptionsPage() {
               </>
             }
             subtext="detected recurring charges"
-            glow="red"
             statStrip={[
               { label: "Monthly", value: fmt(monthlyTotal), color: "amber" },
               { label: "Annual",  value: fmt(annualTotal),  color: "red"   },

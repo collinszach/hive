@@ -64,7 +64,6 @@ export default function OptimizerPage() {
           ? `${best.account_name ?? best.card_slug} · ${Math.round(best.points_earned).toLocaleString()} pts · ${fmt(best.dollar_value)} value`
           : "find the best card to use at checkout"
         }
-        glow="amber"
         statStrip={searched && best ? [
           { label: "Best Card", value: best.account_name ?? best.card_slug, color: "amber" },
           { label: "Earn Rate", value: `${best.earn_rate}x`, color: "default" },

@@ -396,7 +396,6 @@ export default function ReportsPage() {
                 : <><span className="text-semantic-expense">{fmt(dailySpend.reduce((s,d)=>s+d.total,0))}</span> spent</>
             }
             subtext="spending analysis & data export"
-            glow="blue"
             statStrip={
               report === "category" && catData.length > 0 ? [
                 { label: "Total Spend",   value: fmt(totalSpend),                                             color: "red"     },

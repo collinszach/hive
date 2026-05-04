@@ -230,7 +230,6 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in" style={{ position: "relative" }}>
-      <div className="glow-violet" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }} />
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between pb-5 border-b border-white/[0.05]">

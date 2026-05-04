@@ -403,7 +403,6 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-in" style={{ position: "relative" }}>
-      <div className="glow-blue" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }} />
 
       {/* ── Critical error ───────────────────────────────────────────── */}
       {criticalError && (

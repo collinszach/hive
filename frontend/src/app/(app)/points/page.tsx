@@ -156,7 +156,6 @@ export default function PointsPage() {
             eyebrow="Points & Rewards"
             headline={<span className="text-honey">{summaryLoading ? "—" : fmt(totalValue)}</span>}
             subtext="estimated redemption value across all programs"
-            glow="amber"
             statStrip={[
               { label: "Programs",        value: `${programCount} program${programCount !== 1 ? "s" : ""}`,                color: "default" },
               { label: `${days}d Earned`, value: summaryLoading ? "—" : `${Math.round(earned90d).toLocaleString()} pts`,   color: "amber"   },

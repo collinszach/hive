@@ -95,7 +95,6 @@ export default function IncomePage() {
                 : <span className="text-ink-secondary">—</span>
             }
             subtext={`${monthLabel(month)} income from ${summary?.sources.length ?? 0} sources`}
-            glow="green"
             statStrip={[
               { label: monthLabel(month),  value: summary ? fmt(summary.total_income) : "—", color: "green"   },
               { label: "Monthly avg",      value: avgIncome > 0 ? fmt(avgIncome) : "—",        color: "default" },

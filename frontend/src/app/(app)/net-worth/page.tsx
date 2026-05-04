@@ -113,7 +113,7 @@ export default function NetWorthPage() {
 
   const animated   = useAnimatedNumber(netWorth);
   const isPositive = (change ?? 0) >= 0;
-  const glowColor  = isPositive ? "61,214,140" : "248,113,113";
+  const accentRgb  = isPositive ? "90,168,106" : "200,90,90";
   const accent     = isPositive ? "#3DD68C" : "#F87171";
 
   const chartData: ChartRow[] = data.map(s => ({
@@ -146,24 +146,7 @@ export default function NetWorthPage() {
 
       <div style={{ position: "relative", minHeight: "100%", overflow: "hidden", paddingBottom: 60 }}>
 
-        {/* ── Atmospheric background glow ── */}
-        <div aria-hidden className="glow-blue" style={{
-          position:    "absolute",
-          inset:       0,
-          pointerEvents: "none",
-        }} />
-        <div aria-hidden style={{
-          position:    "absolute",
-          top:         -60,
-          left:        "50%",
-          transform:   "translateX(-50%)",
-          width:       700,
-          height:      500,
-          borderRadius: "50%",
-          background:  `radial-gradient(ellipse, rgba(${glowColor},0.07) 0%, transparent 65%)`,
-          pointerEvents: "none",
-          transition:  "background 1s ease",
-        }} />
+        {/* Background removed — clean layout */}
 
         {/* ── Header ── */}
         <div style={{ padding: "28px 28px 0" }}>
@@ -208,7 +191,6 @@ export default function NetWorthPage() {
                   lineHeight:  1,
                   letterSpacing: "-0.02em",
                   marginBottom: 22,
-                  textShadow:  `0 0 100px rgba(${glowColor}, 0.18)`,
                   transition:  "text-shadow 1s ease",
                 }}
               >
@@ -225,8 +207,8 @@ export default function NetWorthPage() {
                     gap:        8,
                     padding:    "7px 16px",
                     borderRadius: 100,
-                    background: `rgba(${glowColor}, 0.08)`,
-                    border:     `1px solid rgba(${glowColor}, 0.18)`,
+                    background: `rgba(${accentRgb}, 0.08)`,
+                    border:     `1px solid rgba(${accentRgb}, 0.18)`,
                   }}
                 >
                   {isPositive
@@ -240,7 +222,7 @@ export default function NetWorthPage() {
                     {change >= 0 ? "+" : ""}{fmt(change)}
                   </span>
                   {changePct !== null && (
-                    <span style={{ fontSize: 11, color: `rgba(${glowColor}, 0.55)`, fontFamily: "var(--font-mono)" }}>
+                    <span style={{ fontSize: 11, color: `rgba(${accentRgb}, 0.55)`, fontFamily: "var(--font-mono)" }}>
                       {changePct >= 0 ? "+" : ""}{changePct.toFixed(1)}%
                     </span>
                   )}

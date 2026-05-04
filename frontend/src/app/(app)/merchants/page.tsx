@@ -181,7 +181,6 @@ function MerchantsPageInner() {
             eyebrow="Merchant Detail"
             headline={<span className="text-[#38BDF8]">{detail.merchant_name}</span>}
             subtext={`${detail.transaction_count} transactions · ${fmt(detail.total_spent)} total`}
-            glow="blue"
             statStrip={[
               { label: "Total Spent", value: fmt(detail.total_spent), color: "red" },
               { label: "Transactions", value: String(detail.transaction_count), color: "default" },
@@ -351,7 +350,6 @@ function MerchantsPageInner() {
                 : <><span className="text-[#38BDF8]">{merchants.length}</span> merchants</>
             }
             subtext="top merchants by spend"
-            glow="blue"
             statStrip={merchants.length > 0 ? [
               { label: "Total Spend", value: fmt(totalSpend), color: "red" },
               { label: "Merchants", value: String(merchants.length), color: "default" },

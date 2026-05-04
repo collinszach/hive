@@ -961,7 +961,6 @@ export default function PlanPage() {
         eyebrow="Financial Planning"
         headline={<><span className="text-semantic-income">Plan</span> your future</>}
         subtext="Project your trajectory, set goals, trim the fat"
-        glow="violet"
       />
 
       {/* Tab switcher */}

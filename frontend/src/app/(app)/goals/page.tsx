@@ -531,7 +531,6 @@ export default function GoalsPage() {
                 : <span className="text-ink-secondary">No goals yet</span>
             }
             subtext="Track your financial targets and stay on course"
-            glow="green"
             statStrip={activeGoals.length > 0 ? [
               { label: "Active",    value: String(activeGoals.length),    color: "amber"   },
               { label: "Completed", value: String(completedGoals.length), color: "green"   },

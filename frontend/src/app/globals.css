@@ -40,8 +40,10 @@
   --border-subtle:  #22252E;
   --border-strong:  #3A3E4A;
 
-  /* Font alias */
-  --font-mono: var(--font-geist-mono);
+  /* Font aliases — Saplyn type system */
+  --font-body: var(--font-jakarta), 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-display: var(--font-display), 'Fraunces', Georgia, serif;
+  --font-mono: var(--font-geist-mono), 'JetBrains Mono', ui-monospace, monospace;
 }
 
 /* ── Base ─────────────────────────────────────────────────────── */
@@ -50,9 +52,10 @@ body {
   background: var(--color-base);
   color: var(--color-ink-primary);
   position: relative;
-  font-family: var(--font-sans), 'Inter', system-ui, sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01";
 }
 
 select {

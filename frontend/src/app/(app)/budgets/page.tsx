@@ -537,7 +537,6 @@ function BudgetsPageInner() {
               )
             }
             subtext={budgets.length > 0 ? "budgets on track this month" : "no budgets set for this month"}
-            glow="green"
             statStrip={budgets.length > 0 ? [
               { label: "Total Budgeted",    value: fmt(totalBudgeted),          color: "default" },
               { label: "Total Spent",       value: fmt(totalSpent),              color: totalSpent > totalBudgeted ? "red" : "default" },

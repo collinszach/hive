@@ -258,7 +258,6 @@ export default function DebtPage() {
             : <span className="text-ink-secondary">Enter your debts</span>
         }
         subtext="Model avalanche vs snowball strategies and see your payoff timeline"
-        glow="green"
         statStrip={validDebts.length > 0 && current.length > 0 ? [
           { label: "Payoff",    value: monthLabel(current.length),        color: "green"   },
           { label: "Months",    value: String(current.length),            color: "default" },

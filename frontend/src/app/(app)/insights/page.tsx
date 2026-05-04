@@ -260,7 +260,6 @@ export default function InsightsPage() {
                 : <><span className="text-semantic-income">All caught up</span></>
             }
             subtext="AI-generated observations about your finances"
-            glow="violet"
             statStrip={[
               { label: "Unread", value: String(unread.length), color: unread.length > 0 ? "amber" : "default" },
               { label: "Total",  value: String(visible.length), color: "default" },
