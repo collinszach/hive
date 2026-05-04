@@ -25,7 +25,7 @@ export default function Nav() {
           [
             ["#features", "Features"],
             ["#pricing", "Pricing"],
-            ["https://github.com/collinszach/hive", "GitHub"],
+            ["https://github.com/collinszach/saplyn", "GitHub"],
           ] as [string, string][]
         ).map(([href, label]) => {
           const isExternal = href.startsWith("http");

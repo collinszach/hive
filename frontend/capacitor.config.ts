@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   // Load from your live server instead of bundled assets.
   // Change this URL to your Cloudflare Tunnel or Tailscale hostname.
   server: {
-    url: "https://hive.zacharyjcollins.com",
+    url: "https://saplyn.app",
     cleartext: false,
   },
   ios: {

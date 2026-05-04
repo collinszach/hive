@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const DISMISSED_KEY = "hive_install_dismissed";
+const DISMISSED_KEY = "saplyn_install_dismissed";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -54,7 +54,7 @@ export default function InstallPrompt() {
     <div className="fixed bottom-0 inset-x-0 z-50 flex items-center justify-between gap-3 px-4 py-3 bg-[rgba(122,184,138,0.08)] border-t border-[rgba(122,184,138,0.20)] backdrop-blur-sm">
       <p className="text-sm text-ink-secondary leading-snug">
         Add{" "}
-        <span className="font-semibold text-ink-primary">Hive</span> to your
+        <span className="font-semibold text-ink-primary">Saplyn</span> to your
         home screen for quick access.
       </p>
       <div className="flex items-center gap-2 shrink-0">

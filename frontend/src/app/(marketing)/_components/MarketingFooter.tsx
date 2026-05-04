@@ -42,7 +42,7 @@ export default function MarketingFooter() {
             );
           })}
           <a
-            href="https://github.com/collinszach/hive"
+            href="https://github.com/collinszach/saplyn"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[12px] text-ink-ghost hover:text-ink-secondary transition-colors duration-150"

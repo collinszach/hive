@@ -36,7 +36,7 @@ export default function PrivacyPage() {
         <h2 className="text-base font-semibold text-white">2. Data We Collect</h2>
         <div className="space-y-3 text-sm text-slate-400 leading-relaxed">
           <p><strong className="text-slate-200">Financial data via Plaid:</strong> Transaction history, account balances, institution names, and account identifiers retrieved from your linked bank and credit card accounts. Plaid access tokens are stored encrypted at rest using AES-256 (Fernet).</p>
-          <p><strong className="text-slate-200">Account credentials:</strong> Your Hive login username and bcrypt-hashed password. Plaintext passwords are never stored.</p>
+          <p><strong className="text-slate-200">Account credentials:</strong> Your Saplyn login username and bcrypt-hashed password. Plaintext passwords are never stored.</p>
           <p><strong className="text-slate-200">Authentication events:</strong> An audit log of login attempts, MFA events, and administrative actions, including IP address and timestamp.</p>
           <p><strong className="text-slate-200">AI chat history:</strong> Messages sent to the AI chat interface are processed by Anthropic Claude or a local Ollama model. Anthropic may process these according to their privacy policy. Local Ollama processing stays entirely on-device.</p>
         </div>
@@ -106,7 +106,7 @@ export default function PrivacyPage() {
       <section className="rounded-xl bg-slate-900 border border-slate-800 p-6 space-y-4">
         <h2 className="text-base font-semibold text-white">7. Your Rights</h2>
         <ul className="space-y-2 text-sm text-slate-400 list-disc list-inside leading-relaxed">
-          <li><strong className="text-slate-200">Access:</strong> All your data is visible within the Hive interface</li>
+          <li><strong className="text-slate-200">Access:</strong> All your data is visible within the Saplyn interface</li>
           <li><strong className="text-slate-200">Deletion:</strong> Delete all financial data at any time from Security Settings</li>
           <li><strong className="text-slate-200">Portability:</strong> Transaction data can be exported from the Transactions page</li>
           <li><strong className="text-slate-200">Correction:</strong> Transaction categories can be manually corrected inline</li>
@@ -119,7 +119,7 @@ export default function PrivacyPage() {
         <p className="text-sm text-slate-400">
           This is a self-hosted personal deployment. The data controller is the individual operating
           this instance. For questions about this privacy policy, refer to the system administrator
-          of this Hive instance.
+          of this Saplyn instance.
         </p>
       </section>
     </div>

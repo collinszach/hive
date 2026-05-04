@@ -289,7 +289,7 @@ export default function Sidebar() {
       <div style={{ padding: "6px 8px 14px" }}>
         {/* Search */}
         <button
-          onClick={() => window.dispatchEvent(new CustomEvent("hive:cmd-k"))}
+          onClick={() => window.dispatchEvent(new CustomEvent("saplyn:cmd-k"))}
           style={{
             display: "flex",
             alignItems: "center",

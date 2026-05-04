@@ -2,29 +2,29 @@
 import { Check, Minus } from "lucide-react";
 
 const ROWS = [
-  { feature: "Rewards optimizer",    hive: true,  monarch: false, ynab: false, copilot: false },
-  { feature: "Open source",         hive: true,  monarch: false, ynab: false, copilot: false },
-  { feature: "Self-hostable",       hive: true,  monarch: false, ynab: false, copilot: false },
-  { feature: "AI chat (real LLM)",  hive: true,  monarch: false, ynab: false, copilot: false },
-  { feature: "Investment tracking", hive: true,  monarch: true,  ynab: false, copilot: true  },
+  { feature: "Rewards optimizer",    saplyn: true,  monarch: false, ynab: false, copilot: false },
+  { feature: "Open source",         saplyn: true,  monarch: false, ynab: false, copilot: false },
+  { feature: "Self-hostable",       saplyn: true,  monarch: false, ynab: false, copilot: false },
+  { feature: "AI chat (real LLM)",  saplyn: true,  monarch: false, ynab: false, copilot: false },
+  { feature: "Investment tracking", saplyn: true,  monarch: true,  ynab: false, copilot: true  },
   { feature: "Price",
-    hive: "$0–$13/mo", monarch: "$99/yr", ynab: "$109/yr", copilot: "$89/yr",
+    saplyn: "$0–$13/mo", monarch: "$99/yr", ynab: "$109/yr", copilot: "$89/yr",
   },
 ];
 
-function Cell({ val, isHive }: { val: boolean | string; isHive?: boolean }) {
+function Cell({ val, isSaplyn }: { val: boolean | string; isSaplyn?: boolean }) {
   if (typeof val === "string") {
     return (
       <span
         className="text-[13px] font-semibold font-geist-mono"
-        style={{ color: isHive ? "#7AB88A" : "#5A6475" }}
+        style={{ color: isSaplyn ? "#7AB88A" : "#5A6475" }}
       >
         {val}
       </span>
     );
   }
   if (val) {
-    return <Check className="w-4 h-4 mx-auto" style={{ color: isHive ? "#7AB88A" : "#34D399" }} strokeWidth={2.5} />;
+    return <Check className="w-4 h-4 mx-auto" style={{ color: isSaplyn ? "#7AB88A" : "#34D399" }} strokeWidth={2.5} />;
   }
   return <Minus className="w-4 h-4 mx-auto text-ink-ghost opacity-30" strokeWidth={1.5} />;
 }
@@ -36,7 +36,7 @@ export default function ComparisonTable() {
         {/* Header */}
         <div className="text-center mb-14">
           <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-honey mb-3">
-            WHY HIVE
+            WHY SAPLYN
           </p>
           <h2 className="text-[36px] sm:text-[44px] font-bold tracking-[-0.02em] leading-tight text-ink-primary">
             Everything Mint promised.
@@ -84,19 +84,19 @@ export default function ComparisonTable() {
               <div className="p-4 text-[13px] text-ink-secondary flex items-center">
                 {row.feature}
               </div>
-              {(["hive", "monarch", "ynab", "copilot"] as const).map((co) => (
+              {(["saplyn", "monarch", "ynab", "copilot"] as const).map((co) => (
                 <div
                   key={co}
                   className="p-4 flex items-center justify-center"
                   style={{
-                    background: co === "hive" ? "rgba(122,184,138,0.04)" : "transparent",
+                    background: co === "saplyn" ? "rgba(122,184,138,0.04)" : "transparent",
                     borderLeft:
-                      co === "hive"
+                      co === "saplyn"
                         ? "1px solid rgba(122,184,138,0.18)"
                         : "1px solid rgba(255,255,255,0.06)",
                   }}
                 >
-                  <Cell val={row[co] as boolean | string} isHive={co === "hive"} />
+                  <Cell val={row[co] as boolean | string} isSaplyn={co === "saplyn"} />
                 </div>
               ))}
             </div>

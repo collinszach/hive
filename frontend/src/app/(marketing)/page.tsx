@@ -40,7 +40,7 @@ export default function LandingPage() {
         <FeatureShowcase
           label="REWARDS OPTIMIZER"
           headline="Know the right card before you tap."
-          description="Hive tracks your full card portfolio and scores every purchase against your actual earn rates. Dining out? Amex Gold. Gas? Capital One Venture X. It tells you — you don't have to remember."
+          description="Saplyn tracks your full card portfolio and scores every purchase against your actual earn rates. Dining out? Amex Gold. Gas? Capital One Venture X. It tells you — you don't have to remember."
           bullets={[
             "Amex Gold, Chase Sapphire, Bilt Blue, Venture X, Chase Southwest",
             "Earn rates updated automatically from your card list",

@@ -197,7 +197,7 @@ export default function PricingSection() {
             </p>
           </div>
           <a
-            href="https://github.com/collinszach/hive"
+            href="https://github.com/collinszach/saplyn"
             target="_blank"
             rel="noopener noreferrer"
             className="hive-btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium shrink-0"

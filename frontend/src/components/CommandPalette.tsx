@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 
 // ── Open the palette from anywhere ────────────────────────────
 export function openCommandPalette() {
-  window.dispatchEvent(new CustomEvent("hive:cmd-k"));
+  window.dispatchEvent(new CustomEvent("saplyn:cmd-k"));
 }
 
 interface NavItem {
@@ -208,10 +208,10 @@ export function CommandPalette() {
       if (!open) openPalette();
     }
     window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("hive:cmd-k", onCustomEvent);
+    window.addEventListener("saplyn:cmd-k", onCustomEvent);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("hive:cmd-k", onCustomEvent);
+      window.removeEventListener("saplyn:cmd-k", onCustomEvent);
     };
   }, [open, openPalette, closePalette]);
 

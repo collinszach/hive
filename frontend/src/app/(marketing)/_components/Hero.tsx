@@ -60,7 +60,7 @@ export default function Hero() {
 
         {/* Subhead */}
         <p className="text-[18px] sm:text-[20px] leading-relaxed text-ink-secondary max-w-[580px] mx-auto mb-10">
-          Hive syncs every account, categorizes every transaction with AI, and tells you
+          Saplyn syncs every account, categorizes every transaction with AI, and tells you
           which credit card earns the most on every purchase — automatically.
         </p>
 
@@ -74,7 +74,7 @@ export default function Hero() {
             <ArrowRight className="w-4 h-4" />
           </Link>
           <a
-            href="https://github.com/collinszach/hive"
+            href="https://github.com/collinszach/saplyn"
             target="_blank"
             rel="noopener noreferrer"
             className="hive-btn-secondary w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 text-[15px] rounded-[10px]"

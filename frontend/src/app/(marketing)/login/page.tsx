@@ -292,7 +292,7 @@ export default function LoginPage() {
             className="text-[36px] font-bold tracking-[0.3em]"
             style={{ color: "#F2EDE8", fontFamily: "var(--font-geist, inherit)" }}
           >
-            HIVE
+            SAPLYN
           </p>
           <p className="text-[10px] font-semibold tracking-[0.2em] uppercase mt-1" style={{ color: "rgba(255,255,255,0.18)" }}>
             Personal Finance Intelligence

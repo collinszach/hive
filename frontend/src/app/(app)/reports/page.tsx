@@ -333,19 +333,19 @@ export default function ReportsPage() {
 
     if (report === "category") {
       const { label: periodLabel } = getPeriodDates(catPeriod, year, catCustomStart, catCustomEnd);
-      filename = `hive-spending-by-category-${periodLabel.replace(/\s+/g, "-").toLowerCase()}.csv`;
+      filename = `saplyn-spending-by-category-${periodLabel.replace(/\s+/g, "-").toLowerCase()}.csv`;
       rows = [
         ["Category", "Subcategory", "Transactions", "Total Spent", "Avg Transaction"],
         ...catData.map((r) => [r.category, r.subcategory ?? "", String(r.transaction_count), String(r.total), String(r.avg_transaction)]),
       ];
     } else if (report === "monthly") {
-      filename = `hive-monthly-summary-${year}.csv`;
+      filename = `saplyn-monthly-summary-${year}.csv`;
       rows = [
         ["Month", "Income", "Expenses", "Net"],
         ...monthlyData.map((r) => [r.month, String(r.income), String(r.expenses), String(r.net)]),
       ];
     } else if (report === "tax-export") {
-      filename = `hive-tax-export-${taxYear}.csv`;
+      filename = `saplyn-tax-export-${taxYear}.csv`;
       rows = [
         ["Date", "Merchant", "Amount", "Category", "Subcategory"],
         ...taxData.map((r) => [r.date, r.merchant, r.amount.toFixed(2), r.category, r.subcategory ?? ""]),
