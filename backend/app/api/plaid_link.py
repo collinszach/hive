@@ -80,6 +80,30 @@ async def create_reauth_link_token(
         raise HTTPException(status_code=502, detail="Failed to start re-authorization. Please try again.") from exc
 
 
+class ClearErrorRequest(BaseModel):
+    item_id: str
+
+
+@router.post("/clear-error")
+async def clear_sync_error(
+    body: ClearErrorRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_plaid),
+) -> dict:
+    """Clear the sync error on a PlaidLink after successful re-authorization."""
+    result = await db.execute(
+        select(PlaidLink).where(PlaidLink.item_id == body.item_id, PlaidLink.is_active == True)  # noqa: E712
+    )
+    link = result.scalar_one_or_none()
+    if not link:
+        raise HTTPException(status_code=404, detail="Linked account not found")
+    link.last_sync_error = None
+    await db.commit()
+    logger.info("Cleared sync error for item %s (%s)", body.item_id, link.institution_name)
+    return {"status": "ok"}
+
+
 @router.post("/investments-link-token", response_model=LinkTokenResponse)
 async def create_investments_link_token(
     request: Request,

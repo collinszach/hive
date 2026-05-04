@@ -206,6 +206,15 @@ export default function ConnectPage() {
         setReceivedRedirectUri(undefined);
         setStatus("success");
         setMessage(`Connected ${metadata.institution?.name ?? "your bank"} — ${data.accounts_created} account(s) linked. Syncing now…`);
+        // If this was a reauth, clear the sync error
+        if (reauthItemId) {
+          await authedFetch("/api/plaid/clear-error", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ item_id: reauthItemId }),
+          }).catch(() => {});
+          setReauthItemId(null);
+        }
         fetchLinked();
         if (window.location.search.includes("oauth_state_id")) {
           window.history.replaceState({}, "", "/connect");
@@ -226,16 +235,20 @@ export default function ConnectPage() {
   };
   const { open, ready } = usePlaidLink(config);
 
-  // Auto-open Plaid Link when token is set (new connection or reauth)
-  const prevTokenRef = useRef<string | null>(null);
+  // Only auto-open on OAuth redirect return
   useEffect(() => {
-    if (ready && receivedRedirectUri) { open(); return; }
-    // Open when token changes (e.g. reauth button clicked)
-    if (ready && linkToken && linkToken !== prevTokenRef.current) {
-      prevTokenRef.current = linkToken;
+    if (ready && receivedRedirectUri) open();
+  }, [ready, receivedRedirectUri, open]);
+
+  // Open Plaid Link when reauth is triggered (not on initial page load)
+  const [reauthPending, setReauthPending] = useState(false);
+  const [reauthItemId, setReauthItemId] = useState<string | null>(null);
+  useEffect(() => {
+    if (ready && reauthPending && linkToken) {
+      setReauthPending(false);
       open();
     }
-  }, [ready, linkToken, receivedRedirectUri, open]);
+  }, [ready, reauthPending, linkToken, open]);
 
   const onInvestSuccess = useCallback<PlaidLinkOnSuccess>(async (public_token, metadata) => {
     setInvestLinkLoading(true);
@@ -448,6 +461,8 @@ export default function ConnectPage() {
                               if (!res.ok) throw new Error("Failed to start reauth");
                               const data = await res.json();
                               setLinkToken(data.link_token);
+                              setReauthPending(true);
+                              setReauthItemId(inst.item_id);
                             } catch {
                               toast.error("Failed to start re-authorization");
                             }
