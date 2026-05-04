@@ -54,6 +54,30 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+// Mounts fresh with a valid token so usePlaidLink initializes correctly
+function ReauthLink({ token, itemId, onDone }: { token: string; itemId: string; onDone: () => void }) {
+  const { open, ready } = usePlaidLink({
+    token,
+    onSuccess: async () => {
+      await fetch("/api/plaid/clear-error", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item_id: itemId }),
+      }).catch(() => {});
+      await fetch("/api/plaid/sync-now", { method: "POST", credentials: "include" }).catch(() => {});
+      onDone();
+    },
+    onExit: () => onDone(),
+  });
+
+  useEffect(() => {
+    if (ready) open();
+  }, [ready, open]);
+
+  return null;
+}
+
 export default function ConnectPage() {
   const [linkToken, setLinkToken]                     = useState<string | null>(null);
   const [receivedRedirectUri, setReceivedRedirectUri] = useState<string | undefined>(undefined);
@@ -231,36 +255,9 @@ export default function ConnectPage() {
     if (ready && receivedRedirectUri) open();
   }, [ready, receivedRedirectUri, open]);
 
-  // Separate Plaid Link instance for reauth (needs its own token)
+  // Reauth state — triggers a separate component mount
   const [reauthToken, setReauthToken] = useState<string | null>(null);
   const [reauthItemId, setReauthItemId] = useState<string | null>(null);
-
-  const reauthConfig: PlaidLinkOptions = useMemo(() => ({
-    token: reauthToken,
-    onSuccess: async () => {
-      // Clear the sync error after successful reauth
-      if (reauthItemId) {
-        await authedFetch("/api/plaid/clear-error", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ item_id: reauthItemId }),
-        }).catch(() => {});
-      }
-      setReauthToken(null);
-      setReauthItemId(null);
-      toast.success("Connection restored! Syncing now…");
-      fetchLinked();
-      // Trigger a sync
-      authedFetch("/api/plaid/sync-now", { method: "POST" }).catch(() => {});
-    },
-    onExit: () => { setReauthToken(null); setReauthItemId(null); },
-  }), [reauthToken, reauthItemId, fetchLinked]);
-
-  const { open: openReauth, ready: reauthReady } = usePlaidLink(reauthConfig);
-
-  useEffect(() => {
-    if (reauthToken && reauthReady) openReauth();
-  }, [reauthToken, reauthReady, openReauth]);
 
   const onInvestSuccess = useCallback<PlaidLinkOnSuccess>(async (public_token, metadata) => {
     setInvestLinkLoading(true);
@@ -384,6 +381,20 @@ export default function ConnectPage() {
 
   return (
     <div className="space-y-5 max-w-2xl animate-fade-in">
+
+      {/* Reauth Plaid Link — mounts fresh with valid token */}
+      {reauthToken && reauthItemId && (
+        <ReauthLink
+          token={reauthToken}
+          itemId={reauthItemId}
+          onDone={() => {
+            setReauthToken(null);
+            setReauthItemId(null);
+            toast.success("Connection restored!");
+            fetchLinked();
+          }}
+        />
+      )}
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
