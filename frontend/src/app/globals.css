@@ -40,9 +40,7 @@
   --border-subtle:  #22252E;
   --border-strong:  #3A3E4A;
 
-  /* Font aliases — Saplyn type system */
-  --font-body: var(--font-jakarta), 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-  --font-display: var(--font-display), 'Fraunces', Georgia, serif;
+  /* Font aliases */
   --font-mono: var(--font-geist-mono), 'JetBrains Mono', ui-monospace, monospace;
 }
 
@@ -52,7 +50,7 @@ body {
   background: var(--color-base);
   color: var(--color-ink-primary);
   position: relative;
-  font-family: var(--font-body);
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "ss01";
