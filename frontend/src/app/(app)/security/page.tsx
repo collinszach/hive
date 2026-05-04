@@ -85,7 +85,7 @@ export default function SecurityPage() {
       status: "implemented",
       content: (
         <div className="space-y-3 text-[13px] text-ink-secondary">
-          <p>Hive Finance implements RBAC with two roles:</p>
+          <p>Saplyn implements RBAC with two roles:</p>
           <ul className="list-disc list-inside space-y-1 pl-2">
             <li><strong className="text-ink-primary">admin</strong> — Full access to all data, settings, admin APIs, and data deletion</li>
             <li><strong className="text-ink-primary">viewer</strong> — Read-only access to financial data; cannot modify settings or delete data</li>
@@ -120,7 +120,7 @@ export default function SecurityPage() {
       status: me?.totp_enabled ? "implemented" : "partial",
       content: (
         <div className="space-y-3 text-[13px] text-ink-secondary">
-          <p>Hive Finance supports TOTP-based two-factor authentication (RFC 6238). Compatible with Google Authenticator, Authy, 1Password, and any TOTP app.</p>
+          <p>Saplyn supports TOTP-based two-factor authentication (RFC 6238). Compatible with Google Authenticator, Authy, 1Password, and any TOTP app.</p>
           <p>MFA status for current account: {me?.totp_enabled ? (
             <span className="text-semantic-income font-medium">Enabled</span>
           ) : (
@@ -138,7 +138,7 @@ export default function SecurityPage() {
       status: "policy",
       content: (
         <div className="space-y-3 text-[13px] text-ink-secondary">
-          <p><strong className="text-ink-primary">Scope:</strong> Hive Finance is a single-user, self-hosted personal application. There are no employees or organizational accounts.</p>
+          <p><strong className="text-ink-primary">Scope:</strong> Saplyn is a single-user, self-hosted personal application. There are no employees or organizational accounts.</p>
           <p><strong className="text-ink-primary">Policy:</strong> Access is controlled by the single admin user. If access needs to be revoked, the admin can deactivate or delete the account via the user management API. JWT tokens expire after 12 hours, ensuring automatic access termination without explicit logout.</p>
           <p><strong className="text-ink-primary">Tailscale enforcement:</strong> Network access is gated by Tailscale device enrollment. Removing a device from the tailnet immediately terminates access regardless of valid JWT tokens.</p>
         </div>
@@ -325,11 +325,11 @@ export default function SecurityPage() {
       status: "policy",
       content: (
         <div className="space-y-4 text-[13px] text-ink-secondary">
-          <p className="font-semibold text-ink-primary">Information Security Policy — Hive Finance</p>
+          <p className="font-semibold text-ink-primary">Information Security Policy — Saplyn</p>
           <div className="space-y-4">
             <div>
               <p className="font-medium text-ink-primary mb-1">Purpose</p>
-              <p>To protect the confidentiality, integrity, and availability of personal financial data processed by Hive Finance, including data obtained through Plaid API integrations.</p>
+              <p>To protect the confidentiality, integrity, and availability of personal financial data processed by Saplyn, including data obtained through Plaid API integrations.</p>
             </div>
             <div>
               <p className="font-medium text-ink-primary mb-1">Access Control</p>
@@ -359,7 +359,7 @@ export default function SecurityPage() {
       status: "implemented",
       content: (
         <div className="space-y-4 text-[13px] text-ink-secondary">
-          <p className="font-semibold text-ink-primary">Access Control Policy — Hive Finance</p>
+          <p className="font-semibold text-ink-primary">Access Control Policy — Saplyn</p>
           <div className="space-y-3">
             <div>
               <p className="font-medium text-ink-primary mb-1">Authentication Requirements</p>
@@ -397,7 +397,7 @@ export default function SecurityPage() {
           <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Security &amp; Compliance</h1>
         </div>
         <p className="text-[13px] text-ink-tertiary">
-          Plaid attestation requirements and security policies for Hive Finance
+          Plaid attestation requirements and security policies for Saplyn
         </p>
       </div>
 

@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.zacharyjcollins.hive",
-  appName: "Hive Finance",
+  appId: "com.zacharyjcollins.saplyn",
+  appName: "Saplyn",
   // Load from your live server instead of bundled assets.
   // Change this URL to your Cloudflare Tunnel or Tailscale hostname.
   server: {
@@ -10,7 +10,7 @@ const config: CapacitorConfig = {
     cleartext: false,
   },
   ios: {
-    scheme: "Hive Finance",
+    scheme: "Saplyn",
     contentInset: "always",
     backgroundColor: "#09090E",
     preferredContentMode: "mobile",

@@ -16,7 +16,7 @@ export default function MarketingFooter() {
         {/* Logo */}
         <div className="flex items-center gap-2.5">
           <HiveHex size={22} />
-          <span className="text-[11px] font-bold tracking-widest text-ink-ghost">HIVE</span>
+          <span className="text-[11px] font-bold tracking-widest text-ink-ghost">SAPLYN</span>
         </div>
 
         {/* Links */}

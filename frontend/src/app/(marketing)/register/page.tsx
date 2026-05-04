@@ -158,7 +158,7 @@ export default function RegisterPage() {
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
           <HiveHex size={38} />
-          <span className="text-[17px] font-bold tracking-[-0.01em] text-ink-primary">HIVE</span>
+          <span className="text-[17px] font-bold tracking-[-0.01em] text-ink-primary">SAPLYN</span>
         </div>
 
         {/* Center hero */}
@@ -216,7 +216,7 @@ export default function RegisterPage() {
           {/* Mobile logo */}
           <div className="flex flex-col items-center mb-10 lg:hidden">
             <HiveHex size={48} />
-            <h1 className="text-2xl font-bold text-ink-primary mt-3">HIVE</h1>
+            <h1 className="text-2xl font-bold text-ink-primary mt-3">SAPLYN</h1>
             <p className="text-[13px] text-ink-tertiary mt-1">Your money, your data, your rules.</p>
           </div>
 

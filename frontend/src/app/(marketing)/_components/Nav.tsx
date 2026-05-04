@@ -16,7 +16,7 @@ export default function Nav() {
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2.5 shrink-0">
         <HiveHex size={28} />
-        <span className="text-[13px] font-bold tracking-[0.1em] text-ink-primary">HIVE</span>
+        <span className="text-[13px] font-bold tracking-[0.1em] text-ink-primary">SAPLYN</span>
       </Link>
 
       {/* Center links — desktop only */}

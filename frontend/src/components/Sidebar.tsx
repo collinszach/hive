@@ -229,25 +229,14 @@ export default function Sidebar() {
           flexShrink: 0,
         }}
       >
-        {/* Hex mark */}
-        <div style={{
-          width: 26,
-          height: 26,
-          borderRadius: 6,
-          background: "var(--color-honey-bright)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-        }}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <polygon points="8,1 14,4.5 14,11.5 8,15 2,11.5 2,4.5" stroke="#0B0C0F" strokeWidth="1.5" fill="none" />
-            <polygon points="8,4 11.5,6 11.5,10 8,12 4.5,10 4.5,6" stroke="#0B0C0F" strokeWidth="1" fill="#0B0C0F" opacity="0.35" />
-            <circle cx="8" cy="8" r="1.2" fill="#0B0C0F" />
-          </svg>
-        </div>
+        {/* Saplyn sprout mark */}
+        <svg width="24" height="24" viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
+          <path d="M16 28 L16 14" stroke="var(--color-honey-bright)" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M16 14 C 16 8, 20 5, 26 5 C 26 11, 22 14, 16 14 Z" fill="var(--color-honey-bright)"/>
+          <path d="M16 18 C 16 14, 13 11, 8 11 C 8 16, 11 18, 16 18 Z" fill="var(--color-honey-bright)" opacity="0.55"/>
+        </svg>
         <span style={{ fontSize: 15, fontWeight: 700, color: "#F0F2F5", letterSpacing: "-0.02em" }}>
-          Hive
+          Saplyn
         </span>
       </Link>
 

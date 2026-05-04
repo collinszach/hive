@@ -162,7 +162,7 @@ async def register(body: RegisterRequest, request: Request, response: Response, 
     await _write_audit(db, "account_created", user.username, request)
     token = _create_access_token(user.username, user.role)
     response.set_cookie(
-        key="hive_auth",
+        key="saplyn_auth",
         value=token,
         httponly=True,
         samesite="lax",
@@ -204,7 +204,7 @@ async def login(body: LoginRequest, request: Request, response: Response, db: As
     await _write_audit(db, "login_success", user.username, request)
     token = _create_access_token(user.username, user.role)
     response.set_cookie(
-        key="hive_auth",
+        key="saplyn_auth",
         value=token,
         httponly=True,
         samesite="lax",
@@ -217,7 +217,7 @@ async def login(body: LoginRequest, request: Request, response: Response, db: As
 
 @router.post("/logout")
 async def logout(response: Response) -> dict:
-    response.delete_cookie(key="hive_auth", path="/")
+    response.delete_cookie(key="saplyn_auth", path="/")
     return {"status": "ok"}
 
 
@@ -253,7 +253,7 @@ async def setup_totp(request: Request, db: AsyncSession = Depends(get_db)) -> Se
     await db.commit()
 
     totp = pyotp.TOTP(secret)
-    uri = totp.provisioning_uri(name=user.username, issuer_name="Hive Finance")
+    uri = totp.provisioning_uri(name=user.username, issuer_name="Saplyn")
     return SetupTotpResponse(secret=secret, provisioning_uri=uri)
 
 
@@ -268,7 +268,7 @@ async def setup_totp_qr(request: Request, db: AsyncSession = Depends(get_db)) ->
         raise HTTPException(status_code=400, detail="Run /setup-totp first")
 
     totp = pyotp.TOTP(user.totp_secret)
-    uri = totp.provisioning_uri(name=user.username, issuer_name="Hive Finance")
+    uri = totp.provisioning_uri(name=user.username, issuer_name="Saplyn")
 
     img = qrcode.make(uri, image_factory=qrcode.image.svg.SvgImage)
     buf = io.BytesIO()
@@ -379,7 +379,7 @@ async def get_audit_log(
 
 def _get_bearer_token(request: Request) -> str:
     # Try cookie first
-    token = request.cookies.get("hive_auth")
+    token = request.cookies.get("saplyn_auth")
     if token:
         return token
     # Fall back to Bearer header

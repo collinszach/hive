@@ -24,7 +24,7 @@ export default function SettingsPage() {
     <div className="space-y-5 animate-fade-in">
       <div>
         <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink-primary">Settings</h1>
-        <p className="text-[13px] text-ink-tertiary mt-0.5">Customize HIVE to your preferences</p>
+        <p className="text-[13px] text-ink-tertiary mt-0.5">Customize Saplyn to your preferences</p>
       </div>
 
       {/* Tab bar */}

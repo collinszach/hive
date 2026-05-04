@@ -51,7 +51,7 @@ export default function ComparisonTable() {
           <div className="grid grid-cols-5 border-b border-border">
             <div className="p-4 col-span-1" />
             {[
-              { label: "Hive", highlight: true },
+              { label: "Saplyn", highlight: true },
               { label: "Monarch", highlight: false },
               { label: "YNAB", highlight: false },
               { label: "Copilot", highlight: false },
