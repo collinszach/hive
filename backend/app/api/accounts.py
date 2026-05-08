@@ -167,6 +167,9 @@ async def unlink_institution(
         item_id, accounts_removed, transactions_deleted,
     )
 
+    from app.tasks.maintenance import snapshot_net_worth
+    snapshot_net_worth.delay()
+
     return UnlinkResponse(
         item_id=item_id,
         accounts_removed=accounts_removed,
@@ -259,6 +262,9 @@ async def delete_manual_account(
 
     await db.delete(acct)
     await db.commit()
+
+    from app.tasks.maintenance import snapshot_net_worth
+    snapshot_net_worth.delay()
 
 
 # ---------------------------------------------------------------------------

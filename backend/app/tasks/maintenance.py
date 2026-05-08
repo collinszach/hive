@@ -40,24 +40,46 @@ def snapshot_net_worth(self) -> dict:
         total_liabilities = 0.0
         breakdown: dict[str, float] = {}
 
+        # Build a set of account names that appear more than once so we can
+        # disambiguate them in the breakdown dict (otherwise duplicate names
+        # silently overwrite each other).
+        name_counts: dict[str, int] = {}
+        for acct in accounts:
+            name_counts[acct.name] = name_counts.get(acct.name, 0) + 1
+
+        name_seen: dict[str, int] = {}
+
+        def _breakdown_key(acct, suffix: str) -> str:
+            """Return a unique breakdown key, appending institution when the name is shared."""
+            if name_counts.get(acct.name, 1) > 1:
+                inst = acct.institution or str(acct.id)[:8]
+                # Further disambiguate with a counter if institution is also shared
+                base = f"{acct.name} · {inst} ({suffix})"
+            else:
+                base = f"{acct.name} ({suffix})"
+            # Final safety: append counter if base key still collides
+            count = name_seen.get(base, 0)
+            name_seen[base] = count + 1
+            return base if count == 0 else f"{base} #{count + 1}"
+
         for acct in accounts:
             balance = float(acct.current_balance or 0)
             acct_type = acct.type.lower()
 
             if acct_type in ("depository", "investment", "brokerage", "other"):
                 total_assets += balance
-                breakdown[f"{acct.name} (asset)"] = round(balance, 2)
+                breakdown[_breakdown_key(acct, "asset")] = round(balance, 2)
             elif acct_type in ("credit", "loan", "mortgage"):
                 total_liabilities += abs(balance)
-                breakdown[f"{acct.name} (liability)"] = round(abs(balance), 2)
+                breakdown[_breakdown_key(acct, "liability")] = round(abs(balance), 2)
             else:
                 # Unknown type — treat positive as asset, negative as liability
                 if balance >= 0:
                     total_assets += balance
-                    breakdown[f"{acct.name} (asset)"] = round(balance, 2)
+                    breakdown[_breakdown_key(acct, "asset")] = round(balance, 2)
                 else:
                     total_liabilities += abs(balance)
-                    breakdown[f"{acct.name} (liability)"] = round(abs(balance), 2)
+                    breakdown[_breakdown_key(acct, "liability")] = round(abs(balance), 2)
 
         today = date.today()
         stmt = pg_insert(NetWorthSnapshot).values(
