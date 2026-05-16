@@ -146,12 +146,15 @@ _RAW_RULES = [
     # Income / Payroll — credits that represent salary, wages, or other income
     # These patterns only fire on negative amounts (credits) in practice since
     # positive transactions rarely contain these keywords.
-    (r"direct deposit|payroll|adp totalsource|adp workforce|paychex|ceridian|workday payroll|gusto.*payroll|intuit payroll", "Income", "Salary"),
+    (r"direct dep(?:osit)?|payroll|adp totalsource|adp workforce|paychex|ceridian|workday payroll|gusto.*payroll|intuit payroll|ach credit.*(?:payroll|salary|income)|ppd.*payroll|stripe.*payout|square.*payout|shopify.*payout|braintree.*payout|rippling.*payroll|bamboohr.*payroll", "Income", "Salary"),
     (r"check deposit|mobile deposit|remote deposit", "Income", "Other"),
     (r"deloitte|accenture|mckinsey|bain.*consult|bcg.*consult|pwc|kpmg|ernst.*young|ey llp", "Income", "Salary"),
-    (r"interest payment|dividend payment|interest earned|savings interest", "Income", "Interest"),
+    (r"interest payment|dividend payment|interest earned|savings interest|apy|high.?yield|hysa|savings.*interest|cd.*interest|bond.*interest", "Income", "Interest"),
     (r"tax refund|irs treas|state tax refund|treasury.*tax", "Income", "Tax Refund"),
-    (r"freelance|contractor payment|consulting payment|invoice payment", "Income", "Freelance"),
+    (r"freelance|contractor payment|consulting payment|invoice payment|upwork|fiverr|toptal|99designs|guru\.com|freelancer\.com|contra\.com", "Income", "Freelance"),
+    (r"reimbursement|expense reimburs|concur|netsuite.*expense|expensify|ramp.*reimb|brex.*reimb", "Income", "Reimbursement"),
+    (r"\bbonus\b|signing bonus|annual bonus|performance bonus|spot bonus|retention bonus", "Income", "Bonus"),
+    (r"rental income|rent payment received|airbnb.*payout|vrbo.*payout|furnished finder|cozy.*rent|zelle.*rent", "Income", "Rental"),
     (r"bilt.*protect.*credit|rent.*rebate|rent.*credit", "Transfers", "Refund"),
 ]
 
@@ -260,6 +263,7 @@ _PLAID_MAP: list[tuple[str, str, str]] = [
     ("bank fees",                      "Transfers",    "Payment"),
     # ── Income ────────────────────────────────────────────────────────────────
     ("payroll",                        "Income",       "Salary"),
+    ("direct dep",                     "Income",       "Salary"),
     ("direct deposit",                 "Income",       "Salary"),
     ("income",                         "Income",       "Salary"),
     ("interest",                       "Income",       "Interest"),
