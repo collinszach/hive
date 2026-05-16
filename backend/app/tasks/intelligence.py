@@ -32,9 +32,10 @@ _SUBSCRIPTION_PATTERNS = re.compile(
     name="app.tasks.intelligence.detect_subscriptions",
     bind=True,
     max_retries=3,
-    default_retry_delay=120,
     autoretry_for=(Exception,),
     retry_backoff=True,
+    retry_backoff_max=120,
+    retry_jitter=True,
 )
 def detect_subscriptions(self) -> dict:
     """Scan last 90 days of transactions and upsert detected subscriptions."""
@@ -161,9 +162,10 @@ def detect_subscriptions(self) -> dict:
     name="app.tasks.intelligence.generate_insights",
     bind=True,
     max_retries=3,
-    default_retry_delay=120,
     autoretry_for=(Exception,),
     retry_backoff=True,
+    retry_backoff_max=120,
+    retry_jitter=True,
 )
 def generate_insights(self) -> dict:
     """Generate proactive insights from recent transaction data.

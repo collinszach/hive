@@ -149,12 +149,12 @@ _RAW_RULES = [
     (r"direct dep(?:osit)?|payroll|adp totalsource|adp workforce|paychex|ceridian|workday payroll|gusto.*payroll|intuit payroll|ach credit.*(?:payroll|salary|income)|ppd.*payroll|stripe.*payout|square.*payout|shopify.*payout|braintree.*payout|rippling.*payroll|bamboohr.*payroll", "Income", "Salary"),
     (r"check deposit|mobile deposit|remote deposit", "Income", "Other"),
     (r"deloitte|accenture|mckinsey|bain.*consult|bcg.*consult|pwc|kpmg|ernst.*young|ey llp", "Income", "Salary"),
-    (r"interest payment|dividend payment|interest earned|savings interest|apy|high.?yield|hysa|savings.*interest|cd.*interest|bond.*interest", "Income", "Interest"),
+    (r"interest payment|dividend payment|interest earned|savings interest|apy|high.?yield|hysa|savings.*interest|\bcd\b.*interest|bond.*interest", "Income", "Interest"),
     (r"tax refund|irs treas|state tax refund|treasury.*tax", "Income", "Tax Refund"),
     (r"freelance|contractor payment|consulting payment|invoice payment|upwork|fiverr|toptal|99designs|guru\.com|freelancer\.com|contra\.com", "Income", "Freelance"),
     (r"reimbursement|expense reimburs|concur|netsuite.*expense|expensify|ramp.*reimb|brex.*reimb", "Income", "Reimbursement"),
     (r"\bbonus\b|signing bonus|annual bonus|performance bonus|spot bonus|retention bonus", "Income", "Bonus"),
-    (r"rental income|rent payment received|airbnb.*payout|vrbo.*payout|furnished finder|cozy.*rent|zelle.*rent", "Income", "Rental"),
+    (r"rental income|rent payment received|airbnb.*payout|vrbo.*payout|furnished finder|cozy.*rent", "Income", "Rental"),
     (r"bilt.*protect.*credit|rent.*rebate|rent.*credit", "Transfers", "Refund"),
 ]
 
@@ -313,7 +313,7 @@ Education → Tuition, Books, Courses
 Personal Care → Haircut, Spa, Clothing
 Transfers → P2P, Payment, Refund
 Business → Office, Software, Advertising
-Income → Salary, Freelance, Interest, Dividend, Tax Refund, Bonus
+Income → Salary, Freelance, Interest, Dividend, Tax Refund, Bonus, Reimbursement, Rental
 Uncategorized → (fallback only)
 """.strip()
 
