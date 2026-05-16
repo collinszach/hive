@@ -163,7 +163,8 @@ async def safe_to_spend(db: AsyncSession = Depends(get_db), user: User = Depends
         month_end = date(today.year + 1, 1, 1)
     else:
         month_end = date(today.year, today.month + 1, 1)
-    days_remaining = (month_end - today).days - 1  # days *after* today
+    # Include today; floor at 1 so daily allowance calculation never divides by zero
+    days_remaining = max(1, (month_end - today).days)
 
     # 1. Trailing 3-month income estimate — only transactions categorised as
     #    "Income" (salary, payroll, etc). Refunds and credits on expense
@@ -469,10 +470,17 @@ async def health_score(db: AsyncSession = Depends(get_db), user: User = Depends(
             SELECT COALESCE(SUM(ABS(amount)) / 3.0, 0)
             FROM transactions
             WHERE date >= :cutoff AND date < :ms
-              AND amount < 0 AND is_excluded = FALSE
-              AND is_transfer = FALSE AND pending = FALSE
+              AND amount < 0
+              AND category = 'Income'
+              AND is_excluded = FALSE
+              AND is_transfer = FALSE
+              AND pending = FALSE
+              AND account_id IN (
+                  SELECT id FROM accounts
+                  WHERE is_active = TRUE AND user_id = :uid
+              )
         """),
-        {"cutoff": three_months_ago, "ms": month_start},
+        {"cutoff": three_months_ago, "ms": month_start, "uid": user.id},
     )
     monthly_income = float(income_res.scalar_one() or 0)
 
@@ -493,8 +501,13 @@ async def health_score(db: AsyncSession = Depends(get_db), user: User = Depends(
 
     if monthly_income > 0:
         savings_rate = max(0.0, (monthly_income - expenses) / monthly_income)
-        # 20%+ savings → 100pts, 10% → 60pts, 0% → 0pts
-        savings_score = min(100, round(savings_rate * 5 * 100))
+        # 20%+ savings → 100pts, 10% → 60pts, 0% → 0pts (piecewise linear)
+        if savings_rate >= 0.20:
+            savings_score = 100
+        elif savings_rate >= 0.10:
+            savings_score = round(60 + (savings_rate - 0.10) / 0.10 * 40)
+        else:
+            savings_score = round(savings_rate / 0.10 * 60)
         factors.append(HealthFactor(
             name="Savings rate",
             score=savings_score,
