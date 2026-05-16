@@ -122,7 +122,7 @@ export default function NetWorthPage() {
     const last = data[data.length - 1];
     const prev = data[data.length - 2];
     const delta = last.net_worth - prev.net_worth;
-    const annualized = delta * 12;
+    const annualized = delta * 365;
     return { delta, annualized };
   }, [data]);
 
@@ -345,7 +345,7 @@ export default function NetWorthPage() {
               <p className="text-sm text-ink-tertiary max-w-xs leading-relaxed">
                 Snapshots are taken daily at 3:30 AM. Connect your accounts to get started.
               </p>
-              <Link href="/connect" className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-honey text-base-dark text-sm font-semibold hover:opacity-90 transition-opacity no-underline">
+              <Link href="/connect" className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-honey text-[#13151A] text-sm font-semibold hover:opacity-90 transition-opacity no-underline">
                 Connect Accounts
               </Link>
             </div>

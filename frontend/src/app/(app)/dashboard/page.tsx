@@ -450,7 +450,7 @@ export default function Dashboard() {
           },
           {
             label: "Saved",
-            value: monthSaved >= 0 ? fmt(monthSaved) : `−${fmt(Math.abs(monthSaved))}`,
+            value: position ? (monthSaved >= 0 ? fmt(monthSaved) : `−${fmt(Math.abs(monthSaved))}`) : "—",
             href:  "/cash-flow",
             color: monthSaved >= 0 ? "var(--color-income)" : "var(--color-expense)",
             sub:   { text: monthIncome > 0 ? `${fmt(monthIncome)} in · ${fmt(monthSpent)} out` : `${pctMonth}% of month elapsed`, color: "var(--color-ink-tertiary)" },
@@ -675,7 +675,7 @@ export default function Dashboard() {
                             <div
                               className="h-full rounded-full"
                               style={{
-                                width: `${Math.min((debitGap / Math.max(spendItems[0]?.spend ?? 1, debitGap)) * 100, 100)}%`,
+                                width: `${Math.min((debitGap / Math.max(maxSpend, debitGap)) * 100, 100)}%`,
                                 background: "rgba(255,255,255,0.15)",
                               }}
                             />

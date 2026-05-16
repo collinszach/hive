@@ -34,11 +34,11 @@ export default function MobileNav() {
       {showMore && (
         <>
           <div
-            className="fixed inset-0 z-40 md:hidden"
+            className="fixed inset-0 z-40 lg:hidden"
             onClick={() => setShowMore(false)}
           />
           <div
-            className="fixed bottom-14 left-0 right-0 z-50 md:hidden rounded-t-2xl border-t"
+            className="fixed bottom-14 left-0 right-0 z-50 lg:hidden rounded-t-2xl border-t"
             style={{
               background: "var(--color-surface)",
               borderColor: "var(--border-strong)",
@@ -69,7 +69,7 @@ export default function MobileNav() {
 
       {/* Bottom tab bar */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden border-t"
+        className="fixed bottom-0 left-0 right-0 z-40 flex lg:hidden border-t"
         style={{
           background: "var(--color-surface)",
           borderColor: "var(--border-default)",
