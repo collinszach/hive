@@ -17,7 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* md:pl-[52px] = sidebar width on desktop; pb-16 = bottom nav on mobile */}
           <main
             style={{ flex: 1, minWidth: 0, overflow: "auto" }}
-            className="md:pl-[220px] pb-16 md:pb-0"
+            className="lg:pl-[220px] pb-16 lg:pb-0"
           >
             <div className="p-4 md:p-6">
               <ErrorBoundary>{children}</ErrorBoundary>

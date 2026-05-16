@@ -149,6 +149,7 @@ export default function Sidebar() {
   const [userInitial, setUserInitial] = useState("?");
   const [unreadCount, setUnreadCount] = useState(0);
   const [anomalyCount, setAnomalyCount] = useState(0);
+  const [lastSync, setLastSync] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
@@ -165,6 +166,24 @@ export default function Sidebar() {
     refresh();
     const interval = setInterval(refresh, 60_000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    api.accounts.linked().then((institutions) => {
+      const dates = institutions
+        .map((inst) => inst.last_sync_at)
+        .filter((d): d is string => d !== null)
+        .map((d) => new Date(d).getTime());
+      if (dates.length === 0) return;
+      const mostRecent = Math.max(...dates);
+      const diffMs = Date.now() - mostRecent;
+      const diffMin = Math.floor(diffMs / 60_000);
+      const diffHr = Math.floor(diffMin / 60);
+      const diffDay = Math.floor(diffHr / 24);
+      if (diffDay >= 1) setLastSync(`${diffDay}d ago`);
+      else if (diffHr >= 1) setLastSync(`${diffHr}h ago`);
+      else setLastSync(`${diffMin}m ago`);
+    }).catch(() => {});
   }, []);
 
   async function handleSync() {
@@ -185,7 +204,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="hidden md:flex md:flex-col"
+      className="hidden lg:flex lg:flex-col"
       style={{
         position: "fixed",
         left: 0,
@@ -349,6 +368,7 @@ export default function Sidebar() {
             style={{ flexShrink: 0, animation: syncing ? "spin 1s linear infinite" : "none" }}
           />
           <span>{syncing ? "Syncing…" : "Sync"}</span>
+          {lastSync && <span className="text-[10px] text-ink-ghost">{lastSync}</span>}
         </button>
 
         {/* Settings */}

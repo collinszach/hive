@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { Star } from "lucide-react";
+import { Star, Zap } from "lucide-react";
 import { api, PointsSummary, LedgerEntry, LeakageResponse } from "@/lib/api";
 import { fmt, cn } from "@/lib/utils";
 import { POINT_VALUES_CPP } from "@/lib/pointsConstants";
@@ -204,10 +204,14 @@ export default function PointsPage() {
           )}
 
           {!summaryLoading && summary && summary.programs.length === 0 && (
-            <div className="hive-card p-16 text-center border-dashed">
-              <Star className="w-8 h-8 text-ink-tertiary/30 mx-auto mb-3" />
-              <p className="text-[14px] text-ink-secondary mb-1">No points data yet</p>
-              <p className="text-[12px] text-ink-tertiary">Link accounts and run a sync to get started.</p>
+            <div className="hive-card flex flex-col items-center justify-center py-16 text-center">
+              <div className="h-14 w-14 rounded-full bg-surface border border-border-subtle flex items-center justify-center mb-4">
+                <Zap className="h-6 w-6 text-honey" />
+              </div>
+              <h3 className="text-base font-semibold text-ink-primary mb-2">No points data yet</h3>
+              <p className="text-sm text-ink-tertiary max-w-xs leading-relaxed">
+                Points are calculated from your transactions after each sync. They&apos;ll appear here automatically.
+              </p>
             </div>
           )}
 

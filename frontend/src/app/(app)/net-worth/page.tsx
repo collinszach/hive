@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { api, type NetWorthSnapshot } from "@/lib/api";
 import { fmt } from "@/lib/utils";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import Link from "next/link";
 
 // ── Animated counter ──────────────────────────────────────────────────────────
 
@@ -115,6 +116,15 @@ export default function NetWorthPage() {
   const isPositive = (change ?? 0) >= 0;
   const accentRgb  = isPositive ? "90,168,106" : "200,90,90";
   const accent     = isPositive ? "#3DD68C" : "#F87171";
+
+  const wealthVelocity = useMemo(() => {
+    if (!data || data.length < 2) return null;
+    const last = data[data.length - 1];
+    const prev = data[data.length - 2];
+    const delta = last.net_worth - prev.net_worth;
+    const annualized = delta * 12;
+    return { delta, annualized };
+  }, [data]);
 
   const chartData: ChartRow[] = data.map(s => ({
     date:        fmtDate(s.snapshot_date),
@@ -241,6 +251,24 @@ export default function NetWorthPage() {
           )}
         </div>
 
+        {/* ── Wealth Velocity Metrics ── */}
+        {wealthVelocity && (
+          <div className="grid grid-cols-2 gap-3 mb-4" style={{ padding: "0 28px" }}>
+            <div className="hive-card p-4">
+              <p className="text-[10px] uppercase tracking-widest text-ink-tertiary mb-1">Latest Change</p>
+              <p className={`text-xl font-bold font-mono ${wealthVelocity.delta >= 0 ? 'text-semantic-income' : 'text-semantic-expense'}`}>
+                {wealthVelocity.delta >= 0 ? '+' : ''}{fmt(wealthVelocity.delta)}
+              </p>
+            </div>
+            <div className="hive-card p-4">
+              <p className="text-[10px] uppercase tracking-widest text-ink-tertiary mb-1">Annualized Rate</p>
+              <p className={`text-xl font-bold font-mono ${wealthVelocity.annualized >= 0 ? 'text-semantic-income' : 'text-semantic-expense'}`}>
+                {wealthVelocity.annualized >= 0 ? '+' : ''}{fmt(wealthVelocity.annualized)}/yr
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ── Chart (borderless, atmospheric) ── */}
         <div className="nw-fade-up nw-fade-up-d2">
           {/* Period pills — live above the chart */}
@@ -309,16 +337,17 @@ export default function NetWorthPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : !loading ? (
-            <div style={{
-              height: 160,
-              display:        "flex",
-              flexDirection:  "column",
-              alignItems:     "center",
-              justifyContent: "center",
-              gap: 8,
-            }}>
-              <p style={{ fontSize: 32, color: "rgba(255,255,255,0.08)" }}>∅</p>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.18)" }}>No snapshots yet</p>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="h-14 w-14 rounded-full bg-surface border border-border-subtle flex items-center justify-center mb-4">
+                <TrendingUp className="h-6 w-6 text-ink-tertiary" />
+              </div>
+              <h3 className="text-base font-semibold text-ink-primary mb-2">No net worth data yet</h3>
+              <p className="text-sm text-ink-tertiary max-w-xs leading-relaxed">
+                Snapshots are taken daily at 3:30 AM. Connect your accounts to get started.
+              </p>
+              <Link href="/connect" className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-honey text-base-dark text-sm font-semibold hover:opacity-90 transition-opacity no-underline">
+                Connect Accounts
+              </Link>
             </div>
           ) : null}
 
