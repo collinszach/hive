@@ -442,6 +442,13 @@ export default function Dashboard() {
               : { text: "updated daily", color: "var(--color-ink-tertiary)" },
           },
           {
+            label: "Monthly Income",
+            value: safeToSpend ? fmt(safeToSpend.breakdown.monthly_income) : "—",
+            href:  "/income",
+            color: safeToSpend && safeToSpend.breakdown.monthly_income > 0 ? "var(--color-income)" : undefined,
+            sub:   { text: "3-month avg", color: "var(--color-ink-tertiary)" },
+          },
+          {
             label: "Saved",
             value: monthSaved >= 0 ? fmt(monthSaved) : `−${fmt(Math.abs(monthSaved))}`,
             href:  "/cash-flow",
@@ -612,40 +619,75 @@ export default function Dashboard() {
           <div className="flex flex-col gap-4">
 
             {/* Spending Breakdown */}
-            {spendItems.length > 0 && (
+            {(loading || spendItems.length > 0) && (
               <div className="hive-card overflow-hidden p-4">
                 <div className="hive-section-header mb-0">
                   <SectionLabel>Spending · {currentMonthLabel}</SectionLabel>
-                  <Link href="/reports" className="flex items-center gap-1 text-[12px] text-honey/80 hover:text-honey transition-colors">
-                    Reports <ChevronRight className="w-3 h-3" />
-                  </Link>
+                  {!loading && <Link href="/reports" className="flex items-center gap-1 text-[12px] text-honey/80 hover:text-honey transition-colors">Reports <ChevronRight className="w-3 h-3" /></Link>}
                 </div>
-                <div className="space-y-2.5">
-                  {spendItems.map((item, i) => (
-                    <Link
-                      key={item.category}
-                      href={`/transactions?category=${encodeURIComponent(item.category)}`}
-                      className="flex items-center gap-3 -mx-1 px-1 py-0.5 rounded hover:bg-white/[0.03] transition-colors no-underline group"
-                      style={{ animationDelay: `${i * 50}ms` }}
-                    >
-                      <div className="w-2 h-2 rounded-full shrink-0" style={{ background: CAT_COLOR[item.category] ?? "#4B5063" }} />
-                      <span className="text-[12px] text-ink-secondary w-[112px] shrink-0 truncate group-hover:text-ink-primary transition-colors">{item.category}</span>
-                      <div className="flex-1 h-1 bg-white/[0.05] rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full animate-bar-grow"
-                          style={{
-                            "--bar-w": `${(item.spend / maxSpend) * 100}%`,
-                            background: CAT_COLOR[item.category] ?? "rgba(255,255,255,0.15)",
-                            opacity: 0.7,
-                          } as React.CSSProperties}
-                        />
+                {loading ? (
+                  <div className="space-y-2.5 mt-2">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-white/[0.06] animate-pulse shrink-0" />
+                        <div className="w-24 h-3 rounded bg-white/[0.06] animate-pulse shrink-0" />
+                        <div className="flex-1 h-1 bg-white/[0.05] rounded-full" />
+                        <div className="w-14 h-3 rounded bg-white/[0.06] animate-pulse shrink-0" />
                       </div>
-                      <span className="text-[12px] font-mono text-ink-tertiary tabular-nums w-16 text-right shrink-0">
-                        {fmt(item.spend)}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {spendItems.map((item, i) => (
+                      <Link
+                        key={item.category}
+                        href={`/transactions?category=${encodeURIComponent(item.category)}`}
+                        className="flex items-center gap-3 -mx-1 px-1 py-0.5 rounded hover:bg-white/[0.03] transition-colors no-underline group"
+                        style={{ animationDelay: `${i * 50}ms` }}
+                      >
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: CAT_COLOR[item.category] ?? "#4B5063" }} />
+                        <span className="text-[12px] text-ink-secondary w-[112px] shrink-0 truncate group-hover:text-ink-primary transition-colors">{item.category}</span>
+                        <div className="flex-1 h-1 bg-white/[0.05] rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full animate-bar-grow"
+                            style={{
+                              "--bar-w": `${(item.spend / maxSpend) * 100}%`,
+                              background: CAT_COLOR[item.category] ?? "rgba(255,255,255,0.15)",
+                              opacity: 0.7,
+                            } as React.CSSProperties}
+                          />
+                        </div>
+                        <span className="text-[12px] font-mono text-ink-tertiary tabular-nums w-16 text-right shrink-0">
+                          {fmt(item.spend)}
+                        </span>
+                      </Link>
+                    ))}
+                    {(() => {
+                      if (!safeToSpend || loading) return null;
+                      const creditOnlyTotal = spendItems.reduce((s, i) => s + i.spend, 0);
+                      const debitGap = safeToSpend.breakdown.spent_this_month - creditOnlyTotal;
+                      if (debitGap < 10) return null;
+                      return (
+                        <div className="flex items-center gap-3 mt-1 pt-2 border-t border-white/[0.04]">
+                          <div className="w-2 h-2 rounded-full bg-white/20 shrink-0" />
+                          <span className="text-[12px] text-ink-tertiary w-[112px] shrink-0">Debit / Checking</span>
+                          <div className="flex-1 h-1 bg-white/[0.05] rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${Math.min((debitGap / Math.max(spendItems[0]?.spend ?? 1, debitGap)) * 100, 100)}%`,
+                                background: "rgba(255,255,255,0.15)",
+                              }}
+                            />
+                          </div>
+                          <span className="text-[12px] font-mono text-ink-tertiary tabular-nums w-16 text-right shrink-0">
+                            {fmt(debitGap)}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
             )}
 
