@@ -495,6 +495,7 @@ async def health_score(db: AsyncSession = Depends(get_db), user: User = Depends(
             Transaction.is_transfer.is_(False),
             Transaction.pending.is_(False),
             Account.subtype.notin_(["savings", "cd", "money market", "checking"]),
+            Account.user_id == user.id,
         )
     )
     expenses = float(expense_res.scalar_one() or 0)
