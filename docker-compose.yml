@@ -67,7 +67,7 @@ services:
   celery_worker:
     build: ./backend
     network_mode: host
-    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=4
     env_file: .env
     environment:
       POSTGRES_HOST: "127.0.0.1"
@@ -89,13 +89,15 @@ services:
   celery_beat:
     build: ./backend
     network_mode: host
-    command: celery -A app.celery_app beat --loglevel=info --scheduler=celery.beat.PersistentScheduler --schedule=/tmp/celerybeat-schedule
+    command: celery -A app.celery_app beat --loglevel=info --scheduler=celery.beat.PersistentScheduler --schedule=/var/celery/celerybeat-schedule
     env_file: .env
     environment:
       POSTGRES_HOST: "127.0.0.1"
       REDIS_URL: "redis://:${REDIS_PASSWORD}@127.0.0.1:6380/0"
       CELERY_BROKER_URL: "redis://:${REDIS_PASSWORD}@127.0.0.1:6380/0"
       CELERY_RESULT_BACKEND: "redis://:${REDIS_PASSWORD}@127.0.0.1:6380/1"
+    volumes:
+      - celery_beat_data:/var/celery
     depends_on:
       postgres:
         condition: service_healthy
@@ -115,7 +117,8 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -125,3 +128,4 @@ services:
 
 volumes:
   postgres_data:
+  celery_beat_data:

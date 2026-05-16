@@ -28,8 +28,15 @@ _SUBSCRIPTION_PATTERNS = re.compile(
 )
 
 
-@celery_app.task(name="app.tasks.intelligence.detect_subscriptions")
-def detect_subscriptions() -> dict:
+@celery_app.task(
+    name="app.tasks.intelligence.detect_subscriptions",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=120,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def detect_subscriptions(self) -> dict:
     """Scan last 90 days of transactions and upsert detected subscriptions."""
     logger.info("Starting subscription detection")
     cutoff = date.today() - timedelta(days=90)
@@ -150,8 +157,15 @@ def detect_subscriptions() -> dict:
     return {"detected": detected}
 
 
-@celery_app.task(name="app.tasks.intelligence.generate_insights")
-def generate_insights() -> dict:
+@celery_app.task(
+    name="app.tasks.intelligence.generate_insights",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=120,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def generate_insights(self) -> dict:
     """Generate proactive insights from recent transaction data.
 
     Insight types produced:
