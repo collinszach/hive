@@ -158,6 +158,10 @@ def sync_single_link(self, item_id: str) -> dict:
         db.add(link)
         db.commit()
 
+        # Update net worth snapshot with fresh balances
+        from app.tasks.maintenance import snapshot_net_worth
+        snapshot_net_worth.delay()
+
         logger.info(
             "sync_single_link %s: +%d ~%d -%d", item_id, added_count, mod_count, removed_count
         )
@@ -361,6 +365,8 @@ def _upsert_transactions(db, account_map: dict, transactions: list) -> int:
     if not rows:
         return 0
 
+    from sqlalchemy import case as sa_case
+
     stmt = pg_insert(Transaction).values(rows)
     stmt = stmt.on_conflict_do_update(
         index_elements=["plaid_transaction_id"],
@@ -373,6 +379,19 @@ def _upsert_transactions(db, account_map: dict, transactions: list) -> int:
             "logo_url": stmt.excluded.logo_url,
             "is_transfer": stmt.excluded.is_transfer,
             "is_excluded": stmt.excluded.is_excluded,
+            # Re-categorize on modify, but never overwrite a manual override.
+            "category": sa_case(
+                (Transaction.category_source == "manual", Transaction.category),
+                else_=stmt.excluded.category,
+            ),
+            "subcategory": sa_case(
+                (Transaction.category_source == "manual", Transaction.subcategory),
+                else_=stmt.excluded.subcategory,
+            ),
+            "category_source": sa_case(
+                (Transaction.category_source == "manual", Transaction.category_source),
+                else_=stmt.excluded.category_source,
+            ),
         },
     )
     db.execute(stmt)
