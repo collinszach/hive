@@ -56,7 +56,7 @@ async def _find_or_create_user(
     # 2. Match by email — link google_id to existing account
     if email:
         result = await db.execute(select(User).where(User.email == email))
-        user = result.scalar_one_or_none()
+        user = result.scalars().first()
         if user:
             user.google_id = google_id
             db.add(user)

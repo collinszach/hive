@@ -22,6 +22,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint("uq_users_google_id", "users", type_="constraint")
+    op.drop_constraint("uq_users_google_id", "users", type_="unique")
     op.drop_column("users", "email")
     op.drop_column("users", "google_id")
