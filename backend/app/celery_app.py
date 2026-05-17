@@ -78,4 +78,9 @@ app.conf.beat_schedule = {
         "schedule": crontab(hour=2, minute=45),
         "options": {"queue": "default"},
     },
+    "daily-backup": {
+        "task": "app.tasks.maintenance.backup_database",
+        "schedule": crontab(hour=1, minute=0),  # 1 AM, before sync tasks
+        "options": {"queue": "default"},
+    },
 }

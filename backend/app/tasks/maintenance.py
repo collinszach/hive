@@ -1,13 +1,77 @@
 """Maintenance Celery tasks — net worth snapshots and materialized view refresh."""
 import logging
+import os
+import subprocess
 from datetime import date, datetime, timezone
+from pathlib import Path
 
 from sqlalchemy import text
 
 from app.celery_app import app
+from app.config import settings
 from app.db import get_sync_db
 
 logger = logging.getLogger(__name__)
+
+
+@app.task(
+    name="app.tasks.maintenance.backup_database",
+    bind=True,
+    max_retries=2,
+    default_retry_delay=300,
+)
+def backup_database(self) -> dict:
+    """Run pg_dump and write a compressed backup to /var/backups/hive/.
+
+    Keeps the last 7 daily dumps. The backup directory should be bind-mounted
+    from the host so backups survive container restarts.
+    """
+    backup_dir = Path("/var/backups/hive")
+    backup_dir.mkdir(parents=True, exist_ok=True)
+
+    today = date.today().isoformat()
+    out_path = backup_dir / f"hive_{today}.sql.gz"
+
+    env = os.environ.copy()
+    env["PGPASSWORD"] = settings.postgres_password
+
+    try:
+        with open(out_path, "wb") as f:
+            dump = subprocess.run(
+                [
+                    "pg_dump",
+                    "-h", settings.postgres_host,
+                    "-p", str(settings.postgres_port),
+                    "-U", settings.postgres_user,
+                    "-d", settings.postgres_db,
+                    "--no-password",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                check=True,
+            )
+            gzip = subprocess.run(
+                ["gzip", "-c"],
+                input=dump.stdout,
+                stdout=f,
+                check=True,
+            )
+
+        size_kb = out_path.stat().st_size // 1024
+        logger.info("backup_database: wrote %s (%d KB)", out_path.name, size_kb)
+
+        # Prune backups older than 7 days
+        all_backups = sorted(backup_dir.glob("hive_*.sql.gz"))
+        for old in all_backups[:-7]:
+            old.unlink()
+            logger.info("backup_database: pruned %s", old.name)
+
+        return {"backup": out_path.name, "size_kb": size_kb}
+
+    except subprocess.CalledProcessError as exc:
+        logger.error("backup_database failed: %s", exc.stderr.decode() if exc.stderr else exc)
+        raise self.retry(exc=exc)
 
 
 @app.task(
