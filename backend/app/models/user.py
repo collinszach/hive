@@ -41,6 +41,8 @@ class User(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     snaptrade_user_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     snaptrade_user_secret: Mapped[Optional[str]] = mapped_column(EncryptedString, nullable=True)
+    google_id: Mapped[Optional[str]] = mapped_column(Text, unique=True, nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
