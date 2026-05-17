@@ -1,5 +1,7 @@
 import logging
+from contextlib import asynccontextmanager
 
+import bcrypt
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -7,6 +9,7 @@ from jose import JWTError, jwt
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy import select
 
 from app.api.accounts import router as accounts_router
 from app.api.billing import router as billing_router
@@ -40,6 +43,8 @@ from app.api.tags import router as tags_router
 from app.api.transactions import router as transactions_router
 from app.api.chat import limiter
 from app.config import settings
+from app.db import AsyncSessionLocal
+from app.models.user import User, UserRole
 
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
@@ -47,7 +52,40 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+async def _seed_admin() -> None:
+    """Create the admin account from env vars if no users exist yet.
+
+    This runs on every startup — safe to call repeatedly (no-op when users exist).
+    Ensures the account survives DB resets, volume issues, or fresh installs.
+    """
+    if not settings.admin_password:
+        return
+    async with AsyncSessionLocal() as db:
+        existing = await db.execute(select(User).limit(1))
+        if existing.scalar_one_or_none() is not None:
+            return
+        password_hash = bcrypt.hashpw(
+            settings.admin_password.encode(), bcrypt.gensalt()
+        ).decode()
+        db.add(User(
+            username=settings.admin_username,
+            password_hash=password_hash,
+            role=UserRole.admin,
+            is_active=True,
+        ))
+        await db.commit()
+        logger.info("Seeded admin account: %s", settings.admin_username)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await _seed_admin()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Hive API",
     description="Self-hosted personal finance intelligence platform",
     version="0.1.0",
