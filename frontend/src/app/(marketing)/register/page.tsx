@@ -1,13 +1,9 @@
 // src/app/(marketing)/register/page.tsx
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  Lock, Eye, EyeOff, AlertCircle, CheckCircle2,
-  CreditCard, Star, Zap, ArrowRight,
-} from "lucide-react";
+import { CreditCard, Star, Zap } from "lucide-react";
 import HiveHex from "../_components/HiveHex";
 
 // ── Feature bullet ────────────────────────────────────────────────────────────
@@ -34,100 +30,17 @@ function FeatureBullet({
   );
 }
 
-// ── Password strength bar ─────────────────────────────────────────────────────
-
-type Strength = "weak" | "fair" | "strong";
-
-function PasswordStrengthBar({ strength }: { strength: Strength }) {
-  const colors: Record<Strength, string> = {
-    weak:   "#F87171",
-    fair:   "#FBBF24",
-    strong: "#34D399",
-  };
-  const fill = colors[strength];
-
-  return (
-    <div className="mt-2 flex items-center gap-2">
-      <div className="flex gap-1">
-        {(["weak", "fair", "strong"] as Strength[]).map((level, i) => {
-          const idx = ["weak", "fair", "strong"].indexOf(strength);
-          const active = i <= idx;
-          return (
-            <div
-              key={level}
-              className="h-[3px] w-8 rounded-full transition-colors duration-300"
-              style={{ background: active ? fill : "rgba(255,255,255,0.08)" }}
-            />
-          );
-        })}
-      </div>
-      <span className="text-[11px]" style={{ color: fill }}>
-        {strength}
-      </span>
-    </div>
-  );
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [username,     setUsername]     = useState("");
-  const [password,     setPassword]     = useState("");
-  const [confirm,      setConfirm]      = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading,      setLoading]      = useState(false);
-  const [checking,     setChecking]     = useState(true);
-  const [error,        setError]        = useState("");
+  const [checking, setChecking] = useState(true);
 
-  // Bug fix: use /api/auth/me to check auth state, not getToken()
-  // getToken() always returns truthy on the client so it can't be used for auth checks
   useEffect(() => {
-    // If already logged in, go to dashboard
     fetch("/api/auth/me", { credentials: "include" })
       .then((r) => { if (r.ok) router.replace("/dashboard"); else setChecking(false); })
       .catch(() => setChecking(false));
   }, [router]);
-
-  const passwordStrength: Strength | null = (() => {
-    if (password.length === 0) return null;
-    if (password.length < 10)  return "weak";
-    if (password.length < 14)  return "fair";
-    return "strong";
-  })();
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    if (password !== confirm)  { setError("Passwords do not match."); return; }
-    if (password.length < 10)  { setError("Password must be at least 10 characters."); return; }
-
-    setLoading(true);
-    try {
-      const res  = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-        credentials: "include",
-      });
-      const data = await res.json() as { detail?: string };
-      if (!res.ok) throw new Error(data.detail ?? "Registration failed");
-      // Cookie is set by the server response — no token to store
-      router.replace("/connect");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Registration failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (checking) return null;
-
-  const canSubmit =
-    !loading &&
-    password === confirm &&
-    password.length >= 10 &&
-    username.length >= 3;
 
   return (
     <div className="min-h-screen bg-base flex overflow-hidden">
@@ -229,155 +142,34 @@ export default function RegisterPage() {
               Start tracking your finances in minutes.
             </p>
           </div>
-          <div className="mb-6 lg:hidden">
+          <div className="mb-8 lg:hidden">
             <h2 className="text-[20px] font-bold text-ink-primary text-center">Create your account</h2>
-            <p className="text-[13px] text-ink-tertiary mt-1 text-center">Choose your admin credentials</p>
+            <p className="text-[13px] text-ink-tertiary mt-1 text-center">Sign in with Google to get started</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Google sign-in */}
-            <a
-              href="/api/auth/google"
-              className="flex items-center justify-center gap-3 w-full py-3 rounded-xl text-[14px] font-medium transition-colors"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1.5px solid rgba(255,255,255,0.08)",
-                color: "#EEEEF0",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.08)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.04)";
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
-                <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-                <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-                <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
-                <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/>
-              </svg>
-              Continue with Google
-            </a>
-
-            {/* Divider */}
-            <div className="flex items-center gap-3" style={{ color: "rgba(255,255,255,0.15)" }}>
-              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
-              <span className="text-[11px] tracking-wider">or</span>
-              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
-            </div>
-
-            {/* Username */}
-            <div>
-              <label className="hive-label">Username</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                autoFocus
-                autoComplete="username"
-                pattern="[A-Za-z0-9_\-]{3,32}"
-                placeholder="admin"
-                className="hive-input w-full"
-              />
-              <p className="mt-1.5 text-[11px] text-ink-ghost">
-                3–32 characters: letters, digits, _ or -
-              </p>
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="hive-label">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-ink-tertiary pointer-events-none" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="new-password"
-                  placeholder="••••••••••"
-                  className="hive-input w-full pl-9 pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-tertiary hover:text-ink-secondary transition-colors"
-                >
-                  {showPassword
-                    ? <EyeOff className="w-[15px] h-[15px]" />
-                    : <Eye className="w-[15px] h-[15px]" />}
-                </button>
-              </div>
-              {passwordStrength && <PasswordStrengthBar strength={passwordStrength} />}
-            </div>
-
-            {/* Confirm */}
-            <div>
-              <label className="hive-label">Confirm password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-ink-tertiary pointer-events-none" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  required
-                  autoComplete="new-password"
-                  placeholder="••••••••••"
-                  className={`hive-input w-full pl-9 pr-10 ${
-                    confirm.length > 0 && password !== confirm
-                      ? "border-semantic-expense/40 focus:border-semantic-expense/60"
-                      : confirm.length > 0 && password === confirm
-                      ? "border-semantic-income/40 focus:border-semantic-income/60"
-                      : ""
-                  }`}
-                />
-                {confirm.length > 0 && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {password === confirm
-                      ? <CheckCircle2 className="w-[15px] h-[15px] text-semantic-income" />
-                      : <AlertCircle className="w-[15px] h-[15px] text-semantic-expense" />}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="flex items-center gap-2 rounded-xl bg-semantic-expense/[0.08] border border-semantic-expense/20 px-3 py-2.5">
-                <AlertCircle className="w-[14px] h-[14px] text-semantic-expense shrink-0" />
-                <p className="text-[13px] text-semantic-expense">{error}</p>
-              </div>
-            )}
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="hive-btn-primary w-full text-[14px] py-3 mt-2 group"
-              style={{ opacity: canSubmit ? 1 : 0.4 }}
-            >
-              {loading ? (
-                <span className="flex items-center gap-2 justify-center">
-                  <span className="w-4 h-4 rounded-full border-2 border-black/30 border-t-black/80 animate-spin" />
-                  Creating account…
-                </span>
-              ) : (
-                <span className="flex items-center gap-2 justify-center">
-                  Get started
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                </span>
-              )}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-[13px] text-ink-tertiary">
-            Already have an account?{" "}
-            <Link href="/login" className="text-honey hover:text-honey/80 font-medium transition-colors">
-              Sign in
-            </Link>
-          </p>
+          <a
+            href="/api/auth/google"
+            className="flex items-center justify-center gap-3 w-full py-3 rounded-xl text-[14px] font-medium transition-colors"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1.5px solid rgba(255,255,255,0.08)",
+              color: "#EEEEF0",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.08)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.04)";
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
+              <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+              <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+              <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
+              <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/>
+            </svg>
+            Continue with Google
+          </a>
         </div>
       </div>
     </div>

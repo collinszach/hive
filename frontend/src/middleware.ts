@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jwtVerify } from "jose";
 
 const PUBLIC_PATHS = ["/", "/login", "/register", "/pricing", "/privacy"];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public paths, API calls, and static assets
@@ -15,12 +16,25 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for auth cookie
-  const token = request.cookies.get("hive_auth");
+  const token = request.cookies.get("hive_auth")?.value;
   if (!token) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Validate the JWT — invalid/expired tokens redirect to login
+  const secret = process.env.SECRET_KEY;
+  if (secret) {
+    try {
+      await jwtVerify(token, new TextEncoder().encode(secret));
+    } catch {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      const res = NextResponse.redirect(loginUrl);
+      res.cookies.delete("hive_auth");
+      return res;
+    }
   }
 
   return NextResponse.next();

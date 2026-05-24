@@ -129,10 +129,8 @@ async def setup_required(db: AsyncSession = Depends(get_db)) -> dict:
 
 @router.post("/register", response_model=LoginResponse)
 async def register(body: RegisterRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)) -> LoginResponse:
-    """
-    Create a new user account. First user gets admin role; subsequent users get viewer role.
-    """
-    # Username: 3–32 chars, letters/digits/underscore/hyphen only
+    """Password registration is disabled — use Google sign-in."""
+    raise HTTPException(status_code=403, detail="Password registration is disabled. Use Google sign-in.")
     import re
     if not re.fullmatch(r"[A-Za-z0-9_\-]{3,32}", body.username):
         raise HTTPException(
@@ -175,6 +173,8 @@ async def register(body: RegisterRequest, request: Request, response: Response, 
 
 @router.post("/login", response_model=LoginResponse)
 async def login(body: LoginRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)) -> LoginResponse:
+    """Password login is disabled — use Google sign-in."""
+    raise HTTPException(status_code=403, detail="Password login is disabled. Use Google sign-in.")
     result = await db.execute(select(User).where(User.username == body.username, User.is_active == True))  # noqa: E712
     user = result.scalar_one_or_none()
 

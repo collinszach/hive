@@ -1,261 +1,22 @@
 // src/app/(marketing)/login/page.tsx
 "use client";
 
-import {
-  useState, useEffect, useRef,
-  FormEvent, KeyboardEvent, ClipboardEvent,
-} from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, AlertCircle } from "lucide-react";
-import HiveHex from "../_components/HiveHex";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function safeJson(res: Response): Promise<Record<string, unknown>> {
-  const ct = res.headers.get("content-type") ?? "";
-  if (!ct.includes("application/json")) return {};
-  try { return await res.json(); } catch { return {}; }
-}
-
-// ── 6-box TOTP input ──────────────────────────────────────────────────────────
-
-function TotpBoxes({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  useEffect(() => { inputRefs.current[0]?.focus(); }, []);
-
-  function focusAt(i: number) {
-    inputRefs.current[Math.max(0, Math.min(5, i))]?.focus();
-  }
-
-  function handleChange(i: number, raw: string) {
-    const digit = raw.replace(/\D/g, "").slice(-1);
-    if (!digit) return;
-    const arr = (value + "      ").slice(0, 6).split("");
-    arr[i] = digit;
-    const next = arr.join("").trimEnd();
-    onChange(next);
-    if (i < 5) focusAt(i + 1);
-  }
-
-  function handleKeyDown(i: number, e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Backspace") {
-      e.preventDefault();
-      if (value[i]) {
-        const arr = (value + "      ").slice(0, 6).split("");
-        arr[i] = " ";
-        onChange(arr.join("").trimEnd());
-      } else if (i > 0) {
-        const arr = (value + "      ").slice(0, 6).split("");
-        arr[i - 1] = " ";
-        onChange(arr.join("").trimEnd());
-        focusAt(i - 1);
-      }
-    } else if (e.key === "ArrowLeft")  { e.preventDefault(); focusAt(i - 1); }
-      else if (e.key === "ArrowRight") { e.preventDefault(); focusAt(i + 1); }
-  }
-
-  function handlePaste(e: ClipboardEvent) {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    onChange(pasted);
-    focusAt(Math.min(pasted.length, 5));
-  }
-
-  return (
-    <div className="flex gap-2.5 justify-center my-8">
-      {Array.from({ length: 6 }).map((_, i) => {
-        const filled = value.length > i && value[i] !== " ";
-        return (
-          <input
-            key={i}
-            ref={(el) => { inputRefs.current[i] = el; }}
-            type="text"
-            inputMode="numeric"
-            maxLength={2}
-            value={filled ? value[i] : ""}
-            autoComplete="one-time-code"
-            onChange={(e) => handleChange(i, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(i, e)}
-            onPaste={handlePaste}
-            onFocus={(e) => e.target.select()}
-            className="w-11 h-14 text-center text-[22px] font-mono font-medium rounded-xl outline-none transition-all duration-150"
-            style={{
-              background: filled ? "rgba(245,185,66,0.07)" : "rgba(255,255,255,0.03)",
-              border: `1.5px solid ${filled ? "rgba(245,185,66,0.35)" : "rgba(255,255,255,0.08)"}`,
-              color: "#EEEEF0",
-              caretColor: "transparent",
-              boxShadow: filled ? "0 0 14px rgba(245,185,66,0.07)" : "none",
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Input field ───────────────────────────────────────────────────────────────
-
-function Field({
-  label,
-  type,
-  value,
-  onChange,
-  autoComplete,
-  autoFocus,
-  suffix,
-}: {
-  label: string;
-  type: string;
-  value: string;
-  onChange: (v: string) => void;
-  autoComplete?: string;
-  autoFocus?: boolean;
-  suffix?: React.ReactNode;
-}) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <div className="mb-5">
-      <label
-        className="block text-[10px] font-semibold uppercase tracking-[0.18em] mb-2 transition-colors duration-150"
-        style={{ color: focused ? "rgba(245,185,66,0.65)" : "rgba(255,255,255,0.22)" }}
-      >
-        {label}
-      </label>
-      <div className="relative">
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          autoComplete={autoComplete}
-          autoFocus={autoFocus}
-          required
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          className="w-full bg-transparent text-[15px] py-2 outline-none transition-all duration-150"
-          style={{
-            color: "#EEEEF0",
-            borderBottom: `1.5px solid ${focused ? "rgba(245,185,66,0.50)" : "rgba(255,255,255,0.10)"}`,
-            paddingRight: suffix ? 36 : 0,
-            fontFamily: "inherit",
-          }}
-        />
-        {suffix && (
-          <div className="absolute right-0 top-1/2 -translate-y-1/2">{suffix}</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Error banner ──────────────────────────────────────────────────────────────
-
-function ErrorBanner({ message }: { message: string }) {
-  return (
-    <div
-      className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mt-4"
-      style={{
-        background: "rgba(248,113,113,0.07)",
-        border: "1px solid rgba(248,113,113,0.18)",
-      }}
-    >
-      <AlertCircle size={13} color="#F87171" className="shrink-0" />
-      <span className="text-[12px] leading-snug" style={{ color: "#F87171" }}>
-        {message}
-      </span>
-    </div>
-  );
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
-
-type Step = "credentials" | "totp";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [step,     setStep]     = useState<Step>("credentials");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [totpCode, setTotpCode] = useState("");
-  const [showPw,   setShowPw]   = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState("");
-  const submittingRef = useRef(false);
 
-  // Redirect if already authenticated; send to setup if no users yet
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
       .then((r) => { if (r.ok) router.replace("/dashboard"); })
       .catch(() => {});
     fetch("/api/auth/setup-required")
-      .then(safeJson)
-      .then((d) => { if (d.setup_required) router.replace("/register"); })
+      .then((r) => r.json())
+      .then((d: { setup_required?: boolean }) => { if (d.setup_required) router.replace("/register"); })
       .catch(() => {});
   }, [router]);
-
-  // Step 1: username + password
-  async function handleCredentials(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const res  = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-        credentials: "include",
-      });
-      const data = await safeJson(res);
-      if (!res.ok) throw new Error(String(data.detail ?? `Login failed (${res.status})`));
-      if (data.totp_required) { setStep("totp"); return; }
-      router.replace("/dashboard");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Login failed. Check your credentials.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Step 2: TOTP code
-  async function handleTotp(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const res  = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password, totp_code: totpCode }),
-        credentials: "include",
-      });
-      const data = await safeJson(res);
-      if (!res.ok) throw new Error(String(data.detail ?? "Invalid code"));
-      router.replace("/dashboard");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Invalid MFA code");
-      setTotpCode("");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Auto-submit TOTP once 6 digits entered
-  useEffect(() => {
-    if (step === "totp" && totpCode.replace(/\s/g, "").length === 6 && !submittingRef.current) {
-      submittingRef.current = true;
-      handleTotp({ preventDefault: () => {} } as FormEvent).finally(() => {
-        submittingRef.current = false;
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totpCode, step]);
 
   return (
     <div
@@ -283,7 +44,7 @@ export default function LoginPage() {
       />
 
       <div className="w-full max-w-[320px] relative z-10">
-        {/* Brand — tessellated H mark */}
+        {/* Brand */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-5">
             <svg width="52" height="48" viewBox="0 0 57 50" fill="none">
@@ -296,10 +57,7 @@ export default function LoginPage() {
               <polygon points="46,34 54,38.5 54,47.5 46,52 38,47.5 38,38.5" fill="#F5B942"/>
             </svg>
           </div>
-          <p
-            className="text-[28px] font-bold tracking-[0.2em]"
-            style={{ color: "#F0F2F5" }}
-          >
+          <p className="text-[28px] font-bold tracking-[0.2em]" style={{ color: "#F0F2F5" }}>
             HIVE
           </p>
           <p className="text-[10px] font-medium tracking-[0.2em] uppercase mt-1.5" style={{ color: "rgba(255,255,255,0.22)" }}>
@@ -307,116 +65,32 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Form */}
-        {step === "credentials" ? (
-          <form onSubmit={handleCredentials}>
-            {/* Google sign-in */}
-            <a
-              href="/api/auth/google"
-              className="flex items-center justify-center gap-3 w-full py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 mb-6"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1.5px solid rgba(255,255,255,0.10)",
-                color: "#EEEEF0",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.09)";
-                (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.18)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.05)";
-                (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.10)";
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
-                <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-                <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-                <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
-                <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/>
-              </svg>
-              Continue with Google
-            </a>
+        <a
+          href="/api/auth/google"
+          className="flex items-center justify-center gap-3 w-full py-3 rounded-xl text-[14px] font-medium transition-all duration-150"
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            border: "1.5px solid rgba(255,255,255,0.10)",
+            color: "#EEEEF0",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.09)";
+            (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.18)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.05)";
+            (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.10)";
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+          Continue with Google
+        </a>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3 mb-5" style={{ color: "rgba(255,255,255,0.15)" }}>
-              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
-              <span className="text-[11px] tracking-wider">or</span>
-              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
-            </div>
-
-            <Field
-              label="Username"
-              type="text"
-              value={username}
-              onChange={setUsername}
-              autoComplete="username"
-              autoFocus
-            />
-            <Field
-              label="Password"
-              type={showPw ? "text" : "password"}
-              value={password}
-              onChange={setPassword}
-              autoComplete="current-password"
-              suffix={
-                <button
-                  type="button"
-                  onClick={() => setShowPw((p) => !p)}
-                  className="flex items-center justify-center p-1 transition-colors duration-150"
-                  style={{ color: "rgba(255,255,255,0.25)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.25)")}
-                >
-                  {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              }
-            />
-            {error && <ErrorBanner message={error} />}
-            <button
-              type="submit"
-              disabled={loading}
-              className="hive-btn-primary w-full mt-7 py-3 text-[13px] rounded-xl"
-              style={{ opacity: loading ? 0.6 : 1 }}
-            >
-              {loading ? "Signing in…" : "Sign in"}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleTotp}>
-            <div className="text-center">
-              <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-honey mb-2">
-                Two-factor auth
-              </p>
-              <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.35)" }}>
-                Enter the 6-digit code from
-                <br />
-                your authenticator app
-              </p>
-            </div>
-            <TotpBoxes value={totpCode} onChange={setTotpCode} />
-            {error && <ErrorBanner message={error} />}
-            <button
-              type="submit"
-              disabled={loading || totpCode.replace(/\s/g, "").length !== 6}
-              className="hive-btn-primary w-full py-3 text-[13px] rounded-xl mt-4"
-              style={{ opacity: (loading || totpCode.replace(/\s/g, "").length !== 6) ? 0.35 : 1 }}
-            >
-              {loading ? "Verifying…" : "Verify"}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setStep("credentials"); setError(""); setTotpCode(""); }}
-              className="w-full py-3 mt-2 text-[12px] transition-colors duration-150"
-              style={{ color: "rgba(255,255,255,0.2)", background: "none", border: "none" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.2)")}
-            >
-              ← Back
-            </button>
-          </form>
-        )}
-
-        {/* Footer links */}
         <div className="flex justify-center gap-6 mt-10">
           {[["Home", "/"], ["Privacy", "/privacy"]].map(([label, href]) => (
             <Link
