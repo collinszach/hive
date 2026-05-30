@@ -107,10 +107,27 @@ if systemctl is-active --quiet nginx 2>/dev/null; then
   fi
 fi
 
+# ── Free port 6380 before starting redis container ───────────────────────────
+# hive-redis uses host networking and binds 127.0.0.1:6380. If a previous
+# container was removed without its process being reaped (e.g. a dockerd
+# restart), the stray redis-server keeps the port and the new container
+# crash-loops on "Address in use". Reap any such orphan that no running
+# container owns. Uses a --pid=host helper so no interactive sudo is needed.
+echo "==> Checking for orphan redis on port 6380"
+
+if pgrep -f "redis-server 127.0.0.1:6380" >/dev/null 2>&1; then
+  if ! docker ps --format '{{.Names}}' | grep -q '^hive-redis-1$'; then
+    echo "  Found orphan redis on 6380 with no running container — reaping"
+    for pid in $(pgrep -f "redis-server 127.0.0.1:6380"); do
+      docker run --rm --pid=host --entrypoint kill redis:7-alpine -9 "$pid" || true
+    done
+  fi
+fi
+
 # ── Database migrations ───────────────────────────────────────────────────────
 echo "==> Running Alembic migrations"
 
-$COMPOSE up -d postgres redis
+$COMPOSE up -d --remove-orphans postgres redis
 
 # Run migrations in a throwaway backend container
 $COMPOSE run --rm \
@@ -122,7 +139,7 @@ echo "  Migrations complete."
 
 # ── Start full stack ──────────────────────────────────────────────────────────
 echo "==> Starting all services"
-$COMPOSE up -d
+$COMPOSE up -d --remove-orphans
 
 echo "  Waiting for backend health check..."
 timeout 120 bash -c "until $COMPOSE ps backend | grep -q healthy; do sleep 3; done"
