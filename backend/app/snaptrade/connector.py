@@ -12,11 +12,31 @@ class SnapTradeConnector:
         self._client = SnapTrade(consumer_key=consumer_key, client_id=client_id)
 
     def register_user(self, local_user_id: str) -> tuple[str, str]:
-        """Register a new SnapTrade user. Returns (snaptrade_user_id, user_secret)."""
-        resp = self._client.authentication.register_snap_trade_user(
-            body={"userId": local_user_id}
-        )
-        return resp.body["userId"], resp.body["userSecret"]
+        """Register a new SnapTrade user. Returns (snaptrade_user_id, user_secret).
+
+        If the user is already registered (400), delete and re-register to recover a fresh secret.
+        """
+        from snaptrade_client.exceptions import ApiException
+        try:
+            resp = self._client.authentication.register_snap_trade_user(
+                body={"userId": local_user_id}
+            )
+            return resp.body["userId"], resp.body["userSecret"]
+        except ApiException as exc:
+            if exc.status != 400:
+                raise
+            # Already registered but secret is lost — delete and re-register
+            logger.warning("SnapTrade user %s already registered, deleting and re-registering", local_user_id)
+            try:
+                self._client.authentication.delete_snap_trade_user(
+                    query_params={"userId": local_user_id}
+                )
+            except Exception as del_exc:
+                logger.warning("SnapTrade delete failed: %s", del_exc)
+            resp = self._client.authentication.register_snap_trade_user(
+                body={"userId": local_user_id}
+            )
+            return resp.body["userId"], resp.body["userSecret"]
 
     def get_connect_url(
         self,

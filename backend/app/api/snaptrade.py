@@ -17,15 +17,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/snaptrade", tags=["snaptrade"])
 
 
-async def _get_user(db: AsyncSession) -> User:
-    """Load the single active user (single-user self-hosted setup)."""
-    result = await db.execute(select(User).where(User.is_active == True).limit(1))  # noqa: E712
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=500, detail="No active user found")
-    return user
-
-
 class ConnectResponse(BaseModel):
     redirect_url: str
 
@@ -38,7 +29,7 @@ class CallbackResponse(BaseModel):
 async def snaptrade_connect(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(require_snaptrade),
+    user: User = Depends(require_snaptrade),
 ) -> ConnectResponse:
     """
     Register this user with SnapTrade (if needed) and return an OAuth redirect URL.
@@ -49,11 +40,12 @@ async def snaptrade_connect(
         raise HTTPException(status_code=503, detail="SnapTrade not configured")
 
     from app.config import settings
-    user = await _get_user(db)
 
     # Register with SnapTrade if first time
+    # Use a stable fixed ID (not DB UUID) so it survives user table changes
+    stable_id = f"hive-{settings.snaptrade_client_id[:8]}"
     if not user.snaptrade_user_id:
-        snap_uid, snap_secret = connector.register_user(str(user.id))
+        snap_uid, snap_secret = connector.register_user(stable_id)
         user.snaptrade_user_id = snap_uid
         user.snaptrade_user_secret = snap_secret  # EncryptedString handles encryption
         db.add(user)
@@ -71,7 +63,11 @@ async def snaptrade_connect(
 
 
 @router.get("/callback", response_model=CallbackResponse)
-async def snaptrade_callback(db: AsyncSession = Depends(get_db)) -> CallbackResponse:
+async def snaptrade_callback(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_snaptrade),
+) -> CallbackResponse:
     """
     Called by the frontend after SnapTrade redirects back with ?snaptrade_connected=1.
     Fetches all accounts from SnapTrade and upserts them into the accounts table.
@@ -79,8 +75,6 @@ async def snaptrade_callback(db: AsyncSession = Depends(get_db)) -> CallbackResp
     connector = get_connector()
     if connector is None:
         raise HTTPException(status_code=503, detail="SnapTrade not configured")
-
-    user = await _get_user(db)
     if not user.snaptrade_user_id:
         raise HTTPException(status_code=400, detail="SnapTrade not connected for this user")
 
