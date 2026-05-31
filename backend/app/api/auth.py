@@ -42,9 +42,14 @@ def _create_access_token(username: str, role: str) -> str:
 
 def decode_token(token: str) -> dict:
     try:
-        return jwt.decode(token, settings.secret_key, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, settings.secret_key, algorithms=[JWT_ALGORITHM])
     except JWTError as exc:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
+    # Single-purpose handoff tokens (minted for the iOS OAuth bridge) must never
+    # be accepted as session bearers — they are only valid at the /exchange endpoint.
+    if payload.get("typ") == "handoff":
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return payload
 
 
 async def require_admin(request: Request) -> dict:

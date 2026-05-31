@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Geist, Geist_Mono, Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import CapacitorAuthBridge from "@/components/CapacitorAuthBridge";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -64,7 +65,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={`${inter.variable} ${geist.variable} ${geistMono.variable} ${fraunces.variable} ${jakarta.variable} antialiased`}
     >
-      <body>{children}</body>
+      <body>
+        <CapacitorAuthBridge />
+        {children}
+      </body>
     </html>
   );
 }

@@ -2,16 +2,17 @@
 import logging
 import re
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.auth import _create_access_token
+from app.api.auth import JWT_ALGORITHM, _create_access_token
 from app.config import settings
 from app.db import get_db
 from app.models.user import User, UserRole
@@ -23,6 +24,29 @@ router = APIRouter(prefix="/api/auth/google", tags=["auth"])
 _GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 _GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
+
+# --- Native (iOS Capacitor) sign-in bridge -------------------------------------
+# Google refuses OAuth inside an embedded WKWebView (`disallowed_useragent`), so
+# the native app opens the consent flow in a system browser (SFSafariViewController).
+# That browser has its own cookie jar, so the `hive_auth` cookie set during the
+# callback never reaches the WKWebView. We bridge the gap with a short-lived,
+# single-purpose handoff token: the callback redirects to a custom scheme deep
+# link carrying the handoff token, the app catches it and navigates the WKWebView
+# to /exchange, and /exchange (now running inside the WKWebView's cookie jar)
+# mints the real session cookie. The long-lived session JWT never transits a URL.
+_MOBILE_STATE_PREFIX = "m."
+_MOBILE_CALLBACK_URL = "hive://auth/callback"
+_HANDOFF_EXPIRE_SECONDS = 60
+
+
+def _create_handoff_token(username: str, role: str) -> str:
+    """Mint a 60-second single-purpose token to hand a session to the WKWebView."""
+    expire = datetime.now(timezone.utc) + timedelta(seconds=_HANDOFF_EXPIRE_SECONDS)
+    return jwt.encode(
+        {"sub": username, "role": role, "typ": "handoff", "exp": expire},
+        settings.secret_key,
+        algorithm=JWT_ALGORITHM,
+    )
 
 
 def _derive_username(email: str, taken: set[str]) -> str:
@@ -94,6 +118,11 @@ async def google_login(request: Request) -> RedirectResponse:
         raise HTTPException(status_code=501, detail="Google OAuth is not configured")
 
     state = secrets.token_urlsafe(32)
+    # Native (iOS) clients pass ?platform=ios so the callback returns via deep link
+    # rather than setting a cookie the WKWebView can't see. We carry the marker in
+    # the OAuth state itself, which round-trips through Google untouched.
+    if request.query_params.get("platform") == "ios":
+        state = _MOBILE_STATE_PREFIX + state
     params = urlencode({
         "client_id": settings.google_client_id,
         "redirect_uri": settings.google_redirect_uri,
@@ -166,6 +195,16 @@ async def google_callback(
     user.last_login_at = datetime.now(timezone.utc)
     await db.commit()
 
+    # Native (iOS) flow: the system browser's cookie jar is invisible to the
+    # WKWebView, so hand the session over via a short-lived deep-link token that
+    # the app exchanges for the real cookie from inside the WebView.
+    if (state_param or "").startswith(_MOBILE_STATE_PREFIX):
+        handoff = _create_handoff_token(user.username, user.role)
+        params = urlencode({"ht": handoff})
+        response = RedirectResponse(url=f"{_MOBILE_CALLBACK_URL}?{params}", status_code=302)
+        response.delete_cookie(key="oauth_state", path="/")
+        return response
+
     token = _create_access_token(user.username, user.role)
 
     response = RedirectResponse(url="/dashboard", status_code=302)
@@ -179,4 +218,46 @@ async def google_callback(
         max_age=60 * 60 * 12,
     )
     response.delete_cookie(key="oauth_state", path="/")
+    return response
+
+
+@router.get("/exchange")
+async def google_exchange(request: Request) -> RedirectResponse:
+    """Exchange a one-time handoff token for the real session cookie.
+
+    Called by the native app navigating the WKWebView to this URL after it
+    catches the `hive://auth/callback?ht=…` deep link. Because the request now
+    originates from the WKWebView, the cookie set here lands in the WebView's
+    own cookie jar (unlike the system-browser callback).
+    """
+    handoff = request.query_params.get("ht")
+    if not handoff:
+        raise HTTPException(status_code=400, detail="Missing handoff token")
+
+    try:
+        payload = jwt.decode(handoff, settings.secret_key, algorithms=[JWT_ALGORITHM])
+    except JWTError as exc:
+        logger.warning("Handoff token rejected: %s", exc)
+        raise HTTPException(status_code=401, detail="Invalid or expired handoff token") from exc
+
+    if payload.get("typ") != "handoff":
+        raise HTTPException(status_code=401, detail="Invalid handoff token")
+
+    username = payload.get("sub")
+    role = payload.get("role")
+    if not username or not role:
+        raise HTTPException(status_code=401, detail="Invalid handoff token")
+
+    token = _create_access_token(username, role)
+
+    response = RedirectResponse(url="/dashboard", status_code=302)
+    response.set_cookie(
+        key="hive_auth",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        secure=settings.cookie_secure,
+        path="/",
+        max_age=60 * 60 * 12,
+    )
     return response

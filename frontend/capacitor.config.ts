@@ -3,10 +3,12 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "com.zacharyjcollins.hive",
   appName: "Hive",
+  // Fallback assets only; the WebView loads server.url (the live site). Epic 3 bundles the real app here.
+  webDir: "public",
   // Load from your live server instead of bundled assets.
-  // Change this URL to your Cloudflare Tunnel or Tailscale hostname.
+  // Remote-load against the live site (Epic 3 will switch to bundled assets; API stays remote).
   server: {
-    url: "https://hive.app",
+    url: "https://hive.zacharyjcollins.com",
     cleartext: false,
   },
   ios: {

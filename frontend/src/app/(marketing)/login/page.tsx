@@ -4,6 +4,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { isNative, startGoogleSignIn } from "@/lib/native-auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -72,6 +73,14 @@ export default function LoginPage() {
             background: "rgba(255,255,255,0.05)",
             border: "1.5px solid rgba(255,255,255,0.10)",
             color: "#EEEEF0",
+          }}
+          onClick={(e) => {
+            // On native (iOS), Google blocks OAuth inside the WKWebView. Open the
+            // system browser instead; the deep-link bridge completes sign-in.
+            if (isNative()) {
+              e.preventDefault();
+              void startGoogleSignIn();
+            }
           }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.09)";

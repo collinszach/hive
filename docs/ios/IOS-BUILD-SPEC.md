@@ -67,7 +67,7 @@ The web app's tokens are the source of truth; we extend them for native, we do n
 ### 3.3 Banned (impeccable absolute + product)
 No side-stripe borders, no gradient text, no decorative glass, no hero-metric template clones, no display fonts in labels, no reinvented scrollbars/form controls, modal-as-first-thought. Earned familiarity over novelty — the tool disappears into the task.
 
-> Execution note: per-screen design work runs through `/impeccable craft <screen>` against this contract. First run `/impeccable init` to generate root `PRODUCT.md` + `DESIGN.md` from the existing tokens (Epic 1).
+> Execution note: the design system is set once with `design-for-ai` (proportions, type scale, hierarchy, color theory) + `/impeccable init` → root `PRODUCT.md` + `DESIGN.md` from the existing tokens (Epic 1). Per-screen work then runs through `/hive-ios <screen>`, which applies design-for-ai principles and hands off to `/impeccable craft` against this contract. See §8 for the two-plugin design stack and layering rule.
 
 ---
 
@@ -139,10 +139,24 @@ Applied per screen during the audit (Epic 2):
 
 ## 8. Tooling created for this project
 
-- **Skill `/hive-ios`** (`.claude/skills/hive-ios/`) — orchestrates the mobile adaptation of a screen: loads this spec + the mobile design contract, runs the audit, then hands off to `/impeccable craft`.
-- **Agent `hive-ios-screen-auditor`** (`.claude/agents/`) — read-only; audits a given route's React source for mobile anti-patterns (fixed widths, hover-only, desktop tables, missing safe-area, sub-44pt targets) and returns a punch list. Used to drive Epic 2.
+### Design stack (two external plugins, installed once)
+Per-screen design craft runs on two complementary Claude Code plugins — install both before Epic 1:
+- **`design-for-ai`** (`ryanthedev/rtd-claude-inn` → `/plugin install design-for-ai@rtd`) — the **theory/vocabulary layer** (Design for Hackers): purpose, proportional + type-scale systems, composition, visual hierarchy, color theory, and an "ai-tells" checklist. Commands: `/design-for-ai`, `/design`, `/exam`, `/brand`, `/fonts`, `/color`, `/flow`, `/hone`. **Used to set the foundation (Epic 1) and as a review/critique lens** — not to drive each build.
+- **`impeccable`** (`pbakaus/impeccable` → `/plugin install impeccable@impeccable`, or `npx impeccable skills install`) — the **production craft workflow**: `init → shape → craft → audit → polish → live`, product-vs-brand register, 27 deterministic anti-pattern rules, live browser iteration. **The per-screen build engine** (Epics 8/9). `/impeccable init` writes root `PRODUCT.md` + `DESIGN.md` (Epic 1).
 
-Existing impeccable design agents (`impeccable-asset-producer`, `impeccable-manual-edit-applier`) are reused — we do not duplicate them.
+Layering rule: design-for-ai owns the *system* (Epic 1 foundation) and serves as a *critique pass*; impeccable owns the *per-screen build*. They do not both drive the same build — see `/hive-ios` for the exact handoff.
+
+### HIVE-specific tooling
+- **Skill `/hive-ios`** (`.claude/skills/hive-ios/`) — orchestrates the mobile adaptation of one screen: loads this spec + the mobile design contract, runs the audit, applies design-for-ai principles, then hands off to `/impeccable craft`.
+- **Skill `/hive-ios-audit-all`** — Epic 2 batch driver: fans `hive-ios-screen-auditor` over all routes → `docs/ios/AUDIT.md`.
+- **Skill `/hive-ios-bundle`** — Epic 3: static-export + bundled-assets pipeline with offline cold-launch verify.
+- **Skill `/hive-ios-release`** — Epic 11: App Store readiness checklist.
+- **Agent `hive-ios-screen-auditor`** — read-only mobile-layout punch list per route (Epic 2).
+- **Agent `hive-ios-a11y-auditor`** — read-only VoiceOver / Dynamic Type / focus / contrast audit per route (Epic 12).
+- **Agent `hive-ios-oauth-deeplink-integrator`** — Epic 5: one OAuth round-trip (Google / Plaid / SnapTrade) wired across native + backend + JS.
+- **Agent `capacitor-integrator`** — installs/wires one Capacitor plugin (Epics 4–7).
+
+Impeccable's own asset agents (`impeccable-asset-producer`, `impeccable-manual-edit-applier`) ship with the plugin and are reused — we do not duplicate them.
 
 ---
 

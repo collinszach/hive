@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, Star, Zap } from "lucide-react";
 import HiveHex from "../_components/HiveHex";
+import { isNative, startGoogleSignIn } from "@/lib/native-auth";
 
 // ── Feature bullet ────────────────────────────────────────────────────────────
 
@@ -154,6 +155,12 @@ export default function RegisterPage() {
               background: "rgba(255,255,255,0.04)",
               border: "1.5px solid rgba(255,255,255,0.08)",
               color: "#EEEEF0",
+            }}
+            onClick={(e) => {
+              if (isNative()) {
+                e.preventDefault();
+                void startGoogleSignIn();
+              }
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.08)";
