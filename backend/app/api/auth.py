@@ -11,13 +11,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
 from jose import JWTError, jwt
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.db import get_db
+from app.models.account import Account
 from app.models.audit_log import AuditLog
+from app.models.plaid_link import PlaidLink
 from app.models.user import User, UserRole
+from app.snaptrade.connector import get_connector
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +122,12 @@ class VerifyTotpRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+class DeleteAccountRequest(BaseModel):
+    # The user must type their account name to confirm — guards against accidental
+    # deletion since Google-only auth means there's no password to re-enter.
+    confirm_username: str
 
 
 # ---------------------------------------------------------------------------
@@ -345,6 +354,56 @@ async def change_password(
     user.password_hash = bcrypt.hashpw(body.new_password.encode(), bcrypt.gensalt()).decode()
     await db.commit()
     await _write_audit(db, "password_changed", user.username, request)
+    return {"status": "ok"}
+
+
+@router.delete("/account")
+async def delete_account(
+    body: DeleteAccountRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Permanently delete the signed-in user and their linked financial data.
+
+    Required by Apple App Store guideline 5.1.1(v) (in-app account deletion). Removes the
+    user's linked accounts — which cascade to transactions, splits, expense shares, the
+    points ledger, and anomalies — plus their Plaid links, and best-effort revokes the
+    SnapTrade registration so brokerage access is severed on their side too. Global,
+    non-user-scoped config (earn rules, the category taxonomy) is intentionally left intact.
+    """
+    token = _get_bearer_token(request)
+    payload = decode_token(token)
+    result = await db.execute(select(User).where(User.username == payload["sub"]))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    if body.confirm_username.strip() != user.username:
+        raise HTTPException(status_code=400, detail="Confirmation does not match your account name")
+
+    username = user.username
+    user_id = user.id
+
+    # Best-effort: deregister from SnapTrade. Never block deletion on an external failure.
+    if user.snaptrade_user_id:
+        connector = get_connector()
+        if connector is not None:
+            try:
+                connector.delete_user(user.snaptrade_user_id)
+            except Exception:  # noqa: BLE001 — external call; log and proceed with local deletion
+                logger.warning("SnapTrade delete_user failed during account deletion", exc_info=True)
+
+    # Delete accounts first so their FK references are gone before the user row.
+    # accounts → transactions → (splits, expense shares, points ledger, anomalies) all cascade.
+    await db.execute(delete(Account).where(Account.user_id == user_id))
+    await db.execute(delete(PlaidLink).where(PlaidLink.user_id == user_id))
+    await db.delete(user)
+    await db.commit()
+
+    await _write_audit(db, "account_deleted", username, request)
+
+    response.delete_cookie(key="hive_auth", path="/")
     return {"status": "ok"}
 
 
