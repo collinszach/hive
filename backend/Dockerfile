@@ -16,6 +16,11 @@ RUN apt-get update && apt-get install -y \
 RUN groupadd --system --gid 1001 appuser && \
     useradd --system --uid 1001 --gid 1001 appuser
 
+# Celery beat persists its schedule here. Create it owned by appuser so the
+# mounted volume is writable by the non-root process (otherwise beat crash-loops
+# with "[Errno 13] Permission denied: '/var/celery/celerybeat-schedule'").
+RUN mkdir -p /var/celery && chown 1001:1001 /var/celery
+
 # Install Python dependencies as root (before switching user)
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
