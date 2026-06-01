@@ -50,6 +50,17 @@ struct AuthService {
         KeychainStore.delete(.sessionToken)
     }
 
+    /// Permanently delete the signed-in account on the server, then clear the local
+    /// session. `confirmUsername` must match the account name or the server rejects it.
+    /// On success the user is fully signed out (server data gone + local token cleared).
+    func deleteAccount(confirmUsername: String) async throws {
+        try await api.send(
+            Endpoint(method: .delete, path: "/api/auth/account"),
+            body: DeleteAccountRequest(confirmUsername: confirmUsername)
+        )
+        signOut()
+    }
+
     /// Whether a session token is already present (used at launch to skip sign-in).
     var hasStoredSession: Bool {
         KeychainStore.get(.sessionToken) != nil

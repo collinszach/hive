@@ -7,7 +7,7 @@ import SwiftUI
 struct ConnectView: View {
     @Environment(AppState.self) private var app
     @State private var model = ConnectViewModel()
-    @State private var confirmingSignOut = false
+    @State private var showSettings = false
     @State private var showLinkChooser = false
     @State private var snapTradeTarget: SnapTradeTarget?
     @State private var plaidLink = PlaidLinkCoordinator()
@@ -34,10 +34,18 @@ struct ConnectView: View {
         }
         .task { if model.state.value == nil { await model.load() } }
         .onChange(of: isUnauthorized) { _, expired in if expired { app.handleSessionExpired() } }
-        .confirmationDialog("Sign out of HIVE?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
-            Button("Sign out", role: .destructive) { app.signOut() }
-            Button("Cancel", role: .cancel) {}
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Haptics.selection(); showSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                        .foregroundStyle(Theme.inkSecondary)
+                }
+                .accessibilityLabel("Settings")
+            }
         }
+        .navigationDestination(isPresented: $showSettings) { SettingsView() }
         .sheet(isPresented: $showLinkChooser) {
             LinkAccountSheet(
                 onPlaid: { Task { await startPlaidLink() } },
@@ -260,7 +268,7 @@ struct ConnectView: View {
         }
     }
 
-    // MARK: Footer — link more (web) + sign out
+    // MARK: Footer — link more (web). Sign-out + account management live in Settings.
 
     private var footer: some View {
         VStack(spacing: Theme.Spacing.md) {
@@ -275,16 +283,6 @@ struct ConnectView: View {
             }
             .buttonStyle(HivePrimaryButtonStyle())
             .disabled(model.isLinking)
-
-            Button(role: .destructive) {
-                confirmingSignOut = true
-            } label: {
-                Text("Sign out")
-                    .font(.hiveBody(15, weight: .medium))
-                    .foregroundStyle(Theme.expense)
-                    .frame(maxWidth: .infinity, minHeight: Theme.minTouchTarget)
-            }
-            .buttonStyle(.plain)
         }
         .padding(.top, Theme.Spacing.sm)
     }

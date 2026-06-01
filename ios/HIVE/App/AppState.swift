@@ -49,6 +49,14 @@ final class AppState {
         phase = .signedOut
     }
 
+    /// Delete the account on the server, then drop to the sign-in screen. Throws so the
+    /// Settings screen can surface a precise error and keep the user on the screen if the
+    /// confirmation didn't match or the request failed.
+    func deleteAccount(confirmUsername: String) async throws {
+        try await auth.deleteAccount(confirmUsername: confirmUsername)
+        phase = .signedOut
+    }
+
     /// Called when an authenticated request comes back 401 — drop to sign-in.
     func handleSessionExpired() {
         auth.signOut()

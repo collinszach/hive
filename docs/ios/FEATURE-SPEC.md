@@ -19,7 +19,7 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | 1.1 Budget create/edit/delete | ✅ | ✅ `BudgetEditorView` | ✅ |
 | 2.4 Owed-to-you reimbursement overview | ✅ | ✅ `ReimbursementView` | ✅ `/api/shares/pending` |
 | 1.2 Card Optimizer | 🔲 | — | ✅ `/api/points/optimize` |
-| 1.3 Settings / Account / Security screen | 🔲 | — (sign-out lives in Connect) | ⚠️ delete-account endpoint **missing** |
+| 1.3 Settings / Account / Security screen | 🚧 | ✅ `SettingsView` (account, sign-out, delete) | ✅ `DELETE /api/auth/account` |
 | 1.4 Biometric app-lock | 🔲 | — | n/a |
 | 2.1 AI Chat | 🔲 | — | ✅ `/api/chat` |
 | 2.2 Push notifications | 🔲 | — | ⚠️ APNs device-token endpoint **missing** |
@@ -28,7 +28,7 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | 3.2 App Store readiness | 🔲 | — | — |
 | Tier 4 polish (manual add, acct detail, redemption banner, search, a11y) | 🔲 | — | mostly backed |
 
-**MVP-to-submit critical path that's still open:** 1.2 Optimizer, 1.3 Settings + delete-account (Apple), 1.4 Biometric, then 3.2 store readiness.
+**MVP-to-submit critical path that's still open:** 1.2 Optimizer, 1.4 Biometric (wires the 1.3 security toggle), then 3.2 store readiness. (1.3 Settings + delete-account ✅ core done.)
 
 ## Where the app is today (✅ shipped)
 
@@ -63,16 +63,14 @@ A flagship differentiator that currently has no native surface. Backend `/api/po
 - **Native:** category/subcategory pickers from `Taxonomy`; amount keypad; ranked rows with `MoneyText`/points; copyable result. Consider a Home-screen quick action / Spotlight later.
 - **DoD:** entering "Dining, $80" returns the ranked cards with correct earn math.
 
-### 1.3 Settings / Account / Security `L`  ·  P0 (Apple-required)  ·  🔲 NOT STARTED
-There is no Settings surface; sign-out lives in `ConnectView` footer.
-**Blocker:** no backend account-deletion endpoint exists (verified absent from `auth.py`) — must be built first.
-- **UX:** A 6th destination (overflow on Connect header, or a profile button → pushed Settings screen). Sections:
-  - **Account:** email, signed-in-as, **Sign out**, **Delete account** (Apple requires an in-app deletion path).
-  - **Security:** Face ID / passcode app-lock toggle (→ 1.4), app-switcher privacy blur toggle.
-  - **Notifications:** per-category push prefs (→ Tier 2).
-  - **About:** version/build, support link, privacy policy, licenses.
-- **Backend:** sign-out is client-side (drop Keychain token); **needs** an account-deletion endpoint if none exists (`DELETE /api/account` — verify/spec on backend).
-- **DoD:** user can sign out, reach a working delete-account flow, and toggle security options; deletion actually revokes server data.
+### 1.3 Settings / Account / Security `L`  ·  P0 (Apple-required)  ·  🚧 CORE DONE (security toggle pending 1.4)
+`SettingsView` reached via a gear in the Connect header (pushed screen). Sign-out moved here from the Connect footer.
+- **UX (built):** Pushed Settings screen with sections:
+  - **Account:** signed-in-as (username), role, last sign-in (from `GET /api/auth/me`); **Sign out** (confirm dialog); **Delete account** → typed-name confirmation sheet.
+  - **Security:** Face ID / passcode app-lock — **placeholder row "Coming soon"** until 1.4 lands.
+  - **About:** version/build from the bundle.
+- **Backend (built):** `DELETE /api/auth/account` — FK-scoped wipe (accounts cascade to transactions/splits/shares/points/anomalies, plus Plaid links), best-effort SnapTrade revoke, clears the auth cookie. Typed `confirm_username` guard (Apple 5.1.1(v)).
+- **DoD:** ✅ sign out, ✅ working delete-account flow that revokes server data; ⏳ security toggle is wired once 1.4 ships. App builds clean for the iOS Simulator.
 
 ### 1.4 Biometric app-lock `M`  ·  P0  ·  🔲 NOT STARTED
 Financial data must lock behind Face ID on cold start + background timeout.
@@ -154,7 +152,7 @@ Audited against `backend/app/api/`:
 
 | Endpoint | For | Status |
 |---|---|---|
-| `DELETE /api/account` (or equivalent) | 1.3 Settings — **Apple-required** | ⚠️ **MISSING** — not in `auth.py`; sign-out is client-side only. Build before 1.3/3.2. |
+| `DELETE /api/auth/account` | 1.3 Settings — **Apple-required** | ✅ present (`auth.py`) — FK-scoped wipe + best-effort SnapTrade revoke + cookie clear; typed-name confirm. |
 | APNs device-token registration + triggers | 2.2 Push | ⚠️ **MISSING** — no device-token route in `api/`. |
 | Subscription receipt-validation | 3.1 StoreKit IAP | ⚠️ **MISSING**. |
 | `GET /api/shares/pending` | 2.4 Owed-to-you | ✅ present (`shares.py`). |
@@ -163,5 +161,5 @@ Audited against `backend/app/api/`:
 | `POST /api/chat` | 2.1 AI Chat | ✅ present — confirm streaming vs. single-response shape. |
 | `POST /api/budgets` create/update + delete | 1.1 Budgets | ✅ wired (editor calls create/update + delete). |
 
-**Net new backend work to unblock the MVP-to-submit path:** account-deletion endpoint (1.3), then
+**Net new backend work to unblock the MVP-to-submit path:** account-deletion endpoint (1.3) ✅ done; next
 APNs registration (2.2) and receipt validation (3.1) for the fast-follow tiers.
