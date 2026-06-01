@@ -115,6 +115,7 @@ _PUBLIC_EXACT = {
     "/api/auth/logout",   # just clears a cookie — no data returned
     "/api/auth/google",
     "/api/auth/google/callback",
+    "/api/auth/google/exchange",   # native handoff-token exchange (self-validates the ht token)
     "/api/health",
     "/api/billing/webhook",   # Stripe webhook — no user auth
 }
