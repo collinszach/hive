@@ -116,6 +116,7 @@ _PUBLIC_EXACT = {
     "/api/auth/google",
     "/api/auth/google/callback",
     "/api/auth/google/exchange",   # native handoff-token exchange (self-validates the ht token)
+    "/api/auth/google/native",     # native iOS sign-in (self-validates the Google ID token)
     "/api/health",
     "/api/billing/webhook",   # Stripe webhook — no user auth
 }

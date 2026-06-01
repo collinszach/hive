@@ -83,6 +83,10 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_redirect_uri: str = ""
+    # iOS OAuth client id (reversed-client-id URL scheme lives in the app).
+    # The native sign-in endpoint accepts ID tokens whose `aud` matches this
+    # OR the web `google_client_id` above.
+    google_ios_client_id: str = ""
 
     @computed_field
     @property

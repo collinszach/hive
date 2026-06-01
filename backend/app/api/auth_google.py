@@ -9,6 +9,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +25,8 @@ router = APIRouter(prefix="/api/auth/google", tags=["auth"])
 _GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 _GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
+_GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo"
+_GOOGLE_ISSUERS = {"accounts.google.com", "https://accounts.google.com"}
 
 # --- Native (iOS Capacitor) sign-in bridge -------------------------------------
 # Google refuses OAuth inside an embedded WKWebView (`disallowed_useragent`), so
@@ -175,7 +178,8 @@ async def google_callback(
             },
         )
         if token_resp.status_code != 200:
-            logger.error("Google token exchange failed: %s", token_resp.text)
+            # Never log token_resp.text — it contains access/refresh/id tokens.
+            logger.error("Google token exchange failed (status=%s)", token_resp.status_code)
             raise HTTPException(status_code=502, detail="Failed to exchange Google token")
         token_data = token_resp.json()
 
@@ -261,3 +265,66 @@ async def google_exchange(request: Request) -> RedirectResponse:
         max_age=60 * 60 * 12,
     )
     return response
+
+
+class NativeAuthRequest(BaseModel):
+    """Body for the native iOS sign-in bridge."""
+
+    id_token: str
+
+
+class NativeAuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+@router.post("/native", response_model=NativeAuthResponse)
+async def google_native(
+    payload: NativeAuthRequest,
+    db: AsyncSession = Depends(get_db),
+) -> NativeAuthResponse:
+    """Native (SwiftUI) Google sign-in.
+
+    The iOS app authenticates with the GoogleSignIn SDK and posts the resulting
+    Google **ID token** here. We verify it against Google, confirm the audience
+    is one of our OAuth clients, then mint our own session JWT and return it as
+    JSON for the app to store in the Keychain. No cookie, no redirect, and the
+    token is never written to a log or URL.
+    """
+    if not payload.id_token:
+        raise HTTPException(status_code=400, detail="Missing id_token")
+
+    # Verify signature + expiry with Google, and read back the validated claims.
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        # POST (form body), not GET — keeps the ID token out of request URLs/access logs.
+        resp = await client.post(
+            _GOOGLE_TOKENINFO_URL, data={"id_token": payload.id_token}
+        )
+    if resp.status_code != 200:
+        logger.warning("Google ID token verification failed (status=%s)", resp.status_code)
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+    claims = resp.json()
+
+    # Audience must be one of our own OAuth clients (iOS or web), never another app's.
+    allowed_aud = {
+        a for a in (settings.google_ios_client_id, settings.google_client_id) if a
+    }
+    if claims.get("aud") not in allowed_aud:
+        logger.warning("Google ID token audience mismatch")
+        raise HTTPException(status_code=401, detail="Invalid Google token audience")
+
+    if claims.get("iss") not in _GOOGLE_ISSUERS:
+        raise HTTPException(status_code=401, detail="Invalid Google token issuer")
+
+    google_id = claims.get("sub")
+    if not google_id:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+    email = claims.get("email", "")
+    name = claims.get("name", "")
+
+    user = await _find_or_create_user(db, google_id, email, name)
+    user.last_login_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    token = _create_access_token(user.username, user.role)
+    return NativeAuthResponse(access_token=token)
