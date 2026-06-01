@@ -1,5 +1,10 @@
 # HIVE iOS — Epic Backlog
 
+> ⚠️ **SUPERSEDED (2026-06-01).** This is the original **Capacitor-hybrid** plan. The project
+> pivoted to a **native SwiftUI app** (`ios/HIVE/`, XcodeGen, iOS 17). The live, tracked backlog
+> with current status is **`docs/ios/FEATURE-SPEC.md`**. Keep this file only for historical
+> context on the epic structure / DoD phrasing — do not track work against it.
+
 > Companion to `IOS-BUILD-SPEC.md`. Epics are ordered by dependency. Each lists goal, key stories, and a definition of done (DoD). Sizing: S < 1d, M 1–3d, L 3–5d, XL 1wk+.
 
 **Suggested release cut:**

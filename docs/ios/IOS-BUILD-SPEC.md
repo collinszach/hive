@@ -1,5 +1,10 @@
 # HIVE iOS Build — Technical & Design Specification
 
+> ⚠️ **Architecture pivoted (2026-06-01).** §1, §4, §8 recommend a **Capacitor hybrid** — that
+> approach was **abandoned** for a **native SwiftUI app** (`ios/HIVE/`, XcodeGen, iOS 17, native
+> GoogleSignIn + Plaid LinkKit). The §3 design system, §5 IA (5-tab map), §6 adaptation intent,
+> and §7 quality gates still hold. For what's built and what's left, see **`docs/ios/FEATURE-SPEC.md`**.
+
 > Status: Draft v1 · Owner: Zach Collins · Last updated: 2026-05-30
 > Goal: ship HIVE to the App Store with **full feature parity** to the web app and a **native-quality**, modern, professional experience.
 

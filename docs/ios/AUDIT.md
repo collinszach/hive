@@ -1,5 +1,10 @@
 # HIVE iOS Mobile-Readiness Audit (Epic 2)
 
+> ⚠️ **SUPERSEDED (2026-06-01).** This audited the **web screens** for Capacitor/WKWebView
+> readiness. The project pivoted to a **native SwiftUI app**, so the WebView blockers below
+> (OAuth `disallowed_useragent`, `100vh` keyboard, CSV `<a>` download, etc.) no longer apply.
+> Current native status lives in **`docs/ios/FEATURE-SPEC.md`**. Retained for historical context.
+
 > Per-screen audit of all 31 HIVE routes for iOS Capacitor parity. Generated 2026-05-30.
 > Each screen was read at source level and scored against IOS-BUILD-SPEC.md §6 + DESIGN-MOBILE.md.
 > **Bucket:** `reflow-only` (CSS/state fixes, structure already mobile-shaped) vs `redesign` (structural rework or a functional WebView blocker).
