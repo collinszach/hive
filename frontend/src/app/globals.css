@@ -389,3 +389,46 @@ select {
 .stagger-children > *:nth-child(8)  { animation-delay: 350ms; }
 .stagger-children > *:nth-child(9)  { animation-delay: 400ms; }
 .stagger-children > *:nth-child(10) { animation-delay: 450ms; }
+
+/* ── iOS / touch shell (Epic 4 cross-cutting) ─────────────────────
+   Targets coarse-pointer devices (iPhone WebView) only, so desktop
+   density is untouched. Three native-feel fixes applied globally:
+     1. ≥44pt touch targets on all interactive controls.
+     2. font-size ≥16px on inputs — stops iOS auto-zoom on focus.
+     3. tactile :active press feedback (hover does nothing on touch). */
+@media (pointer: coarse) {
+  .hive-btn-primary,
+  .hive-btn-rewards,
+  .hive-btn-secondary,
+  .hive-btn-ghost,
+  .hive-btn-danger,
+  .hive-input,
+  .hive-select {
+    min-height: 44px;
+  }
+
+  /* 16px prevents the focus-zoom jump iOS forces on smaller fields */
+  .hive-input,
+  .hive-select {
+    font-size: 16px;
+  }
+
+  .hive-btn-primary:active,
+  .hive-btn-rewards:active,
+  .hive-btn-secondary:active,
+  .hive-btn-ghost:active,
+  .hive-btn-danger:active {
+    transform: scale(0.97);
+    transition: transform 80ms ease;
+  }
+}
+
+/* Honor reduced-motion for the press feedback and stagger reveals */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up,
+  .stagger-children > * {
+    animation: none !important;
+  }
+  *:active { transform: none !important; }
+}

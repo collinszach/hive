@@ -12,14 +12,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <AuthGuard>
-        <div style={{ display: "flex", minHeight: "100vh", background: "var(--color-base)" }}>
+        <div style={{ display: "flex", minHeight: "100dvh", background: "var(--color-base)" }}>
           <Sidebar />
-          {/* md:pl-[52px] = sidebar width on desktop; pb-16 = bottom nav on mobile */}
+          {/* lg:pl-[220px] = sidebar width on desktop.
+              Bottom pad clears the fixed MobileNav (≈4rem) + the home
+              indicator (safe-area-inset-bottom) on mobile; removed on lg. */}
           <main
             style={{ flex: 1, minWidth: 0, overflow: "auto" }}
-            className="lg:pl-[220px] pb-16 lg:pb-0"
+            className="lg:pl-[220px] pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0"
           >
-            <div className="p-4 md:p-6">
+            {/* Top pad clears the notch / Dynamic Island; reset on desktop. */}
+            <div className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] md:px-6 md:pb-6 md:pt-6">
               <ErrorBoundary>{children}</ErrorBoundary>
             </div>
           </main>
