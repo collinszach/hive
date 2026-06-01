@@ -479,43 +479,54 @@ async def update_category(
     db.add(tx)
     await db.commit()
 
-    # Sync points recalc — fetch card_slug from account
-    acct_result = await db.execute(
-        select(Account.card_slug).where(Account.id == tx.account_id)
-    )
-    card_slug = acct_result.scalar_one_or_none()
-
-    if card_slug and not tx.is_excluded and not tx.pending:
-        pts = compute_points_for_transaction(
-            card_slug=card_slug,
-            category=tx.category,
-            subcategory=tx.subcategory,
-            amount=float(tx.amount),
+    # Sync points recalc is SECONDARY to the category override (the user's actual
+    # intent, already committed above). It must NEVER fail the request: a points
+    # recompute hiccup previously surfaced as a 500, making a successful category
+    # save look like a failure on the client. Best-effort, rollback-on-error.
+    try:
+        acct_result = await db.execute(
+            select(Account.card_slug).where(Account.id == tx.account_id)
         )
-        if pts:
-            stmt = pg_insert(PointsLedger).values(
-                transaction_id=tx.id,
-                account_id=tx.account_id,
-                card_slug=pts.card_slug,
-                program=pts.program,
-                points_earned=pts.points_earned,
-                earn_rate=pts.earn_rate,
+        card_slug = acct_result.scalar_one_or_none()
+
+        if card_slug and not tx.is_excluded and not tx.pending:
+            pts = compute_points_for_transaction(
+                card_slug=card_slug,
                 category=tx.category,
                 subcategory=tx.subcategory,
+                amount=float(tx.amount),
             )
-            stmt = stmt.on_conflict_do_update(
-                constraint="uq_points_ledger_transaction",
-                set_={
-                    "card_slug": stmt.excluded.card_slug,
-                    "program": stmt.excluded.program,
-                    "points_earned": stmt.excluded.points_earned,
-                    "earn_rate": stmt.excluded.earn_rate,
-                    "category": stmt.excluded.category,
-                    "subcategory": stmt.excluded.subcategory,
-                },
-            )
-            await db.execute(stmt)
-            await db.commit()
+            if pts:
+                stmt = pg_insert(PointsLedger).values(
+                    transaction_id=tx.id,
+                    account_id=tx.account_id,
+                    card_slug=pts.card_slug,
+                    program=pts.program,
+                    points_earned=pts.points_earned,
+                    earn_rate=pts.earn_rate,
+                    category=tx.category,
+                    subcategory=tx.subcategory,
+                )
+                stmt = stmt.on_conflict_do_update(
+                    constraint="uq_points_ledger_transaction",
+                    set_={
+                        "card_slug": stmt.excluded.card_slug,
+                        "program": stmt.excluded.program,
+                        "points_earned": stmt.excluded.points_earned,
+                        "earn_rate": stmt.excluded.earn_rate,
+                        "category": stmt.excluded.category,
+                        "subcategory": stmt.excluded.subcategory,
+                    },
+                )
+                await db.execute(stmt)
+                await db.commit()
+    except Exception:
+        # Don't let a points-ledger problem undo or mask the category change.
+        await db.rollback()
+        logger.exception(
+            "Points recompute failed after category override tx=%s (category still saved)",
+            transaction_id,
+        )
 
     logger.info(
         "Manual category override tx=%s → %s / %s",
