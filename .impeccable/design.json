@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-30T00:00:00Z",
+  "title": "Design System: HIVE",
+  "extensions": {
+    "colorMeta": {
+      "base": { "role": "neutral", "displayName": "OLED Base", "canonical": "#13151A", "tonalRamp": ["#0B0C0F", "#13151A", "#1A1D24", "#1F2229", "#252830", "#2A2D35", "#3A3E4A", "#4B5563"] },
+      "blue": { "role": "primary", "displayName": "Interactive Blue", "canonical": "#3B82F6", "tonalRamp": ["#0F1E38", "#15315E", "#1D4ED8", "#2563EB", "#3B82F6", "#60A5FA", "#93C5FD", "#DBEAFE"] },
+      "honey-bright": { "role": "secondary", "displayName": "Reward Honey", "canonical": "#F5B942", "tonalRamp": ["#3A2A06", "#5C420A", "#8A6610", "#C9920E", "#F5B942", "#F8CD74", "#FBE0A6", "#FDF1D6"] },
+      "ink-primary": { "role": "neutral", "displayName": "Primary Ink", "canonical": "#F0F2F5", "tonalRamp": ["#4B5563", "#6B7280", "#9CA3AF", "#C4C9D1", "#F0F2F5", "#F5F7F9", "#FAFBFC", "#FFFFFF"] },
+      "ink-secondary": { "role": "neutral", "displayName": "Secondary Ink", "canonical": "#9CA3AF", "tonalRamp": ["#374151", "#4B5563", "#6B7280", "#9CA3AF", "#B5BBC4", "#CDD2D9", "#E5E8EC", "#F5F7F9"] },
+      "income": { "role": "tertiary", "displayName": "Income Green", "canonical": "#22C55E", "tonalRamp": ["#052E16", "#0A4A22", "#107A38", "#16A34A", "#22C55E", "#4ADE80", "#86EFAC", "#DCFCE7"] },
+      "expense": { "role": "tertiary", "displayName": "Expense Red", "canonical": "#EF4444", "tonalRamp": ["#3F0A0A", "#5E1212", "#991B1B", "#DC2626", "#EF4444", "#F87171", "#FCA5A5", "#FEE2E2"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The single hero metric on a screen (net worth, total balance). Max one per screen." },
+      "headline": { "displayName": "Headline", "purpose": "Screen heading." },
+      "title": { "displayName": "Title", "purpose": "Card title, section header." },
+      "body": { "displayName": "Body", "purpose": "Default text and primary figures. Prose capped 65-75ch." },
+      "caption": { "displayName": "Caption", "purpose": "Secondary / meta / dense table cells." },
+      "label": { "displayName": "Label", "purpose": ".hive-label uppercase caption, 0.08em tracking." },
+      "mono": { "displayName": "Mono Figures", "purpose": "Every amount, points value, and date. Tabular-nums, decimal-aligned." }
+    },
+    "shadows": [
+      { "name": "focus-ring", "value": "0 0 0 3px rgba(59,130,246,0.08)", "purpose": "Interactive-blue focus feedback on inputs, selects, and buttons. The only resting 'glow'." }
+    ],
+    "motion": [
+      { "name": "ease-state", "value": "150ms ease", "purpose": "Default state transition (background, border, color)." },
+      { "name": "fade-up", "value": "120ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Entrance reveal — quick ease-out, no overshoot." },
+      { "name": "stagger-step", "value": "50ms", "purpose": "Delay between staggered list-item reveals." }
+    ],
+    "breakpoints": [
+      { "name": "iphone-se", "value": "375px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The default action everywhere except rewards surfaces. Interactive blue.",
+      "html": "<button class=\"ds-btn-primary\">Link account</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #3B82F6; color: #fff; font-size: 13px; font-weight: 600; border: none; border-radius: 10px; padding: 8px 16px; cursor: pointer; transition: background 150ms ease; } .ds-btn-primary:hover { background: #2563EB; } .ds-btn-primary:active { background: #1D4ED8; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Rewards Button",
+      "kind": "button",
+      "refersTo": "button-rewards",
+      "description": "Honey CTA reserved for points/optimize/reward surfaces only. Never a generic primary.",
+      "html": "<button class=\"ds-btn-rewards\">Redeem points</button>",
+      "css": ".ds-btn-rewards { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #F5B942; color: #0B0C0F; font-size: 13px; font-weight: 600; border: none; border-radius: 7px; padding: 8px 16px; cursor: pointer; transition: opacity 150ms ease; } .ds-btn-rewards:hover { opacity: 0.88; } .ds-btn-rewards:disabled { opacity: 0.4; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Low-emphasis action; translucent fill, lifts to overlay surface on hover.",
+      "html": "<button class=\"ds-btn-secondary\">Filter</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: rgba(255,255,255,0.05); color: #9CA3AF; font-size: 12px; font-weight: 500; border: 1px solid #3A3E4A; border-radius: 8px; padding: 7px 14px; cursor: pointer; letter-spacing: -0.01em; transition: background 150ms, border-color 150ms, color 150ms; } .ds-btn-secondary:hover { background: #252830; border-color: #4A5060; color: #F0F2F5; } .ds-btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Default container. Elevated surface at rest, lifts to overlay on hover via background + border step, not shadow.",
+      "html": "<div class=\"ds-card\"><span class=\"ds-card-label\">Checking</span><span class=\"ds-card-figure\">$4,820.16</span></div>",
+      "css": ".ds-card { background: #1F2229; border: 1px solid #2A2D35; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 6px; transition: background 150ms ease, border-color 150ms ease; } .ds-card:hover { background: #252830; border-color: #3A3E4A; } .ds-card-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #9CA3AF; } .ds-card-figure { font-family: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 21px; font-weight: 500; color: #F0F2F5; }"
+    },
+    {
+      "name": "Rewards Card",
+      "kind": "card",
+      "refersTo": "card-rewards",
+      "description": "Honey-bordered card for points/rewards content only.",
+      "html": "<div class=\"ds-card-rewards\"><span class=\"ds-card-label\">Amex MR</span><span class=\"ds-card-figure\">82,140 pts</span></div>",
+      "css": ".ds-card-rewards { background: #252830; border: 1px solid rgba(245,185,66,0.18); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 6px; } .ds-card-rewards .ds-card-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #9CA3AF; } .ds-card-rewards .ds-card-figure { font-family: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 21px; font-weight: 500; color: #F5B942; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Translucent field with a blue focus ring — the interactive signal.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search transactions\" />",
+      "css": ".ds-input { background: rgba(255,255,255,0.05); border: 1px solid #3A3E4A; border-radius: 9px; color: #F0F2F5; font-size: 13px; font-weight: 400; padding: 8px 12px; outline: none; width: 100%; letter-spacing: -0.01em; transition: border-color 150ms, background 150ms, box-shadow 150ms; } .ds-input::placeholder { color: #6B7280; } .ds-input:hover { border-color: rgba(255,255,255,0.15); } .ds-input:focus { border-color: rgba(59,130,246,0.20); background: rgba(255,255,255,0.07); box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Warmly-Lit Instrument",
+    "overview": "HIVE looks like a well-made financial terminal seen in a dark room: an OLED-black field, exact monospaced figures, and a single warm light — honey gold — that switches on only when there is something genuinely rewarding to show. It is a product surface, not a brand surface: the design serves the operator's task and then disappears. Density is welcome; the operator would rather see six real card balances than one smoothed summary. The aesthetic philosophy is comprehension-first — fastest to read, impossible to misread — and identity is carried entirely by accent discipline, typography, and the data itself. The system explicitly rejects the generic AI-dashboard look: Inter everywhere, cyan-on-black neon, a card wrapped around every group, glassmorphism, gradient or glowing text, and a cloned hero-metric template. It also rejects consumer-fintech gamification. This is a shared responsive codebase wrapped for iOS via Capacitor; it must read from iPhone SE width up to Dynamic-Island devices and on desktop web, without forking.",
+    "keyCharacteristics": [
+      "OLED-dark surfaces layered by tone, not shadow (base -> surface -> elevated -> overlay).",
+      "Two-color discipline: blue means interactive, honey means rewards. Nothing else earns an accent.",
+      "All money is monospaced, tabular, decimal-aligned.",
+      "Restrained by default; one dominant element per screen.",
+      "Fixed rem type scale on a 3:4 ratio — figures never reflow-jitter across device widths."
+    ],
+    "rules": [
+      { "name": "The Two-Signal Rule", "body": "Exactly two colors carry meaning: blue = interactive, honey = rewards. Any blue that isn't clickable, or any honey that isn't a reward, is a bug.", "section": "colors" },
+      { "name": "The Tertiary-Text Ceiling", "body": "Ink Tertiary (#6B7280) is forbidden for any figure, amount, or decision-critical text — it fails 4.5:1 everywhere. Confine it to timestamps, disabled hints, and icons paired with a label, and never place it on the overlay surface (3.10).", "section": "colors" },
+      { "name": "The Direction-Plus-Color Rule", "body": "Money direction and semantic state are never conveyed by color alone. Green/red always ride with a sign, arrow, or label.", "section": "colors" },
+      { "name": "The Tabular-Money Rule", "body": "Every monetary figure, points value, and date uses the mono family with font-variant-numeric: tabular-nums. Columns align on the decimal. No exceptions.", "section": "typography" },
+      { "name": "The No-Inter Rule", "body": "Body is Plus Jakarta Sans; figures are mono. Inter-everywhere is a generated-UI tell and is prohibited as a body face here.", "section": "typography" },
+      { "name": "The Tonal-Depth Rule", "body": "Convey elevation by stepping the surface token, never by adding a drop shadow. If a component needs to feel raised, move it up the base->surface->elevated->overlay ladder.", "section": "elevation" },
+      { "name": "The Glow-Is-Earned Rule", "body": "Glow exists only for focus feedback and the single top-edge page-hero wash. No glowing text, no glow on resting cards, no neon edges.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep blue strictly interactive and honey strictly rewards — the Two-Signal Rule.",
+      "Do render every amount, points value, and date in Geist/JetBrains Mono with tabular-nums, decimal-aligned in columns.",
+      "Do build hierarchy in order: white space -> weight -> size -> color -> ornament. Reach for a border or glow only after the first four fail.",
+      "Do convey depth by stepping the surface token; lift a card on hover by changing its background, not by adding a shadow.",
+      "Do give every screen one dominant element — usually the hero metric or the single decision the screen exists for.",
+      "Do convey money direction and state without relying on color: pair green/red with a sign, arrow, or label.",
+      "Do use Ink Secondary (#9CA3AF) for secondary text on any surface; it passes 4.5:1 everywhere.",
+      "Do meet 44pt touch targets, safe areas, and Dynamic Type from iPhone SE to Dynamic-Island widths — responsively, never as a fork."
+    ],
+    "donts": [
+      "Don't use Inter as a body face, or cyan/neon as an accent — both are generated-UI tells.",
+      "Don't wrap every group in a card. The card is not the default container; use white space and alignment.",
+      "Don't use glassmorphism or decorative blur, and don't proliferate .glass-card on iOS.",
+      "Don't use gradient text or glowing text. Glow is reserved for focus rings and the single top-edge page-hero wash.",
+      "Don't use a colored border-left stripe (>1px) to denote category or status.",
+      "Don't use bounce or springy easing; motion is quick ease-out, <=300ms, and honors reduced-motion.",
+      "Don't clone one hero-metric template onto every screen — one earned hero per screen.",
+      "Don't put Ink Tertiary (#6B7280) on a figure, amount, or decision-critical text, and never place it on the overlay surface.",
+      "Don't justify a choice as 'clean / modern / sleek.' The only rationale is 'fastest to read, impossible to misread.'"
+    ]
+  }
+}
