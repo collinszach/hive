@@ -57,8 +57,13 @@ struct ProgramLedgerView: View {
                     PointsText(points: program.displayPoints, size: 34, weight: .medium)
                     Text("pts").font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
                 }
-                Text("Worth \(program.estimatedValueDollars.formatted(.currency(code: "USD")))")
-                    .font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
+                if let threshold = program.redemptionThreshold, threshold > 0 {
+                    Text(program.aboveThreshold
+                         ? "Ready to redeem"
+                         : "Redeem at \(threshold.formatted(.number.grouping(.automatic))) pts")
+                        .font(.hiveBody(13))
+                        .foregroundStyle(program.aboveThreshold ? Theme.honeyBright : Theme.inkSecondary)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -79,8 +84,10 @@ private struct LedgerRow: View {
                         .lineLimit(1)
                     HStack(spacing: Theme.Spacing.xs) {
                         Text(DateOnly.shortLabel(entry.date))
-                        Text("·")
-                        Text(entry.amount.formatted(.currency(code: "USD")))
+                        if let context = entry.subcategory ?? entry.category {
+                            Text("·")
+                            Text(context).lineLimit(1)
+                        }
                     }
                     .font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
                 }

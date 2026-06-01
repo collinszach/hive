@@ -164,13 +164,17 @@ struct PlanView: View {
     }
 
     private func pointsHero(_ s: PointsSummary) -> some View {
-        // Rewards context → RewardsCard (honey treatment). The dollar figure itself
-        // stays neutral mono; the honey card signals "this is rewards".
-        RewardsCard {
+        // Rewards context → RewardsCard (honey treatment). Points only — never a
+        // dollar valuation: the headline is the total points across all programs.
+        let totalPoints = s.programs.reduce(0) { $0 + $1.displayPoints }
+        return RewardsCard {
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("Rewards value").hiveLabelStyle()
-                MoneyHero(amount: s.totalEstimatedValueDollars, size: 40)
-                Text("Estimated across \(s.programs.count) program\(s.programs.count == 1 ? "" : "s")")
+                Text("Total points").hiveLabelStyle()
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.xs) {
+                    PointsText(points: totalPoints, size: 40, weight: .semibold)
+                    Text("pts").font(.hiveBody(15)).foregroundStyle(Theme.inkSecondary)
+                }
+                Text("Across \(s.programs.count) program\(s.programs.count == 1 ? "" : "s")")
                     .font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -230,13 +234,20 @@ struct ProgramCard: View {
                     Text(program.program)
                         .font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
                     Spacer()
-                    Text(program.estimatedValueDollars.formatted(.currency(code: "USD")))
-                        .font(.hiveMono(14, weight: .medium)).foregroundStyle(Theme.inkSecondary)
+                    if program.aboveThreshold {
+                        Text("Ready to redeem")
+                            .font(.hiveBody(11, weight: .semibold))
+                            .foregroundStyle(Theme.honeyBright)
+                    }
                 }
                 HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.xs) {
                     PointsText(points: program.displayPoints, size: 26, weight: .medium)
                     Text(program.hasManualBalance ? "balance" : "earned · 90d")
                         .font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
+                }
+                if let threshold = program.redemptionThreshold, threshold > 0 {
+                    Text("Redeem at \(threshold.formatted(.number.grouping(.automatic))) pts")
+                        .font(.hiveBody(11)).foregroundStyle(Theme.inkTertiary)
                 }
             }
         }
