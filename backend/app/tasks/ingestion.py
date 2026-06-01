@@ -4,6 +4,7 @@ import re as _re
 from datetime import date, datetime, timezone
 from typing import Optional
 
+import plaid
 from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -17,6 +18,24 @@ from app.models.transaction import Transaction
 from app.plaid.connector import plaid_connector
 
 logger = logging.getLogger(__name__)
+
+
+def _plaid_error_code(exc: Exception) -> Optional[str]:
+    """Best-effort extraction of Plaid's `error_code` from an ApiException.
+
+    Plaid's SDK puts the JSON error in `.body` (a string); fall back to scanning the
+    stringified exception so we don't depend on the exact SDK shape.
+    """
+    body = getattr(exc, "body", None) or str(exc)
+    for code in (
+        "ADDITIONAL_CONSENT_REQUIRED",
+        "ITEM_LOGIN_REQUIRED",
+        "PENDING_EXPIRATION",
+        "INVALID_CREDENTIALS",
+    ):
+        if code in body:
+            return code
+    return None
 
 
 def _compute_statement_balance(db, acct: Account) -> Optional[float]:
@@ -114,10 +133,27 @@ def sync_single_link(self, item_id: str) -> dict:
             logger.warning("sync_single_link: no active link found for item_id=%s", item_id)
             return {"item_id": item_id, "skipped": True}
 
-        added, modified, removed, next_cursor = plaid_connector.sync_transactions(
-            access_token=link.access_token,
-            cursor=link.sync_cursor,
-        )
+        # Some items (e.g. a Vanguard 401k) are linked for investments/balances only and
+        # never granted the TRANSACTIONS product. Plaid then rejects /transactions/sync
+        # with ADDITIONAL_CONSENT_REQUIRED. That's expected, not a failure — skip the
+        # transaction pull but still refresh balances below, and don't surface an error.
+        transactions_synced = True
+        try:
+            added, modified, removed, next_cursor = plaid_connector.sync_transactions(
+                access_token=link.access_token,
+                cursor=link.sync_cursor,
+            )
+        except plaid.ApiException as exc:
+            if _plaid_error_code(exc) == "ADDITIONAL_CONSENT_REQUIRED":
+                logger.info(
+                    "Item %s has no transactions consent (balances/investments only); "
+                    "skipping transaction sync, refreshing balances only", item_id
+                )
+                added, modified, removed = [], [], []
+                next_cursor = link.sync_cursor  # leave cursor untouched
+                transactions_synced = False
+            else:
+                raise
 
         accounts = db.execute(
             select(Account).where(
