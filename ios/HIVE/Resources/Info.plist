@@ -35,6 +35,8 @@
 	<string>522735463598-ua1344cfd6d6elgiric47g1qk01ma9f8.apps.googleusercontent.com</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>HIVE uses Face ID to lock your financial data so only you can open the app.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

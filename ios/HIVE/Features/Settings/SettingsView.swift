@@ -6,6 +6,7 @@ import SwiftUI
 /// feature lands (FEATURE-SPEC 1.4).
 struct SettingsView: View {
     @Environment(AppState.self) private var app
+    @Environment(LockState.self) private var lock
     @State private var model = SettingsViewModel()
     @State private var confirmingSignOut = false
     @State private var showDeleteSheet = false
@@ -60,19 +61,58 @@ struct SettingsView: View {
         return rows
     }
 
-    // MARK: Security (placeholder until biometric lock ships — FEATURE-SPEC 1.4)
+    // MARK: Security — biometric app-lock (FEATURE-SPEC 1.4)
 
+    private var lockBinding: Binding<Bool> {
+        Binding(get: { lock.isEnabled }, set: { on in Task { await lock.setEnabled(on) } })
+    }
+
+    @ViewBuilder
     private var securitySection: some View {
         section("Security") {
-            GroupedCard(data: [InfoRow(label: "Face ID / Touch ID lock", value: "Coming soon")]) { row in
-                HStack {
-                    Text(row.label).font(.hiveBody(15)).foregroundStyle(Theme.inkPrimary)
-                    Spacer()
-                    Text(row.value).font(.hiveBody(13)).foregroundStyle(Theme.inkTertiary)
+            if lock.isBiometryAvailable {
+                VStack(spacing: Theme.Spacing.md) {
+                    Card(padding: Theme.Spacing.md) {
+                        Toggle(isOn: lockBinding) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(lock.biometryLabel) lock")
+                                    .font(.hiveBody(15)).foregroundStyle(Theme.inkPrimary)
+                                Text("Require \(lock.biometryLabel) when reopening HIVE")
+                                    .font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .tint(Theme.blue)
+                    }
+                    if lock.isEnabled {
+                        Card(padding: Theme.Spacing.md) {
+                            Picker("Re-lock after", selection: timeoutBinding) {
+                                Text("Immediately").tag(0)
+                                Text("After 1 minute").tag(1)
+                                Text("After 5 minutes").tag(5)
+                                Text("After 15 minutes").tag(15)
+                            }
+                            .pickerStyle(.menu)
+                            .tint(Theme.blue)
+                            .font(.hiveBody(15))
+                        }
+                    }
                 }
-                .frame(minHeight: Theme.minTouchTarget - 2 * Theme.Spacing.md)
+            } else {
+                GroupedCard(data: [InfoRow(label: "App lock", value: "Set up Face ID in iOS Settings")]) { row in
+                    HStack {
+                        Text(row.label).font(.hiveBody(15)).foregroundStyle(Theme.inkPrimary)
+                        Spacer()
+                        Text(row.value).font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary)
+                    }
+                    .frame(minHeight: Theme.minTouchTarget - 2 * Theme.Spacing.md)
+                }
             }
         }
+    }
+
+    private var timeoutBinding: Binding<Int> {
+        Binding(get: { lock.timeoutMinutes }, set: { lock.timeoutMinutes = $0 })
     }
 
     // MARK: About

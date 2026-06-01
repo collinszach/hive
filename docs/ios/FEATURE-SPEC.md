@@ -19,8 +19,8 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | 1.1 Budget create/edit/delete | ✅ | ✅ `BudgetEditorView` | ✅ |
 | 2.4 Owed-to-you reimbursement overview | ✅ | ✅ `ReimbursementView` | ✅ `/api/shares/pending` |
 | 1.2 Card Optimizer | 🔲 | — | ✅ `/api/points/optimize` |
-| 1.3 Settings / Account / Security screen | 🚧 | ✅ `SettingsView` (account, sign-out, delete) | ✅ `DELETE /api/auth/account` |
-| 1.4 Biometric app-lock | 🔲 | — | n/a |
+| 1.3 Settings / Account / Security screen | ✅ | ✅ `SettingsView` (account, sign-out, delete, lock toggle) | ✅ `DELETE /api/auth/account` |
+| 1.4 Biometric app-lock | ✅ | ✅ `LockState` + `LockScreenView` gating `RootView` | n/a |
 | 2.1 AI Chat | 🔲 | — | ✅ `/api/chat` |
 | 2.2 Push notifications | 🔲 | — | ⚠️ APNs device-token endpoint **missing** |
 | 2.3 Spending forecast | 🔲 | — | ✅ `/api/forecast/{category}` |
@@ -28,7 +28,7 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | 3.2 App Store readiness | 🔲 | — | — |
 | Tier 4 polish (manual add, acct detail, redemption banner, search, a11y) | 🔲 | — | mostly backed |
 
-**MVP-to-submit critical path that's still open:** 1.2 Optimizer, 1.4 Biometric (wires the 1.3 security toggle), then 3.2 store readiness. (1.3 Settings + delete-account ✅ core done.)
+**MVP-to-submit critical path that's still open:** 1.2 Optimizer, then 3.2 store readiness. (1.3 Settings + delete-account ✅, 1.4 Biometric lock ✅.)
 
 ## Where the app is today (✅ shipped)
 
@@ -63,21 +63,20 @@ A flagship differentiator that currently has no native surface. Backend `/api/po
 - **Native:** category/subcategory pickers from `Taxonomy`; amount keypad; ranked rows with `MoneyText`/points; copyable result. Consider a Home-screen quick action / Spotlight later.
 - **DoD:** entering "Dining, $80" returns the ranked cards with correct earn math.
 
-### 1.3 Settings / Account / Security `L`  ·  P0 (Apple-required)  ·  🚧 CORE DONE (security toggle pending 1.4)
+### 1.3 Settings / Account / Security `L`  ·  P0 (Apple-required)  ·  ✅ DONE
 `SettingsView` reached via a gear in the Connect header (pushed screen). Sign-out moved here from the Connect footer.
 - **UX (built):** Pushed Settings screen with sections:
   - **Account:** signed-in-as (username), role, last sign-in (from `GET /api/auth/me`); **Sign out** (confirm dialog); **Delete account** → typed-name confirmation sheet.
-  - **Security:** Face ID / passcode app-lock — **placeholder row "Coming soon"** until 1.4 lands.
+  - **Security:** Face ID / passcode app-lock toggle + re-lock timeout picker (wired to `LockState`, 1.4).
   - **About:** version/build from the bundle.
 - **Backend (built):** `DELETE /api/auth/account` — FK-scoped wipe (accounts cascade to transactions/splits/shares/points/anomalies, plus Plaid links), best-effort SnapTrade revoke, clears the auth cookie. Typed `confirm_username` guard (Apple 5.1.1(v)).
-- **DoD:** ✅ sign out, ✅ working delete-account flow that revokes server data; ⏳ security toggle is wired once 1.4 ships. App builds clean for the iOS Simulator.
+- **DoD:** ✅ sign out, ✅ working delete-account flow that revokes server data, ✅ security toggle wired (1.4). App builds clean for the iOS Simulator.
 
-### 1.4 Biometric app-lock `M`  ·  P0  ·  🔲 NOT STARTED
-Financial data must lock behind Face ID on cold start + background timeout.
-Needs `NSFaceIDUsageDescription` added to `Info.plist` (not present yet) + a `LockState` gate on `RootView`.
-- **UX:** On launch/return-from-background past N minutes, present a lock screen requiring Face ID / passcode (`LAContext`). Blur content in the app switcher. This guards the *existing* session — not a replacement for Google sign-in.
-- **Native:** `LocalAuthentication`; store "lock enabled" + timeout in `UserDefaults`; gate `RootView` behind a `LockState`. Snapshot-blur via `scenePhase`.
-- **DoD:** with lock on, app requires Face ID after backgrounding; failed/canceled auth keeps content hidden; toggle in Settings.
+### 1.4 Biometric app-lock `M`  ·  P0  ·  ✅ DONE
+Financial data locks behind Face ID on cold start + background timeout. `NSFaceIDUsageDescription` added to `project.yml` info props; `LockState` gates `RootView`.
+- **UX (built):** Cold launch (when enabled) and return-from-background past the timeout present `LockScreenView` requiring Face ID / Touch ID / passcode (`.deviceOwnerAuthentication`, auto-prompt + manual retry). An opaque `PrivacyCover` hides content whenever the scene is inactive (app-switcher snapshot). Guards the *existing* session — not a second sign-in.
+- **Native (built):** `LocalAuthentication` via `BiometricAuth`; `LockState` (@Observable, injected at root) persists enabled + timeout in `UserDefaults`, handles `scenePhase`. Settings toggle requires a successful auth to enable; timeout picker (Immediately / 1 / 5 / 15 min).
+- **DoD:** ✅ with lock on, app requires Face ID after backgrounding; ✅ failed/canceled auth keeps content hidden (lock stays up); ✅ toggle + timeout in Settings. Clean iOS Simulator build.
 
 ---
 

@@ -43,6 +43,7 @@ targets:
         UILaunchScreen: {}
         UIUserInterfaceStyle: Dark
         ITSAppUsesNonExemptEncryption: false
+        NSFaceIDUsageDescription: HIVE uses Face ID to lock your financial data so only you can open the app.
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIStatusBarStyle: UIStatusBarStyleLightContent
