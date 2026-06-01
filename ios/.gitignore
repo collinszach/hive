@@ -1,0 +1,16 @@
+# xcodegen generates the project from project.yml — don't commit it.
+*.xcodeproj
+*.xcworkspace
+
+# Build output / local state
+.build/
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+
+# SPM
+.swiftpm/
+
+# macOS
+.DS_Store
