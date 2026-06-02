@@ -23,6 +23,7 @@ router = APIRouter(prefix="/api/accounts", tags=["accounts"])
 class AccountOut(BaseModel):
     id: uuid.UUID
     plaid_account_id: Optional[str]
+    snaptrade_account_id: Optional[str]
     name: str
     official_name: Optional[str]
     institution: str

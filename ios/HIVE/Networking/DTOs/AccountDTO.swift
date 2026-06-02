@@ -3,6 +3,7 @@ import Foundation
 /// Mirrors `AccountOut` from `backend/app/api/accounts.py`. Balances are `Decimal`.
 struct AccountDTO: Decodable, Identifiable, Hashable {
     let id: String
+    let snaptradeAccountId: String?
     let name: String
     let officialName: String?
     let institution: String

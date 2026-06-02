@@ -1,6 +1,7 @@
 """SnapTrade API — connect flow and callback handling."""
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -23,6 +24,39 @@ class ConnectResponse(BaseModel):
 
 class CallbackResponse(BaseModel):
     accounts_added: int
+
+
+class PositionOut(BaseModel):
+    symbol: Optional[str]
+    description: Optional[str]
+    units: Optional[float]
+    price: Optional[float]
+    market_value: Optional[float]
+    open_pnl: Optional[float]
+    avg_price: Optional[float]
+    currency: Optional[str]
+    type: Optional[str]
+
+
+class OrderOut(BaseModel):
+    action: Optional[str]
+    status: Optional[str]
+    symbol: Optional[str]
+    description: Optional[str]
+    quantity: Optional[float]
+    filled_quantity: Optional[float]
+    price: Optional[float]
+    order_type: Optional[str]
+    placed_at: Optional[str]
+    executed_at: Optional[str]
+    currency: Optional[str]
+
+
+class HoldingsOut(BaseModel):
+    total_value: Optional[float]
+    currency: Optional[str]
+    positions: list[PositionOut]
+    orders: list[OrderOut]
 
 
 @router.post("/connect", response_model=ConnectResponse)
@@ -122,3 +156,47 @@ async def snaptrade_callback(
     snapshot_net_worth.delay()
 
     return CallbackResponse(accounts_added=added)
+
+
+@router.get("/accounts/{snaptrade_account_id}/holdings", response_model=HoldingsOut)
+async def snaptrade_holdings(
+    snaptrade_account_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_snaptrade),
+) -> HoldingsOut:
+    """Return positions and recent orders for one connected SnapTrade account.
+
+    Ownership is enforced: the account must belong to the current user.
+    """
+    connector = get_connector()
+    if connector is None:
+        raise HTTPException(status_code=503, detail="SnapTrade not configured")
+    if not user.snaptrade_user_id:
+        raise HTTPException(status_code=400, detail="SnapTrade not connected for this user")
+
+    # Verify the account exists and is owned by this user before hitting SnapTrade.
+    result = await db.execute(
+        select(Account).where(
+            Account.snaptrade_account_id == snaptrade_account_id,
+            Account.user_id == user.id,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    try:
+        holdings = connector.get_holdings(
+            snaptrade_user_id=user.snaptrade_user_id,
+            user_secret=user.snaptrade_user_secret,
+            account_id=snaptrade_account_id,
+        )
+    except Exception as exc:
+        logger.warning("SnapTrade get_holdings failed for %s: %s", snaptrade_account_id, exc)
+        raise HTTPException(status_code=502, detail="Could not load holdings from SnapTrade")
+
+    return HoldingsOut(
+        total_value=holdings["total_value"],
+        currency=holdings["currency"],
+        positions=[PositionOut(**p) for p in holdings["positions"] if p],
+        orders=[OrderOut(**o) for o in holdings["orders"] if o],
+    )

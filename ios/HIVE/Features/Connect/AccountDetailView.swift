@@ -9,15 +9,27 @@ struct AccountDetailView: View {
     @State private var selected: TransactionDTO?
 
     var body: some View {
-        Screen(title: account.name, refresh: { await model.load(accountId: account.id) }) {
+        Screen(title: account.name, refresh: {
+            await model.load(accountId: account.id)
+            if let sid = account.snaptradeAccountId { await model.loadHoldings(snaptradeAccountId: sid) }
+        }) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 summaryCard.hiveEntrance(0)
-                transactionsSection.hiveEntrance(1)
+                if account.snaptradeAccountId != nil {
+                    holdingsSection.hiveEntrance(1)
+                    ordersSection.hiveEntrance(2)
+                }
+                transactionsSection.hiveEntrance(account.snaptradeAccountId != nil ? 3 : 1)
             }
             .padding(.top, Theme.Spacing.sm)
         }
         .navigationBarTitleDisplayMode(.inline)
-        .task { if model.state.value == nil { await model.load(accountId: account.id) } }
+        .task {
+            if model.state.value == nil { await model.load(accountId: account.id) }
+            if let sid = account.snaptradeAccountId, model.holdingsState?.value == nil {
+                await model.loadHoldings(snaptradeAccountId: sid)
+            }
+        }
         .sheet(item: $selected) { tx in
             TransactionDetailView(transaction: tx) { await model.load(accountId: account.id) }
                 .presentationDetents([.large])
@@ -81,6 +93,129 @@ struct AccountDetailView: View {
         amount.formatted(.currency(code: code).precision(.fractionLength(2)))
     }
 
+    // MARK: Holdings (SnapTrade investment accounts)
+
+    @ViewBuilder private var holdingsSection: some View {
+        if let sid = account.snaptradeAccountId, let state = model.holdingsState {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("Holdings").hiveLabelStyle().padding(.leading, Theme.Spacing.xs)
+                LoadStateView(
+                    state: state,
+                    emptyTitle: "No holdings",
+                    emptyMessage: "This account has no open positions.",
+                    emptyIcon: "chart.pie",
+                    onRetry: { Task { await model.loadHoldings(snaptradeAccountId: sid) } }
+                ) { holdings in
+                    positionsList(holdings.positions)
+                } skeleton: {
+                    SkeletonList(count: 4)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private func positionsList(_ positions: [PositionDTO]) -> some View {
+        if positions.isEmpty {
+            EmptyView()
+        } else {
+            GroupedCard(data: positions) { pos in
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(pos.displaySymbol)
+                            .font(.hiveMono(15, weight: .semibold))
+                            .foregroundStyle(Theme.inkPrimary)
+                        if let desc = pos.description, desc != pos.symbol {
+                            Text(desc)
+                                .font(.hiveBody(12))
+                                .foregroundStyle(Theme.inkSecondary)
+                                .lineLimit(1)
+                        }
+                        if let units = pos.units, let price = pos.price {
+                            Text("\(unitsLabel(units)) @ \(money(price, pos.currency ?? account.currency))")
+                                .font(.hiveBody(11))
+                                .foregroundStyle(Theme.inkSecondary)
+                        }
+                    }
+                    Spacer(minLength: Theme.Spacing.md)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        MoneyText(amount: pos.marketValue ?? 0, size: 15,
+                                  currencyCode: pos.currency ?? account.currency)
+                        if let pnl = pos.openPnl, pnl != 0 {
+                            MoneyText(amount: pnl, size: 12, signed: true,
+                                      currencyCode: pos.currency ?? account.currency)
+                        }
+                    }
+                }
+                .frame(minHeight: Theme.minTouchTarget - 2 * Theme.Spacing.md)
+            }
+        }
+    }
+
+    // MARK: Recent orders (trades)
+
+    @ViewBuilder private var ordersSection: some View {
+        if let holdings = model.holdingsState?.value, !holdings.orders.isEmpty {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("Recent trades").hiveLabelStyle().padding(.leading, Theme.Spacing.xs)
+                GroupedCard(data: holdings.orders) { order in
+                    HStack(alignment: .firstTextBaseline) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: Theme.Spacing.xs) {
+                                if let side = order.sideLabel {
+                                    Text(side)
+                                        .font(.hiveMono(10, weight: .bold))
+                                        .foregroundStyle(sideTint(order.action))
+                                }
+                                Text(order.displaySymbol)
+                                    .font(.hiveMono(15, weight: .semibold))
+                                    .foregroundStyle(Theme.inkPrimary)
+                            }
+                            if let status = order.status {
+                                Text(status.capitalized)
+                                    .font(.hiveBody(11))
+                                    .foregroundStyle(Theme.inkSecondary)
+                            }
+                        }
+                        Spacer(minLength: Theme.Spacing.md)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            if let qty = order.quantity, let price = order.price {
+                                Text("\(unitsLabel(qty)) @ \(money(price, order.currency ?? account.currency))")
+                                    .font(.hiveBody(12))
+                                    .foregroundStyle(Theme.inkPrimary)
+                            }
+                            if let when = orderDateLabel(order) {
+                                Text(when).font(.hiveBody(11)).foregroundStyle(Theme.inkSecondary)
+                            }
+                        }
+                    }
+                    .frame(minHeight: Theme.minTouchTarget - 2 * Theme.Spacing.md)
+                }
+            }
+        }
+    }
+
+    private func sideTint(_ action: String?) -> Color {
+        switch action?.uppercased() {
+        case "BUY": return Theme.income
+        case "SELL": return Theme.expense
+        default: return Theme.inkSecondary
+        }
+    }
+
+    private func unitsLabel(_ units: Decimal) -> String {
+        units.formatted(.number.precision(.fractionLength(0...4)))
+    }
+
+    /// Best-effort short date from an ISO-8601 order timestamp.
+    private func orderDateLabel(_ order: OrderDTO) -> String? {
+        guard let raw = order.executedAt ?? order.placedAt else { return nil }
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = iso.date(from: raw) ?? ISO8601DateFormatter().date(from: raw)
+        guard let date else { return String(raw.prefix(10)) }
+        return date.formatted(.dateTime.month(.abbreviated).day())
+    }
+
     // MARK: Recent transactions
 
     @ViewBuilder private var transactionsSection: some View {
@@ -127,6 +262,10 @@ struct AccountDetailView: View {
 final class AccountDetailViewModel {
     private(set) var state: LoadState<[TransactionDTO]> = .loading
 
+    /// Holdings for SnapTrade investment accounts. `nil` = not an investment account
+    /// (the section is hidden); otherwise a normal load lifecycle.
+    private(set) var holdingsState: LoadState<HoldingsDTO>?
+
     private let api: APIClient
     init(api: APIClient = .shared) { self.api = api }
 
@@ -147,6 +286,23 @@ final class AccountDetailViewModel {
             state = .failed(error)
         } catch {
             state = .failed(.network)
+        }
+    }
+
+    /// Load SnapTrade positions + recent orders for a connected investment account.
+    func loadHoldings(snaptradeAccountId: String) async {
+        if holdingsState?.value == nil { holdingsState = .loading }
+        do {
+            let resp = try await api.send(
+                .get("/api/snaptrade/accounts/\(snaptradeAccountId)/holdings"),
+                as: HoldingsDTO.self
+            )
+            holdingsState = (resp.positions.isEmpty && resp.orders.isEmpty) ? .empty : .loaded(resp)
+        } catch let error as APIError {
+            if case .cancelled = error { return }
+            holdingsState = .failed(error)
+        } catch {
+            holdingsState = .failed(.network)
         }
     }
 }
