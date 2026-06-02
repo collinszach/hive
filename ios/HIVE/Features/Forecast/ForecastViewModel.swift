@@ -21,6 +21,10 @@ final class ForecastViewModel {
     private(set) var compareProjection: ProjectionResponse?
     var compareScenarioId: String?
 
+    /// Scenario templates (grad school / home / baby). Loaded lazily the first time the
+    /// scenario menu appears; empty until then.
+    private(set) var presets: [ScenarioPresetDTO] = []
+
     var selectedScenarioId: String?
     var horizonMonths: Int = 24
 
@@ -201,6 +205,32 @@ final class ForecastViewModel {
         let ok = await saveAssumptions(body)
         if ok { advisorState = nil }  // re-projected; analysis is stale
         return ok
+    }
+
+    /// Fetch the scenario-template catalog (idempotent; no-op once loaded).
+    func loadPresets() async {
+        guard presets.isEmpty else { return }
+        presets = (try? await api.send(.get("/api/planning/presets"), as: [ScenarioPresetDTO].self)) ?? []
+    }
+
+    /// Create a scenario pre-seeded from a template, select it, and project it.
+    @discardableResult
+    func createFromPreset(_ preset: ScenarioPresetDTO) async -> Bool {
+        do {
+            let created = try await api.send(
+                .post("/api/planning/scenarios/from-preset"),
+                body: PresetCreateBody(preset: preset.key, name: nil), as: ScenarioDTO.self
+            )
+            Haptics.success()
+            selectedScenarioId = created.id
+            incomeState = .loading; eventsState = .loading
+            advisorState = nil
+            await loadScenarios()
+            return true
+        } catch {
+            Haptics.error()
+            return false
+        }
     }
 
     /// Create a what-if scenario, select it, and project it.

@@ -26,7 +26,7 @@ struct ForecastView: View {
             }
             .padding(.top, Theme.Spacing.sm)
         }
-        .task { await model.load() }
+        .task { await model.load(); await model.loadPresets() }
         .sheet(isPresented: $showNewScenario) {
             NewScenarioSheet { name in await model.createScenario(name: name) }
                 .presentationDetents([.height(220)])
@@ -135,6 +135,20 @@ struct ForecastView: View {
                 Haptics.selection(); showNewScenario = true
             } label: {
                 Label("New scenario", systemImage: "plus")
+            }
+            if !model.presets.isEmpty {
+                Menu {
+                    ForEach(model.presets) { preset in
+                        Button {
+                            Haptics.selection()
+                            Task { await model.createFromPreset(preset) }
+                        } label: {
+                            Label(preset.label, systemImage: preset.icon)
+                        }
+                    }
+                } label: {
+                    Label("New from template", systemImage: "wand.and.stars")
+                }
             }
             if model.selectedScenario?.isBaseline == false {
                 Button(role: .destructive) {

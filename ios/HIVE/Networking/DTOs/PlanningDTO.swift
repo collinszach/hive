@@ -87,6 +87,31 @@ struct ScenarioCreateBody: Encodable {
     let name: String
 }
 
+/// One scenario template. Mirrors an entry of `GET /api/planning/presets`.
+struct ScenarioPresetDTO: Decodable, Identifiable {
+    let key: String
+    let label: String
+    let description: String
+
+    var id: String { key }
+
+    /// SF Symbol per known preset; a neutral fallback keeps unknown keys renderable.
+    var icon: String {
+        switch key {
+        case "grad_school": return "graduationcap"
+        case "home_purchase": return "house"
+        case "new_baby": return "figure.and.child.holdinghands"
+        default: return "sparkles"
+        }
+    }
+}
+
+/// Body for `POST /api/planning/scenarios/from-preset`.
+struct PresetCreateBody: Encodable {
+    let preset: String
+    let name: String?
+}
+
 // MARK: - Income streams (mirrors `_income_dict` / `IncomeStreamBody`)
 
 /// One recurring income (or, with `kind == "expense"`, recurring outflow) stream.

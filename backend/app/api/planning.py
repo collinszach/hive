@@ -50,6 +50,16 @@ TARGETS = {"cash", "investment"}
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+def _add_months(d: date, n: int) -> date:
+    """Return `d` shifted by `n` whole months, clamping the day to the target month's length."""
+    import calendar
+    m = d.month - 1 + n
+    year = d.year + m // 12
+    month = m % 12 + 1
+    day = min(d.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+
 def _month_index(anchor: date, d: date) -> int:
     """1-based projection month for a calendar date. Month 1 == anchor + 1 month.
 
@@ -157,6 +167,140 @@ async def create_scenario(body: ScenarioCreate, session: AsyncSession = Depends(
     session.add(scenario)
     await session.flush()
     await _get_or_create_assumptions(session, scenario.id)
+    return _scenario_dict(scenario)
+
+
+# ── Scenario presets (Epic 9) ────────────────────────────────────────────────
+#
+# A preset seeds a brand-new what-if scenario with a realistic starting set of income
+# streams, life events, and assumption overrides — a launchpad the user then edits.
+# All dates are anchored relative to *today* at creation time (months-out offsets).
+
+@dataclass
+class _PresetIncome:
+    name: str
+    monthly_amount: float
+    months_out: int
+    end_months_out: Optional[int] = None
+    kind: Optional[str] = None
+    growth_pct: float = 0.0
+    taxable: bool = True
+
+
+@dataclass
+class _PresetEvent:
+    name: str
+    amount: float
+    months_out: int
+    kind: str = "outflow"
+    target: str = "cash"
+    recurrence: str = "once"
+    end_months_out: Optional[int] = None
+    category: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@dataclass
+class _Preset:
+    key: str
+    label: str
+    description: str
+    assumptions: dict = field(default_factory=dict)
+    income: list[_PresetIncome] = field(default_factory=list)
+    events: list[_PresetEvent] = field(default_factory=list)
+
+
+_PRESETS: dict[str, _Preset] = {
+    "grad_school": _Preset(
+        key="grad_school",
+        label="Grad School",
+        description="Two years of tuition with a reduced stipend income.",
+        assumptions={"auto_invest_surplus": False},
+        income=[
+            _PresetIncome(name="TA/RA stipend", monthly_amount=1900,
+                          months_out=2, end_months_out=26),
+        ],
+        events=[
+            _PresetEvent(name="Tuition", amount=22000, months_out=2,
+                         recurrence="annual", end_months_out=14, category="Education"),
+            _PresetEvent(name="Books & fees", amount=1200, months_out=2,
+                         recurrence="semiannual", end_months_out=26, category="Education"),
+        ],
+    ),
+    "home_purchase": _Preset(
+        key="home_purchase",
+        label="Buy a Home",
+        description="Down payment, closing costs, and a new monthly mortgage.",
+        income=[],
+        events=[
+            _PresetEvent(name="Down payment", amount=80000, months_out=6, category="Home"),
+            _PresetEvent(name="Closing costs", amount=9000, months_out=6, category="Home"),
+            _PresetEvent(name="Mortgage payment", amount=2600, months_out=6,
+                         recurrence="monthly", category="Home", notes="Replaces rent"),
+        ],
+    ),
+    "new_baby": _Preset(
+        key="new_baby",
+        label="New Baby",
+        description="Delivery costs, baby gear, and ongoing childcare.",
+        events=[
+            _PresetEvent(name="Delivery & medical", amount=6000, months_out=5, category="Health"),
+            _PresetEvent(name="Baby gear & nursery", amount=3500, months_out=7, category="Shopping"),
+            _PresetEvent(name="Childcare", amount=1600, months_out=9,
+                         recurrence="monthly", end_months_out=60, category="Health"),
+        ],
+    ),
+}
+
+
+class PresetCreate(BaseModel):
+    preset: str
+    name: Optional[str] = Field(default=None, max_length=120)
+
+
+@router.get("/presets")
+async def list_presets() -> list[dict]:
+    """The catalog of scenario templates the client can offer."""
+    return [{"key": p.key, "label": p.label, "description": p.description} for p in _PRESETS.values()]
+
+
+@router.post("/scenarios/from-preset", status_code=201)
+async def create_scenario_from_preset(
+    body: PresetCreate, session: AsyncSession = Depends(get_db)
+) -> dict:
+    """Create a what-if scenario pre-seeded from a named template."""
+    preset = _PRESETS.get(body.preset)
+    if preset is None:
+        raise HTTPException(status_code=400, detail=f"Unknown preset: {body.preset!r}")
+
+    today = date.today()
+    scenario = PlanScenario(name=(body.name or preset.label), is_baseline=False)
+    session.add(scenario)
+    await session.flush()
+
+    assumptions = await _get_or_create_assumptions(session, scenario.id)
+    for key, value in preset.assumptions.items():
+        setattr(assumptions, key, value)
+
+    for inc in preset.income:
+        session.add(IncomeStream(
+            scenario_id=scenario.id, name=inc.name, kind=inc.kind,
+            monthly_amount=inc.monthly_amount,
+            start_date=_add_months(today, inc.months_out),
+            end_date=_add_months(today, inc.end_months_out) if inc.end_months_out is not None else None,
+            growth_pct=inc.growth_pct, taxable=inc.taxable,
+        ))
+
+    for ev in preset.events:
+        session.add(PlanEvent(
+            scenario_id=scenario.id, name=ev.name, amount=ev.amount,
+            event_date=_add_months(today, ev.months_out),
+            end_date=_add_months(today, ev.end_months_out) if ev.end_months_out is not None else None,
+            kind=ev.kind, target=ev.target, recurrence=ev.recurrence,
+            growth_pct=0.0, category=ev.category, notes=ev.notes,
+        ))
+
+    await session.flush()
     return _scenario_dict(scenario)
 
 
