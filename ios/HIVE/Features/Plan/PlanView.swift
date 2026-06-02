@@ -19,6 +19,8 @@ struct PlanView: View {
             await segment == .budgets ? model.loadBudgets() : model.loadPoints()
         }) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                forecastLink.hiveEntrance(0)
+
                 Picker("View", selection: $segment) {
                     ForEach(Segment.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
@@ -72,6 +74,41 @@ struct PlanView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+    }
+
+    // MARK: Forecast entry
+
+    /// Always-visible doorway into the projection engine — sits above the
+    /// Budgets/Points control so the planning surface is reachable from either tab.
+    private var forecastLink: some View {
+        NavigationLink {
+            ForecastView()
+        } label: {
+            Card {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Theme.blue)
+                        .frame(width: 40, height: 40)
+                        .background(Theme.blueDim, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Forecast").font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                        Text("Project net worth, cash runway, and life events")
+                            .font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: Theme.Spacing.sm)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.inkTertiary)
+                        .accessibilityHidden(true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Forecast. Project net worth, cash runway, and life events.")
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Budgets

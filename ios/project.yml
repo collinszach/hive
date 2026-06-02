@@ -48,6 +48,10 @@ targets:
         UILaunchScreen: {}
         UIUserInterfaceStyle: Dark
         ITSAppUsesNonExemptEncryption: false
+        # Apple-sanctioned allowance for local/private hosts (e.g. a dev backend at
+        # localhost). Does NOT weaken ATS for public servers.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         NSFaceIDUsageDescription: HIVE uses Face ID to lock your financial data so only you can open the app.
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

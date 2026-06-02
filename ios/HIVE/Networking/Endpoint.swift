@@ -30,5 +30,15 @@ struct Endpoint {
 
 /// Backend environment. Single source of truth for the base URL.
 enum APIEnvironment {
-    static let baseURL = URL(string: "https://hive.zacharyjcollins.com")!
+    static let baseURL: URL = {
+        #if DEBUG
+        // Local dev: point the app at a local backend by launching with
+        // HIVE_API_BASE_URL set (e.g. http://localhost:8000). Inert otherwise.
+        if let override = ProcessInfo.processInfo.environment["HIVE_API_BASE_URL"],
+           let url = URL(string: override) {
+            return url
+        }
+        #endif
+        return URL(string: "https://hive.zacharyjcollins.com")!
+    }()
 }

@@ -25,6 +25,13 @@ final class AppState {
 
     /// Called at launch: resume an existing session or fall to the sign-in screen.
     func bootstrap() {
+        #if DEBUG
+        // Local dev: skip the Google sign-in gate by launching with HIVE_DEV_TOKEN set.
+        // The token is written to the Keychain so `hasStoredSession` resolves true.
+        if let devToken = ProcessInfo.processInfo.environment["HIVE_DEV_TOKEN"], !devToken.isEmpty {
+            KeychainStore.set(devToken, for: .sessionToken)
+        }
+        #endif
         phase = auth.hasStoredSession ? .signedIn : .signedOut
     }
 

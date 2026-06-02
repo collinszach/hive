@@ -7,6 +7,7 @@ struct MainTabView: View {
     enum Tab: Hashable { case home, money, plan, insights, connect }
     @State private var selection: Tab = .home
     @State private var router = NotificationRouter.shared
+    @State private var devForecast = false
 
     var body: some View {
         TabView(selection: $selection) {
@@ -36,6 +37,15 @@ struct MainTabView: View {
                 selection = route
                 router.pending = nil
             }
+        }
+        .fullScreenCover(isPresented: $devForecast) {
+            NavigationStack { ForecastView() }
+        }
+        .task {
+            #if DEBUG
+            // Local dev: jump straight to Forecast by launching with HIVE_DEV_OPEN=forecast.
+            if ProcessInfo.processInfo.environment["HIVE_DEV_OPEN"] == "forecast" { devForecast = true }
+            #endif
         }
         .task {
             // Re-register opted-in devices so the backend has a fresh token, and
