@@ -33,12 +33,16 @@ final class LockState {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        let enabled = defaults.bool(forKey: Keys.enabled)
+        // Default ON: protect financial data out of the box. `object(forKey:)` distinguishes
+        // "never set" (→ default true) from an explicit user opt-out (→ false).
+        let enabled = (defaults.object(forKey: Keys.enabled) as? Bool) ?? true
         self.isEnabled = enabled
         let stored = defaults.integer(forKey: Keys.timeout)
         self.timeoutMinutes = stored == 0 ? 5 : stored  // default: 5 minutes
-        // A cold launch with lock on must require auth before content shows.
-        self.isLocked = enabled
+        // A cold launch with lock on must require auth before content shows — but only if
+        // biometrics are actually enrolled, so a device without Face ID can't be bricked
+        // (there's no passcode fallback in biometrics-only mode).
+        self.isLocked = enabled && BiometricAuth.isAvailable
     }
 
     var biometryLabel: String { BiometricAuth.biometryLabel() }
@@ -63,7 +67,7 @@ final class LockState {
         case .background:
             backgroundedAt = Date()
         case .active:
-            if isEnabled, let since = backgroundedAt {
+            if isEnabled, BiometricAuth.isAvailable, let since = backgroundedAt {
                 let elapsed = Date().timeIntervalSince(since)
                 if elapsed >= Double(timeoutMinutes) * 60 { isLocked = true }
             }

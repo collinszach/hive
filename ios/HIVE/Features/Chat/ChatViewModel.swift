@@ -52,8 +52,16 @@ final class ChatViewModel {
                 body: ChatRequest(message: text, conversationHistory: history, useClaude: useClaude),
                 as: ChatResponse.self
             )
-            messages.append(ChatMessageDTO(role: .assistant, content: resp.response))
-            Haptics.success()
+            // Guard against a blank reply: the model occasionally returns whitespace-only
+            // content, which would otherwise render as an empty bubble (looks like "no answer").
+            let reply = resp.response.trimmingCharacters(in: .whitespacesAndNewlines)
+            if reply.isEmpty {
+                Haptics.error()
+                errorText = "The assistant didn't return a reply. Try rephrasing, or switch models."
+            } else {
+                messages.append(ChatMessageDTO(role: .assistant, content: reply))
+                Haptics.success()
+            }
         } catch let error as APIError {
             handle(error)
         } catch {
@@ -64,7 +72,7 @@ final class ChatViewModel {
     private func handle(_ error: APIError) {
         Haptics.error()
         switch error {
-        case .server(let status) where status == 402:
+        case .paymentRequired:
             errorText = "Claude chat needs the Pro plan. Upgrade, or switch to Local to keep going."
             proGateHit = true
         case .server(let status) where status == 503:
