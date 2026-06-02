@@ -25,7 +25,7 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | 2.2 Push notifications | 🔲 | — | ⚠️ APNs device-token endpoint **missing** |
 | 2.3 Spending forecast | 🔲 | — | ✅ `/api/forecast/{category}` |
 | 3.1 StoreKit 2 IAP | 🔲 | — | ⚠️ receipt-validation endpoint **missing** |
-| 3.2 App Store readiness | 🔲 | — | — |
+| 3.2 App Store readiness | 🟡 | `PrivacyInfo.xcprivacy` + usage strings | — |
 | Tier 4 polish (manual add, acct detail, redemption banner, search, a11y) | 🔲 | — | mostly backed |
 
 **MVP-to-submit critical path that's still open:** 3.2 store readiness. (1.2 Optimizer ✅, 1.3 Settings + delete-account ✅, 1.4 Biometric lock ✅.)
@@ -121,8 +121,16 @@ inline mark-settled / delete with haptics).
 - **Native:** StoreKit 2 `Product`/`Transaction.currentEntitlements`; server receipt validation endpoint (**spec on backend**); entitlement cached + revalidated on launch.
 - **DoD:** sandbox purchase unlocks the gated feature; restore works; expiry re-locks.
 
-### 3.2 App Store readiness `M`  ·  P0 for submission  ·  🔲 NOT STARTED
-- Privacy nutrition labels (Plaid/SnapTrade financial data), usage strings, screenshots per device class, App Privacy disclosures, account-deletion (1.3) reachable, TestFlight beta, crash reporting.
+### 3.2 App Store readiness `M`  ·  P0 for submission  ·  🟡 IN PROGRESS
+- **Done (code/config):**
+  - **Privacy Manifest** — `HIVE/Resources/PrivacyInfo.xcprivacy` (bundled at app root). `NSPrivacyTracking=false`, no tracking domains; declares the one required-reason API in use (`UserDefaults` → `CA92.1`, for `LockState`'s app-lock prefs). Prevents the upload-time required-reason rejection.
+  - **Usage strings** — `NSFaceIDUsageDescription` set (project.yml). No camera/location/contacts used → none else required.
+  - **Encryption** — `ITSAppUsesNonExemptEncryption=false`.
+  - **Account deletion reachable** — Settings → Delete account (1.3), Apple 5.1.1(v) ✅.
+- **Still manual (App Store Connect / account-bound, can't be done from the repo):**
+  - Privacy nutrition labels (financial data via Plaid/SnapTrade) in App Store Connect.
+  - Screenshots per device class; app description/keywords; support + privacy-policy URLs.
+  - TestFlight beta build upload; crash reporting (Xcode Organizer / MetricKit — no SDK added yet).
 - **DoD:** passes review checklist; beta live on TestFlight.
 
 ---
