@@ -11,6 +11,7 @@ struct PlanView: View {
     @State private var segment: Segment = .budgets
     @State private var budgetEditor: BudgetEditorTarget?
     @State private var ledgerProgram: ProgramSummary?
+    @State private var showOptimizer = false
 
     var body: some View {
         Screen(title: "Plan", refresh: {
@@ -31,6 +32,19 @@ struct PlanView: View {
             .padding(.top, Theme.Spacing.sm)
             .animation(.easeOut(duration: 0.2), value: segment)
         }
+        .toolbar {
+            if segment == .points {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Haptics.selection(); showOptimizer = true
+                    } label: {
+                        Image(systemName: "creditcard")
+                    }
+                    .foregroundStyle(Theme.honeyBright)
+                    .accessibilityLabel("Find best card")
+                }
+            }
+        }
         .task { await model.loadBudgets() }
         .onChange(of: segment) { _, seg in
             Haptics.selection()
@@ -49,6 +63,11 @@ struct PlanView: View {
         }
         .sheet(item: $ledgerProgram) { program in
             ProgramLedgerView(program: program)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showOptimizer) {
+            CardOptimizerView()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }

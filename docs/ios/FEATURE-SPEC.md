@@ -18,7 +18,7 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | In-app Plaid + SnapTrade linking | ✅ | ✅ | ✅ |
 | 1.1 Budget create/edit/delete | ✅ | ✅ `BudgetEditorView` | ✅ |
 | 2.4 Owed-to-you reimbursement overview | ✅ | ✅ `ReimbursementView` | ✅ `/api/shares/pending` |
-| 1.2 Card Optimizer | 🔲 | — | ✅ `/api/points/optimize` |
+| 1.2 Card Optimizer | ✅ | `CardOptimizerView` | ✅ `/api/points/optimize` |
 | 1.3 Settings / Account / Security screen | ✅ | ✅ `SettingsView` (account, sign-out, delete, lock toggle) | ✅ `DELETE /api/auth/account` |
 | 1.4 Biometric app-lock | ✅ | ✅ `LockState` + `LockScreenView` gating `RootView` | n/a |
 | 2.1 AI Chat | 🔲 | — | ✅ `/api/chat` |
@@ -28,7 +28,7 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | 3.2 App Store readiness | 🔲 | — | — |
 | Tier 4 polish (manual add, acct detail, redemption banner, search, a11y) | 🔲 | — | mostly backed |
 
-**MVP-to-submit critical path that's still open:** 1.2 Optimizer, then 3.2 store readiness. (1.3 Settings + delete-account ✅, 1.4 Biometric lock ✅.)
+**MVP-to-submit critical path that's still open:** 3.2 store readiness. (1.2 Optimizer ✅, 1.3 Settings + delete-account ✅, 1.4 Biometric lock ✅.)
 
 ## Where the app is today (✅ shipped)
 
@@ -56,12 +56,13 @@ un-budgeted category, edit fixes category + amount/rollover, swipe/confirm delet
 - **Native:** reuse `Card`/`GroupedCard`, `.sheet` editor mirroring `SplitEditorView`; optimistic update then reload; money in `.hiveMono` tabular.
 - **DoD:** can create, change, and remove a monthly budget; gauge reflects live spend; survives relaunch.
 
-### 1.2 Card Optimizer — "which card at checkout?" `M`  ·  P0  ·  🔲 NOT STARTED
-A flagship differentiator that currently has no native surface. Backend `/api/points/optimize` confirmed present.
-- **UX:** Quick-access entry (Plan→Points header action, or a Home shortcut). Enter merchant/category + amount → ranked card list with earn rate, points, and est. dollar value (CPP). Honey/gold allowed here (rewards context).
-- **Backend (exists):** `GET /api/points/optimize?category=&subcategory=&amount=`.
-- **Native:** category/subcategory pickers from `Taxonomy`; amount keypad; ranked rows with `MoneyText`/points; copyable result. Consider a Home-screen quick action / Spotlight later.
-- **DoD:** entering "Dining, $80" returns the ranked cards with correct earn math.
+### 1.2 Card Optimizer — "which card at checkout?" `M`  ·  P0  ·  ✅ DONE
+A flagship differentiator, now surfaced natively. `CardOptimizerView` opens from a creditcard toolbar button on Plan → Points (rewards context, honey/gold allowed).
+- **UX (built):** category + subcategory menus (from `Taxonomy`) and an amount field; auto-runs on open with a sensible default (Food & Drink / $100) and re-queries live on every change. Ranked rows: top pick in a `RewardsCard` with a honey "Best" badge, the rest in plain `Card`s, each showing points earned + `N× points` earn rate. Footnote: "Ranked by redemption value across programs."
+- **Points-only:** per the rewards-page directive, results lead with points + earn rate; `dollarValue` is decoded but never rendered.
+- **Backend (exists):** `GET /api/points/optimize?category=&subcategory=&amount=` → `OptimizerResponse{cards:[CardOption]}` (`is_best` flags the top pick).
+- **Native files:** `Features/Plan/CardOptimizerView.swift`, `CardOptimizerViewModel.swift`; DTOs `OptimizerResponse`/`CardOption` in `PlanDTO.swift`; card names via `CardCatalog`.
+- **DoD met:** picking a category/amount returns the ranked cards with correct earn math, best badged.
 
 ### 1.3 Settings / Account / Security `L`  ·  P0 (Apple-required)  ·  ✅ DONE
 `SettingsView` reached via a gear in the Connect header (pushed screen). Sign-out moved here from the Connect footer.

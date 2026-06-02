@@ -115,3 +115,29 @@ struct PointsLedgerEntry: Decodable, Identifiable {
     // transactionId can repeat across programs in theory; pair with program for a stable id.
     var id: String { "\(transactionId)-\(program)" }
 }
+
+// MARK: - Card optimizer
+
+/// `GET /api/points/optimize?category=&subcategory=&amount=`. Mirrors
+/// `OptimizerResponse` from `backend/app/api/points.py` — "which card at checkout?".
+struct OptimizerResponse: Decodable {
+    let category: String?
+    let subcategory: String?
+    let amount: Decimal
+    let cards: [CardOption]
+}
+
+/// One ranked card for a hypothetical purchase. Mirrors `CardOptionOut`.
+/// Cards arrive pre-ranked by redemption value across programs; `isBest` flags
+/// the top pick. The UI deliberately leads with points + earn rate, not dollars.
+struct CardOption: Decodable, Identifiable {
+    let cardSlug: String
+    let accountName: String?
+    let program: String
+    let earnRate: Double
+    let pointsEarned: Double
+    let dollarValue: Decimal
+    let isBest: Bool
+
+    var id: String { cardSlug }
+}
