@@ -37,8 +37,10 @@ final class LockState {
         // "never set" (→ default true) from an explicit user opt-out (→ false).
         let enabled = (defaults.object(forKey: Keys.enabled) as? Bool) ?? true
         self.isEnabled = enabled
-        let stored = defaults.integer(forKey: Keys.timeout)
-        self.timeoutMinutes = stored == 0 ? 5 : stored  // default: 5 minutes
+        // Default: re-lock IMMEDIATELY (0 min) — leaving the foreground (home, app switcher,
+        // another app) re-locks, so swiping up and back always re-checks the face.
+        // `integer(forKey:)` returns 0 when unset, which is exactly the "Immediately" tag.
+        self.timeoutMinutes = defaults.integer(forKey: Keys.timeout)
         // A cold launch with lock on must require auth before content shows — but only if
         // biometrics are actually enrolled, so a device without Face ID can't be bricked
         // (there's no passcode fallback in biometrics-only mode).
@@ -63,11 +65,19 @@ final class LockState {
     /// React to scene-phase changes. Records background time and, on return to active,
     /// re-locks if the timeout has elapsed. Auto-prompting is owned by `LockScreenView`.
     func handleScenePhase(_ phase: ScenePhase) {
+        guard isEnabled, BiometricAuth.isAvailable else { backgroundedAt = nil; return }
         switch phase {
         case .background:
-            backgroundedAt = Date()
+            // Immediate mode (timeout 0): re-lock the moment we leave the foreground, so
+            // returning from the app switcher / home screen always requires a fresh face
+            // check. Otherwise start the clock and decide on return.
+            if timeoutMinutes == 0 {
+                isLocked = true
+            } else {
+                backgroundedAt = Date()
+            }
         case .active:
-            if isEnabled, BiometricAuth.isAvailable, let since = backgroundedAt {
+            if let since = backgroundedAt {
                 let elapsed = Date().timeIntervalSince(since)
                 if elapsed >= Double(timeoutMinutes) * 60 { isLocked = true }
             }
