@@ -26,7 +26,7 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | 2.3 Spending forecast | ✅ | done | ✅ `/api/forecast/{category}` |
 | 3.1 StoreKit 2 IAP | 🔲 | — | ⚠️ receipt-validation endpoint **missing** |
 | 3.2 App Store readiness | 🟡 | `PrivacyInfo.xcprivacy` + usage strings | — |
-| Tier 4 polish (manual add, acct detail, redemption banner, search, a11y) | 🔲 | — | mostly backed |
+| Tier 4 polish (manual add ✅, acct detail ✅, redemption banner ✅, search 🔲, a11y 🔲, empty-state audit 🔲) | 🟡 | partial | mostly backed |
 
 **MVP-to-submit critical path that's still open:** 3.2 store readiness. (1.2 Optimizer ✅, 1.3 Settings + delete-account ✅, 1.4 Biometric lock ✅.)
 
