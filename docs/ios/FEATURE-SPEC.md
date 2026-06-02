@@ -23,7 +23,7 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | 1.4 Biometric app-lock | ✅ | ✅ `LockState` + `LockScreenView` gating `RootView` | n/a |
 | 2.1 AI Chat | ✅ | `ChatView` (Insights → Assistant) | ✅ `/api/chat` |
 | 2.2 Push notifications | ✅ | code done | APNs endpoint + sender + triggers built; needs NUC `.env` + migration |
-| 2.3 Spending forecast | 🔲 | — | ✅ `/api/forecast/{category}` |
+| 2.3 Spending forecast | ✅ | done | ✅ `/api/forecast/{category}` |
 | 3.1 StoreKit 2 IAP | 🔲 | — | ⚠️ receipt-validation endpoint **missing** |
 | 3.2 App Store readiness | 🟡 | `PrivacyInfo.xcprivacy` + usage strings | — |
 | Tier 4 polish (manual add, acct detail, redemption banner, search, a11y) | 🔲 | — | mostly backed |
@@ -105,12 +105,12 @@ APNs token-auth push, end-to-end. v1 triggers wired: **anomaly flagged** (daily 
 - **Native (built):** APNs entitlement (`HIVE.entitlements`, `aps-environment`) + `remote-notification` background mode; `AppDelegate` (token + tap callbacks via `@UIApplicationDelegateAdaptor`); `PushManager` (permission, registration, token POST/DELETE, sandbox via `#if DEBUG`); `NotificationRouter` deep-links a tapped push to the right tab; Settings → Notifications priming card (not-determined / denied / authorized states).
 - **DoD:** ✅ builds; anomaly + weekly pushes wired and deep-link to Insights; permission manageable in Settings. ⚙️ remaining: populate APNs `.env` on the NUC (Key ID `BBF7AWYK83`, Team `K28M38H7Y5`, key path), run the migration, and verify a real push on the plugged-in device.
 
-### 2.3 Spending forecast `M`  ·  P2  ·  🔲 NOT STARTED
-Prophet forecasts exist server-side (`/api/forecast/{category}` confirmed) and are unused on device.
-- **UX:** On Insights (or a category detail), a "projected end-of-month / next-month" line on the spend chart with a confidence band; a plain-language nudge ("On pace to exceed Dining budget by ~$120").
-- **Backend (exists):** `GET /api/forecast/{category}` (weekly Prophet job).
-- **Native:** Swift Charts `AreaMark` band + `LineMark`; dashed projection; reduced-motion safe.
-- **DoD:** at least one category shows a forecast band that matches the backend series.
+### 2.3 Spending forecast `M`  ·  P2  ·  ✅ DONE
+Prophet forecasts surfaced on Insights as a forecast card with a category picker.
+- **UX (built):** "Spending forecast" section on Insights with a category Menu (the 9 forecastable categories), a "Next 30 days · projected" hero total, a Swift Charts confidence band (`AreaMark` lower…upper) + dashed projected `LineMark`, and a plain-language pace nudge. When a current-month budget exists for the category, the nudge projects month-end (`actualSpend` + predicted spend for the rest of *this* month) vs. the effective budget ("On pace to exceed your Dining budget by ~$120"); otherwise it states the 30-day projection. 422 (insufficient history) renders a calm empty state, not an error.
+- **Backend (exists):** `GET /api/forecast/{category}?periods=` (Prophet; future-only daily series with `predicted`/`lower`/`upper`).
+- **Native:** `Networking/DTOs/ForecastDTO.swift`; `InsightsViewModel` (`loadForecast`, `selectForecastCategory`, `forecastNudge`); `InsightsView` (`forecastSection`/`forecastCard`/`forecastChart`).
+- **DoD:** ✅ builds; forecast band + projected total render from the backend series; category switch reloads; budget-aware nudge.
 
 ### 2.4 "Owed to you" reimbursement overview `S–M`  ·  P2  ·  ✅ DONE
 Shipped in `Features/Transactions/ReimbursementView.swift` (opened from the Money toolbar;

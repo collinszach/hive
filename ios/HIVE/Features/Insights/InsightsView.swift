@@ -17,8 +17,9 @@ struct InsightsView: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 assistantBanner.hiveEntrance(0)
                 netWorthSection.hiveEntrance(1)
-                anomaliesSection.hiveEntrance(2)
-                leakageSection.hiveEntrance(3)
+                forecastSection.hiveEntrance(2)
+                anomaliesSection.hiveEntrance(3)
+                leakageSection.hiveEntrance(4)
             }
             .padding(.top, Theme.Spacing.sm)
         }
@@ -167,6 +168,138 @@ struct InsightsView: View {
                 }
             }
         }
+    }
+
+    // MARK: Spending forecast (2.3)
+
+    /// Categories Prophet can usually fit (mirrors the backend's forecast list); keeps
+    /// the picker from offering categories that will 422 for lack of history.
+    private static let forecastCategories = [
+        "Food & Drink", "Groceries", "Travel", "Transportation",
+        "Entertainment", "Shopping", "Health", "Utilities", "Home",
+    ]
+
+    @ViewBuilder private var forecastSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack {
+                Text("Spending forecast").hiveLabelStyle()
+                Spacer()
+                forecastCategoryMenu
+            }
+            .padding(.leading, Theme.Spacing.xs)
+
+            switch model.forecastState {
+            case .loading:
+                SkeletonBlock(height: 200, cornerRadius: Theme.Radius.card)
+            case .empty:
+                Card {
+                    Text("Not enough history yet to forecast \(model.forecastCategory). Check back after a few more weeks of activity.")
+                        .font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            case .failed:
+                Card { failedNote { Task { await model.loadForecast() } } }
+            case .loaded(let resp):
+                forecastCard(resp)
+            }
+        }
+    }
+
+    private var forecastCategoryMenu: some View {
+        Menu {
+            ForEach(Self.forecastCategories, id: \.self) { cat in
+                Button {
+                    Haptics.selection()
+                    model.selectForecastCategory(cat)
+                } label: {
+                    if cat == model.forecastCategory {
+                        Label(cat, systemImage: "checkmark")
+                    } else {
+                        Text(cat)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: Theme.Spacing.xs) {
+                Text(model.forecastCategory)
+                    .font(.hiveBody(13, weight: .medium)).foregroundStyle(Theme.blue)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.inkTertiary)
+            }
+        }
+    }
+
+    private func forecastCard(_ resp: ForecastResponse) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("Next 30 days · projected").hiveLabelStyle()
+                MoneyHero(amount: resp.projectedTotal, size: 34)
+            }
+
+            forecastChart(resp).frame(height: 150)
+
+            if let nudge = model.forecastNudge {
+                HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+                    Image(systemName: nudge.over ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(nudge.over ? Theme.warning : Theme.income)
+                    Text(nudge.text)
+                        .font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, Theme.Spacing.xs)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.vertical, Theme.Spacing.xl)
+        .background(Theme.surface)
+        .background(Theme.heroLift)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+            .stroke(Theme.borderDefault, lineWidth: 1))
+        .hiveCardShadow()
+    }
+
+    private func forecastChart(_ resp: ForecastResponse) -> some View {
+        let points = resp.dailyForecast.compactMap { day -> (Date, Double, Double, Double)? in
+            guard let d = day.day else { return nil }
+            return (d,
+                    (day.predicted as NSDecimalNumber).doubleValue,
+                    (day.lower as NSDecimalNumber).doubleValue,
+                    (day.upper as NSDecimalNumber).doubleValue)
+        }
+        return Chart(points, id: \.0) { point in
+            AreaMark(
+                x: .value("Date", point.0),
+                yStart: .value("Low", point.2),
+                yEnd: .value("High", point.3)
+            )
+            .foregroundStyle(Theme.blue.opacity(0.14))
+            .interpolationMethod(.monotone)
+
+            LineMark(x: .value("Date", point.0), y: .value("Projected", point.1))
+                .foregroundStyle(Theme.blue)
+                .lineStyle(StrokeStyle(lineWidth: 2, dash: [4, 3]))
+                .interpolationMethod(.monotone)
+        }
+        .chartXAxis {
+            AxisMarks(preset: .aligned, values: .automatic(desiredCount: 3)) { _ in
+                AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                    .font(.hiveBody(10)).foregroundStyle(Theme.inkTertiary)
+            }
+        }
+        .chartYAxis {
+            AxisMarks(preset: .aligned, position: .leading, values: .automatic(desiredCount: 3)) { value in
+                AxisValueLabel {
+                    if let v = value.as(Double.self) {
+                        Text(Decimal(v).formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                            .font(.hiveMono(9)).foregroundStyle(Theme.inkTertiary)
+                    }
+                }
+            }
+        }
+        .accessibilityLabel("Projected \(resp.category) spending over the next 30 days with a confidence band")
     }
 
     // MARK: Anomaly review queue
