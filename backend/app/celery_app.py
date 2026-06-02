@@ -73,6 +73,12 @@ app.conf.beat_schedule = {
         "schedule": crontab(hour=5, minute=0),
         "options": {"queue": "default"},
     },
+    "weekly-insight-digest": {
+        # Monday 8 AM — after daily-insights has populated the week's feed.
+        "task": "app.tasks.intelligence.weekly_insight_digest",
+        "schedule": crontab(hour=8, minute=0, day_of_week=1),
+        "options": {"queue": "default"},
+    },
     "daily-snaptrade-sync": {
         "task": "app.tasks.snaptrade_sync.sync_snaptrade_balances",
         "schedule": crontab(hour=2, minute=45),

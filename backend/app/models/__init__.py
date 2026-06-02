@@ -5,6 +5,7 @@ from app.models.account import Account  # noqa: F401
 from app.models.anomaly import Anomaly  # noqa: F401
 from app.models.budget import Budget  # noqa: F401
 from app.models.categorization_rule import CategorizationRule  # noqa: F401
+from app.models.device_token import DeviceToken  # noqa: F401
 from app.models.earn_rule import EarnRule  # noqa: F401
 from app.models.goal import Goal, GoalType  # noqa: F401
 from app.models.insight import Insight  # noqa: F401
@@ -23,6 +24,7 @@ __all__ = [
     "Anomaly",
     "Budget",
     "CategorizationRule",
+    "DeviceToken",
     "EarnRule",
     "Goal",
     "GoalType",

@@ -73,6 +73,15 @@ class Settings(BaseSettings):
     ntfy_url: str = ""
     ntfy_topic: str = "finance-alerts"
 
+    # Apple Push Notification service (APNs) — token-based auth (.p8 key).
+    # The .p8 file is a secret: mount it on the host and point apns_key_path at it.
+    # NEVER commit the key. apns_use_sandbox=True for dev builds, False for TestFlight/App Store.
+    apns_key_id: str = ""
+    apns_team_id: str = ""
+    apns_key_path: str = ""  # filesystem path to AuthKey_XXXXXXXX.p8
+    apns_bundle_id: str = "com.zacharyjcollins.hive"
+    apns_use_sandbox: bool = True
+
     # Stripe (get from dashboard.stripe.com)
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""

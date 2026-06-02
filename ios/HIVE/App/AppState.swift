@@ -45,6 +45,9 @@ final class AppState {
     }
 
     func signOut() {
+        // Drop this device's push token before clearing the session token, so the
+        // DELETE still carries a valid Bearer.
+        Task { await PushManager.shared.unregister() }
         auth.signOut()
         phase = .signedOut
     }

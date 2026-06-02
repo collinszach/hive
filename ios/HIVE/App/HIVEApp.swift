@@ -3,6 +3,7 @@ import GoogleSignIn
 
 @main
 struct HIVEApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var app = AppState()
     @State private var lock = LockState()
     @Environment(\.scenePhase) private var scenePhase

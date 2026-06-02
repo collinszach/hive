@@ -27,6 +27,7 @@ from app.api.income import router as income_router
 from app.api.insights import router as insights_router
 from app.api.merchants import router as merchants_router
 from app.api.net_worth import router as net_worth_router
+from app.api.notifications import router as notifications_router
 from app.api.plan import router as plan_router
 from app.api.plaid_link import router as plaid_router
 from app.api.plaid_webhook import router as plaid_webhook_router
@@ -163,6 +164,7 @@ app.include_router(income_router)
 app.include_router(insights_router)
 app.include_router(merchants_router)
 app.include_router(net_worth_router)
+app.include_router(notifications_router)
 app.include_router(plan_router)
 app.include_router(plaid_router)
 app.include_router(plaid_webhook_router)

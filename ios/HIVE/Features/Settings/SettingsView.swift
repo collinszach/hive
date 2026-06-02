@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Settings / Account surface. Reached from the Connect tab's toolbar gear. Owns the
 /// account identity readout, sign-out, the Apple-required in-app account deletion, and
@@ -8,6 +9,7 @@ struct SettingsView: View {
     @Environment(AppState.self) private var app
     @Environment(LockState.self) private var lock
     @State private var model = SettingsViewModel()
+    @State private var push = PushManager.shared
     @State private var confirmingSignOut = false
     @State private var showDeleteSheet = false
 
@@ -15,13 +17,15 @@ struct SettingsView: View {
         Screen(title: "Settings", refresh: { await model.load() }) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 accountSection.hiveEntrance(0)
-                securitySection.hiveEntrance(1)
-                aboutSection.hiveEntrance(2)
-                dangerSection.hiveEntrance(3)
+                notificationsSection.hiveEntrance(1)
+                securitySection.hiveEntrance(2)
+                aboutSection.hiveEntrance(3)
+                dangerSection.hiveEntrance(4)
             }
             .padding(.top, Theme.Spacing.sm)
         }
         .task { if model.state.value == nil { await model.load() } }
+        .task { await push.refreshStatus() }
         .confirmationDialog("Sign out of HIVE?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
             Button("Sign out", role: .destructive) { app.signOut() }
             Button("Cancel", role: .cancel) {}
@@ -59,6 +63,69 @@ struct SettingsView: View {
             rows.append(InfoRow(label: "Last sign-in", value: Self.dateFormatter.string(from: last)))
         }
         return rows
+    }
+
+    // MARK: Notifications — push opt-in (FEATURE-SPEC 2.2)
+
+    @ViewBuilder
+    private var notificationsSection: some View {
+        section("Notifications") {
+            switch push.status {
+            case .authorized, .provisional, .ephemeral:
+                Card(padding: Theme.Spacing.md) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Push notifications")
+                                .font(.hiveBody(15)).foregroundStyle(Theme.inkPrimary)
+                            Text("Alerts for unusual charges and your weekly recap")
+                                .font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer()
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 18)).foregroundStyle(Theme.income)
+                    }
+                    .frame(minHeight: Theme.minTouchTarget - 2 * Theme.Spacing.md)
+                }
+            case .denied:
+                Card(padding: Theme.Spacing.md) {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        Text("Notifications are turned off")
+                            .font(.hiveBody(15)).foregroundStyle(Theme.inkPrimary)
+                        Text("Turn them on in iOS Settings to get alerts for unusual charges and your weekly recap.")
+                            .font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("Open Settings") { openSystemSettings() }
+                            .font(.hiveBody(14, weight: .medium))
+                            .foregroundStyle(Theme.blue)
+                            .frame(minHeight: Theme.minTouchTarget, alignment: .leading)
+                    }
+                }
+            default: // notDetermined
+                Card(padding: Theme.Spacing.md) {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        Text("Stay on top of your money")
+                            .font(.hiveBody(15)).foregroundStyle(Theme.inkPrimary)
+                        Text("Get a heads-up when we spot an unusual charge, plus a weekly recap of what changed.")
+                            .font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("Turn on notifications") {
+                            Haptics.selection()
+                            Task { await push.requestAuthorization() }
+                        }
+                        .font(.hiveBody(14, weight: .semibold))
+                        .foregroundStyle(Theme.blue)
+                        .frame(minHeight: Theme.minTouchTarget, alignment: .leading)
+                    }
+                }
+            }
+        }
+    }
+
+    private func openSystemSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
     }
 
     // MARK: Security — biometric app-lock (FEATURE-SPEC 1.4)

@@ -22,7 +22,7 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | 1.3 Settings / Account / Security screen | ✅ | ✅ `SettingsView` (account, sign-out, delete, lock toggle) | ✅ `DELETE /api/auth/account` |
 | 1.4 Biometric app-lock | ✅ | ✅ `LockState` + `LockScreenView` gating `RootView` | n/a |
 | 2.1 AI Chat | ✅ | `ChatView` (Insights → Assistant) | ✅ `/api/chat` |
-| 2.2 Push notifications | 🔲 | — | ⚠️ APNs device-token endpoint **missing** |
+| 2.2 Push notifications | ✅ | code done | APNs endpoint + sender + triggers built; needs NUC `.env` + migration |
 | 2.3 Spending forecast | 🔲 | — | ✅ `/api/forecast/{category}` |
 | 3.1 StoreKit 2 IAP | 🔲 | — | ⚠️ receipt-validation endpoint **missing** |
 | 3.2 App Store readiness | 🟡 | `PrivacyInfo.xcprivacy` + usage strings | — |
@@ -93,12 +93,17 @@ The marquee "intelligence" feature, now native. `ChatView` is pushed from a prom
 - **Deferred:** tappable references that deep-link to a cited transaction/budget (backend returns prose only — no structured citations yet).
 - **DoD met:** a question returns a grounded answer; the keyboard never covers the composer; the view auto-scrolls.
 
-### 2.2 Push notifications `L`  ·  P1  ·  🔲 NOT STARTED
-**Blocker:** no APNs device-token registration endpoint on the backend (verified absent) + no trigger wiring.
-- **UX:** Permission priming before the system prompt. v1 events: **bills/recurring due, anomaly flagged, reward redemption threshold hit, weekly insight.** Tap → deep-link to the relevant screen. Manage in Settings (2.1.3).
-- **Backend:** APNs device-token registration endpoint (**verify/spec**); triggers wired to existing daily tasks (anomaly, points, net-worth) + thresholds in `CLAUDE.md`.
-- **Native:** `UNUserNotificationCenter`, APNs entitlement, token POST to backend, deep-link router.
-- **DoD:** a reward-threshold push arrives and opens Plan→Points; permission manageable in Settings.
+### 2.2 Push notifications `L`  ·  P1  ·  ✅ DONE (code) · ⚙️ needs APNs config on NUC
+APNs token-auth push, end-to-end. v1 triggers wired: **anomaly flagged** (daily scan) and **weekly insight digest** (Mon 8 AM). No quiet hours.
+- **Backend (built):**
+  - `device_tokens` table + model + Alembic migration `t8u9v0w1x2y3` (token unique, per-user, sandbox flag, soft-deactivate).
+  - `POST/DELETE /api/notifications/device-token` (`api/notifications.py`) — upserts/reactivates, deactivates on sign-out.
+  - APNs sender `app/notifications/apns.py` (ES256 provider JWT via `python-jose`, httpx HTTP/2 — added `h2` to requirements; caches the provider token ~50 min; deactivates dead tokens on 410/BadDeviceToken).
+  - Dispatch helpers `app/notifications/push.py` (`send_to_user`, `send_to_all`).
+  - Triggers: `run_anomaly_scan` pushes when `flagged>0` (→ Insights); new `weekly_insight_digest` task surfaces the top fresh insight (beat: Mon 8 AM, → Insights).
+  - Config in `config.py`: `apns_key_id/team_id/key_path/bundle_id/use_sandbox`. **.p8 is a secret — set these in `.env` on the NUC, never commit the key.**
+- **Native (built):** APNs entitlement (`HIVE.entitlements`, `aps-environment`) + `remote-notification` background mode; `AppDelegate` (token + tap callbacks via `@UIApplicationDelegateAdaptor`); `PushManager` (permission, registration, token POST/DELETE, sandbox via `#if DEBUG`); `NotificationRouter` deep-links a tapped push to the right tab; Settings → Notifications priming card (not-determined / denied / authorized states).
+- **DoD:** ✅ builds; anomaly + weekly pushes wired and deep-link to Insights; permission manageable in Settings. ⚙️ remaining: populate APNs `.env` on the NUC (Key ID `BBF7AWYK83`, Team `K28M38H7Y5`, key path), run the migration, and verify a real push on the plugged-in device.
 
 ### 2.3 Spending forecast `M`  ·  P2  ·  🔲 NOT STARTED
 Prophet forecasts exist server-side (`/api/forecast/{category}` confirmed) and are unused on device.
@@ -164,7 +169,7 @@ Audited against `backend/app/api/`:
 | Endpoint | For | Status |
 |---|---|---|
 | `DELETE /api/auth/account` | 1.3 Settings — **Apple-required** | ✅ present (`auth.py`) — FK-scoped wipe + best-effort SnapTrade revoke + cookie clear; typed-name confirm. |
-| APNs device-token registration + triggers | 2.2 Push | ⚠️ **MISSING** — no device-token route in `api/`. |
+| APNs device-token registration + triggers | 2.2 Push | ✅ **built** — `POST/DELETE /api/notifications/device-token`; APNs sender (`notifications/apns.py`); anomaly + weekly-digest triggers. Needs APNs `.env` on NUC + migration run. |
 | Subscription receipt-validation | 3.1 StoreKit IAP | ⚠️ **MISSING**. |
 | `GET /api/shares/pending` | 2.4 Owed-to-you | ✅ present (`shares.py`). |
 | `GET /api/points/optimize` | 1.2 Optimizer | ✅ present (`points.py`). |

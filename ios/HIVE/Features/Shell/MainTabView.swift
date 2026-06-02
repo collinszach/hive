@@ -6,6 +6,7 @@ import SwiftUI
 struct MainTabView: View {
     enum Tab: Hashable { case home, money, plan, insights, connect }
     @State private var selection: Tab = .home
+    @State private var router = NotificationRouter.shared
 
     var body: some View {
         TabView(selection: $selection) {
@@ -30,6 +31,21 @@ struct MainTabView: View {
                 .tag(Tab.connect)
         }
         .onChange(of: selection) { _, _ in Haptics.selection() }
+        .onChange(of: router.pending) { _, route in
+            if let route {
+                selection = route
+                router.pending = nil
+            }
+        }
+        .task {
+            // Re-register opted-in devices so the backend has a fresh token, and
+            // route any notification that launched the app cold.
+            await PushManager.shared.registerIfAuthorized()
+            if let route = router.pending {
+                selection = route
+                router.pending = nil
+            }
+        }
     }
 }
 

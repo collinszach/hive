@@ -430,3 +430,65 @@ def generate_insights(self) -> dict:
 
     logger.info("Generated %d insights", generated)
     return {"generated": generated}
+
+
+@celery_app.task(
+    name="app.tasks.intelligence.weekly_insight_digest",
+    bind=True,
+    max_retries=2,
+    default_retry_delay=300,
+)
+def weekly_insight_digest(self) -> dict:
+    """Push a weekly digest summarizing the highest-priority fresh insight.
+
+    Runs after the week's insights are generated. Picks the most important unread,
+    undismissed, unexpired insight and sends it as a single push (no per-insight spam).
+    """
+    from app.notifications.push import send_to_all
+
+    _PRIORITY_RANK = {"high": 0, "medium": 1, "low": 2}
+
+    with SyncSessionLocal() as session:
+        recent = (
+            session.execute(
+                select(Insight).where(
+                    Insight.is_read.is_(False),
+                    Insight.is_dismissed.is_(False),
+                )
+            )
+            .scalars()
+            .all()
+        )
+        # Only insights from the last 7 days are "this week's".
+        cutoff = date.today() - timedelta(days=7)
+        fresh = [
+            i
+            for i in recent
+            if i.created_at is not None and i.created_at.date() >= cutoff
+        ]
+        if not fresh:
+            logger.info("weekly_insight_digest: no fresh insights to surface")
+            return {"sent": 0}
+
+        fresh.sort(key=lambda i: _PRIORITY_RANK.get(i.priority or "medium", 1))
+        top = fresh[0]
+        extra = len(fresh) - 1
+        title = top.title
+        body = top.body
+        if extra > 0:
+            body = f"{body}  (+{extra} more this week)"
+
+        try:
+            sent = send_to_all(
+                session,
+                title=title,
+                body=body,
+                data={"route": "insights"},
+                thread_id="weekly-digest",
+            )
+        except Exception as exc:
+            logger.exception("weekly_insight_digest push failed")
+            raise self.retry(exc=exc)
+
+    logger.info("weekly_insight_digest: surfaced '%s' to %d devices", top.title, sent)
+    return {"sent": sent, "fresh": len(fresh)}

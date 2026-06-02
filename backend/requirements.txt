@@ -23,6 +23,7 @@ snaptrade-python-sdk
 # AI / ML
 anthropic==0.37.0
 httpx==0.27.2
+h2==4.1.0  # HTTP/2 transport for httpx — required for APNs
 scikit-learn==1.5.2
 prophet==1.1.6
 pandas==2.2.3

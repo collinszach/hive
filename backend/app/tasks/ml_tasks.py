@@ -39,6 +39,21 @@ def run_anomaly_scan(self) -> dict:
             result["flagged"],
             result.get("errors", 0),
         )
+        flagged = result.get("flagged", 0)
+        if flagged > 0:
+            from app.notifications.push import send_to_all
+
+            count = "an unusual charge" if flagged == 1 else f"{flagged} unusual charges"
+            try:
+                send_to_all(
+                    db,
+                    title="Unusual activity",
+                    body=f"We flagged {count} for you to review.",
+                    data={"route": "insights"},
+                    thread_id="anomaly",
+                )
+            except Exception:
+                logger.exception("anomaly push notification failed")
         return result
     except Exception as exc:
         logger.exception("run_anomaly_scan failed")
