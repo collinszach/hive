@@ -12,6 +12,11 @@ final class ForecastViewModel {
     private(set) var incomeState: LoadState<[IncomeStreamDTO]> = .loading
     private(set) var eventsState: LoadState<[PlanEventDTO]> = .loading
 
+    /// AI advisor result. `nil` = not yet requested (the section shows a call-to-action);
+    /// otherwise a normal load lifecycle. Cleared whenever the projection it analyzed goes
+    /// stale (scenario switch, horizon change, assumptions edit).
+    private(set) var advisorState: LoadState<AdvisorResponse>?
+
     /// Optional second scenario overlaid on the chart for what-if comparison.
     private(set) var compareProjection: ProjectionResponse?
     var compareScenarioId: String?
@@ -114,6 +119,7 @@ final class ForecastViewModel {
         guard id != selectedScenarioId else { return }
         Haptics.selection()
         selectedScenarioId = id
+        advisorState = nil  // analysis was for the previous scenario
         // Avoid comparing a scenario against itself.
         if compareScenarioId == id { compareScenarioId = nil; compareProjection = nil }
         incomeState = .loading; eventsState = .loading
@@ -132,7 +138,69 @@ final class ForecastViewModel {
         guard months != horizonMonths else { return }
         Haptics.selection()
         horizonMonths = months
+        advisorState = nil  // analysis was for the previous horizon
         await loadProjection()
+    }
+
+    // MARK: AI advisor (Epic 10)
+
+    /// Ask the backend to stress-test the current scenario projection with Claude.
+    /// On-demand (a Pro-gated network + model call), so it's never auto-run on load.
+    func runAdvisor() async {
+        guard let id = selectedScenarioId else { return }
+        advisorState = .loading
+        do {
+            let resp = try await api.send(
+                .post("/api/planning/scenarios/\(id)/advisor",
+                      query: [.init(name: "months", value: String(horizonMonths))]),
+                as: AdvisorResponse.self
+            )
+            Haptics.success()
+            advisorState = .loaded(resp)
+        } catch let error as APIError {
+            Haptics.error()
+            advisorState = .failed(error)
+        } catch {
+            Haptics.error()
+            advisorState = .failed(.network)
+        }
+    }
+
+    /// Apply one advisor suggestion by overriding a single assumption key, leaving the rest
+    /// untouched. Clears the (now stale) advisor result on success.
+    @discardableResult
+    func applySuggestion(_ s: AdvisorSuggestion) async -> Bool {
+        guard let a = currentAssumptions else { return false }
+        var body = AssumptionsUpdateBody(
+            annualReturnPct: a.annualReturnPct,
+            annualInflationPct: a.annualInflationPct,
+            effectiveTaxRatePct: a.effectiveTaxRatePct,
+            emergencyFloor: a.emergencyFloor,
+            autoInvestSurplus: a.autoInvestSurplus,
+            bandSpreadPct: a.bandSpreadPct,
+            baseMonthlyExpenses: a.baseMonthlyExpenses
+        )
+        switch s.assumption {
+        case "annual_return_pct":
+            guard let v = s.suggested?.doubleValue else { return false }; body.annualReturnPct = v
+        case "annual_inflation_pct":
+            guard let v = s.suggested?.doubleValue else { return false }; body.annualInflationPct = v
+        case "effective_tax_rate_pct":
+            guard let v = s.suggested?.doubleValue else { return false }; body.effectiveTaxRatePct = v
+        case "band_spread_pct":
+            guard let v = s.suggested?.doubleValue else { return false }; body.bandSpreadPct = v
+        case "emergency_floor":
+            guard let v = s.suggested?.doubleValue else { return false }; body.emergencyFloor = Decimal(v)
+        case "base_monthly_expenses":
+            guard let v = s.suggested?.doubleValue else { return false }; body.baseMonthlyExpenses = Decimal(v)
+        case "auto_invest_surplus":
+            guard let v = s.suggested?.boolValue else { return false }; body.autoInvestSurplus = v
+        default:
+            return false
+        }
+        let ok = await saveAssumptions(body)
+        if ok { advisorState = nil }  // re-projected; analysis is stale
+        return ok
     }
 
     /// Create a what-if scenario, select it, and project it.
@@ -179,6 +247,7 @@ final class ForecastViewModel {
         do {
             try await api.send(Endpoint(method: .put, path: "/api/planning/scenarios/\(id)/assumptions"), body: body)
             Haptics.success()
+            advisorState = nil       // inputs changed — prior analysis is stale
             await loadProjection()   // re-reads assumptions + re-projects
             return true
         } catch {
@@ -195,6 +264,7 @@ final class ForecastViewModel {
         do {
             try await api.send(.post("/api/planning/scenarios/\(id)/income"), body: body)
             Haptics.success()
+            advisorState = nil
             await loadDetails(); await loadProjection()
             return true
         } catch {
@@ -207,6 +277,7 @@ final class ForecastViewModel {
         do {
             try await api.sendVoid(Endpoint(method: .delete, path: "/api/planning/income/\(stream.id)"))
             Haptics.success()
+            advisorState = nil
             await loadDetails(); await loadProjection()
         } catch {
             Haptics.error()
@@ -221,6 +292,7 @@ final class ForecastViewModel {
         do {
             try await api.send(.post("/api/planning/scenarios/\(id)/events"), body: body)
             Haptics.success()
+            advisorState = nil
             await loadDetails(); await loadProjection()
             return true
         } catch {
@@ -233,6 +305,7 @@ final class ForecastViewModel {
         do {
             try await api.sendVoid(Endpoint(method: .delete, path: "/api/planning/events/\(event.id)"))
             Haptics.success()
+            advisorState = nil
             await loadDetails(); await loadProjection()
         } catch {
             Haptics.error()

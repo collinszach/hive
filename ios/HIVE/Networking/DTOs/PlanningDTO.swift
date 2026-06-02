@@ -190,6 +190,105 @@ struct AssumptionsUpdateBody: Encodable {
     }
 }
 
+// MARK: - AI advisor (Epic 10, mirrors `AdvisorResponse` in planning.py)
+
+/// A JSON scalar that may arrive as a number or a boolean (`current`/`suggested` values).
+/// Decoded permissively so a string slips through too, and rendered for display.
+enum AdvisorScalar: Decodable, Hashable {
+    case number(Double)
+    case bool(Bool)
+    case string(String)
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if let b = try? c.decode(Bool.self) { self = .bool(b); return }
+        if let d = try? c.decode(Double.self) { self = .number(d); return }
+        if let s = try? c.decode(String.self) { self = .string(s); return }
+        self = .string("—")
+    }
+
+    var doubleValue: Double? { if case let .number(d) = self { return d } else { return nil } }
+    var boolValue: Bool? { if case let .bool(b) = self { return b } else { return nil } }
+
+    var display: String {
+        switch self {
+        case .number(let d):
+            // Whole numbers render without a trailing .0; fractions keep up to 2 places.
+            return d == d.rounded() ? String(Int(d)) : d.formatted(.number.precision(.fractionLength(0...2)))
+        case .bool(let b): return b ? "On" : "Off"
+        case .string(let s): return s
+        }
+    }
+}
+
+/// One risk the advisor surfaced in the projection.
+struct AdvisorRisk: Decodable, Identifiable, Hashable {
+    let title: String
+    let detail: String
+    let severity: String   // low | medium | high
+
+    var id: String { title + detail }
+
+    private enum CodingKeys: String, CodingKey { case title, detail, severity }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        title = (try? c.decode(String.self, forKey: .title)) ?? "Risk"
+        detail = (try? c.decode(String.self, forKey: .detail)) ?? ""
+        severity = ((try? c.decode(String.self, forKey: .severity)) ?? "medium").lowercased()
+    }
+}
+
+/// One actionable assumption change the advisor recommends. `assumption` is one of the
+/// tunable keys the backend whitelists, so it maps directly onto `AssumptionsUpdateBody`.
+struct AdvisorSuggestion: Decodable, Identifiable, Hashable {
+    let assumption: String
+    let current: AdvisorScalar?
+    let suggested: AdvisorScalar?
+    let rationale: String
+
+    var id: String { assumption + rationale }
+
+    private enum CodingKeys: String, CodingKey { case assumption, current, suggested, rationale }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        assumption = (try? c.decode(String.self, forKey: .assumption)) ?? ""
+        current = try? c.decodeIfPresent(AdvisorScalar.self, forKey: .current)
+        suggested = try? c.decodeIfPresent(AdvisorScalar.self, forKey: .suggested)
+        rationale = (try? c.decode(String.self, forKey: .rationale)) ?? ""
+    }
+
+    /// Human-readable label for the assumption key (matches the assumptions editor).
+    var label: String {
+        switch assumption {
+        case "annual_return_pct": return "Annual return"
+        case "annual_inflation_pct": return "Inflation"
+        case "effective_tax_rate_pct": return "Effective tax rate"
+        case "emergency_floor": return "Emergency floor"
+        case "auto_invest_surplus": return "Auto-invest surplus"
+        case "band_spread_pct": return "Confidence band"
+        case "base_monthly_expenses": return "Monthly expenses"
+        default: return assumption
+        }
+    }
+}
+
+/// Full advisor payload. Mirrors `AdvisorResponse`.
+struct AdvisorResponse: Decodable {
+    let summary: String
+    let risks: [AdvisorRisk]
+    let suggestions: [AdvisorSuggestion]
+    let modelUsed: String
+
+    private enum CodingKeys: String, CodingKey { case summary, risks, suggestions, modelUsed }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        summary = (try? c.decode(String.self, forKey: .summary)) ?? ""
+        risks = (try? c.decode([AdvisorRisk].self, forKey: .risks)) ?? []
+        suggestions = (try? c.decode([AdvisorSuggestion].self, forKey: .suggestions)) ?? []
+        modelUsed = (try? c.decode(String.self, forKey: .modelUsed)) ?? "claude"
+    }
+}
+
 extension PlanningDateParser {
     private static let outFormatter: DateFormatter = {
         let f = DateFormatter()

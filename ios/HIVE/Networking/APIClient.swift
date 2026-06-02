@@ -110,6 +110,8 @@ actor APIClient {
             throw APIError.unauthorized
         case 403:
             throw APIError.forbidden
+        case 402:
+            throw APIError.paymentRequired
         case 404:
             throw APIError.notFound
         case 500...599:

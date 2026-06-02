@@ -176,9 +176,10 @@ struct ForecastView: View {
                 netWorthHero(resp).hiveEntrance(1)
                 trajectoryChart(resp).hiveEntrance(2)
                 runwayCallout(resp).hiveEntrance(3)
-                incomeSection.hiveEntrance(4)
-                eventsSection.hiveEntrance(5)
-                detailGrid(resp).hiveEntrance(6)
+                advisorSection.hiveEntrance(4)
+                incomeSection.hiveEntrance(5)
+                eventsSection.hiveEntrance(6)
+                detailGrid(resp).hiveEntrance(7)
             }
         } skeleton: {
             VStack(spacing: Theme.Spacing.md) {
@@ -358,6 +359,179 @@ struct ForecastView: View {
             default:
                 emptyFlowCard(message: "No events yet. Add tuition, a home purchase, a windfall.")
             }
+        }
+    }
+
+    // MARK: AI advisor
+
+    @ViewBuilder private var advisorSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack {
+                Text("AI advisor").hiveLabelStyle()
+                Spacer()
+                if case .loaded = model.advisorState {
+                    Button {
+                        Haptics.selection(); Task { await model.runAdvisor() }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.clockwise").font(.system(size: 11, weight: .semibold))
+                            Text("Re-run").font(.hiveBody(13, weight: .medium))
+                        }
+                        .foregroundStyle(Theme.blue)
+                    }
+                    .accessibilityLabel("Re-run advisor")
+                }
+            }
+            .padding(.leading, Theme.Spacing.xs)
+
+            switch model.advisorState {
+            case .none, .some(.empty):
+                advisorPrompt
+            case .some(.loading):
+                advisorLoading
+            case .some(.failed(let error)):
+                advisorError(error)
+            case .some(.loaded(let resp)):
+                advisorResult(resp)
+            }
+        }
+    }
+
+    /// Pre-run call to action.
+    private var advisorPrompt: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.blue)
+                        .accessibilityHidden(true)
+                    Text("Stress-test this plan")
+                        .font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                }
+                Text("Have AI review this scenario for risks — cash runway, optimistic returns, inflation drag — and suggest assumption changes.")
+                    .font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    Haptics.selection(); Task { await model.runAdvisor() }
+                } label: {
+                    Text("Analyze")
+                        .font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.base)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm + 2)
+                        .background(Theme.blue, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                }
+                .accessibilityLabel("Analyze this plan with AI")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var advisorLoading: some View {
+        Card {
+            HStack(spacing: Theme.Spacing.md) {
+                ProgressView().tint(Theme.blue)
+                Text("Analyzing your projection…")
+                    .font(.hiveBody(14)).foregroundStyle(Theme.inkSecondary)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityLabel("Analyzing your projection")
+        }
+    }
+
+    @ViewBuilder private func advisorError(_ error: APIError) -> some View {
+        Card {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text(error == .paymentRequired ? "Pro feature" : "Couldn't analyze")
+                    .font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                Text(error.userMessage)
+                    .font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if error.isRetryable {
+                    Button {
+                        Haptics.selection(); Task { await model.runAdvisor() }
+                    } label: {
+                        Text("Try again").font(.hiveBody(14, weight: .medium)).foregroundStyle(Theme.blue)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func advisorResult(_ resp: AdvisorResponse) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            if !resp.summary.isEmpty {
+                Card {
+                    Text(resp.summary)
+                        .font(.hiveBody(14)).foregroundStyle(Theme.inkPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            if !resp.risks.isEmpty {
+                GroupedCard(data: resp.risks) { risk in advisorRiskRow(risk) }
+            }
+            ForEach(resp.suggestions) { s in advisorSuggestionCard(s) }
+            Text("AI estimate · \(resp.modelUsed). Review before acting.")
+                .font(.hiveBody(11)).foregroundStyle(Theme.inkTertiary)
+                .padding(.leading, Theme.Spacing.xs)
+        }
+    }
+
+    private func advisorRiskRow(_ risk: AdvisorRisk) -> some View {
+        let tint = severityTint(risk.severity)
+        return HStack(alignment: .top, spacing: Theme.Spacing.md) {
+            Circle().fill(tint).frame(width: 8, height: 8).padding(.top, 6)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(risk.title).font(.hiveBody(14, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                Text(risk.detail).font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(risk.severity) risk: \(risk.title). \(risk.detail)")
+    }
+
+    private func advisorSuggestionCard(_ s: AdvisorSuggestion) -> some View {
+        Card {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                HStack {
+                    Text(s.label).font(.hiveBody(14, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                    Spacer()
+                    if let from = s.current?.display, let to = s.suggested?.display {
+                        HStack(spacing: 4) {
+                            Text(from).font(.hiveMono(12)).foregroundStyle(Theme.inkTertiary)
+                            Image(systemName: "arrow.right").font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.inkTertiary)
+                            Text(to).font(.hiveMono(12, weight: .medium)).foregroundStyle(Theme.blue)
+                        }
+                    }
+                }
+                Text(s.rationale).font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if s.suggested != nil {
+                    Button {
+                        Haptics.selection(); Task { await model.applySuggestion(s) }
+                    } label: {
+                        Text("Apply change")
+                            .font(.hiveBody(13, weight: .semibold)).foregroundStyle(Theme.blue)
+                            .padding(.vertical, Theme.Spacing.xs + 2).padding(.horizontal, Theme.Spacing.md)
+                            .background(Theme.blueDim, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                    }
+                    .accessibilityLabel("Apply: set \(s.label) to \(s.suggested?.display ?? "")")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func severityTint(_ severity: String) -> Color {
+        switch severity {
+        case "high": return Theme.expense
+        case "low": return Theme.income
+        default: return Theme.blue
         }
     }
 
