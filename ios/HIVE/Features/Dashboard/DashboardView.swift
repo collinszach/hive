@@ -6,6 +6,7 @@ import Charts
 struct DashboardView: View {
     @Environment(AppState.self) private var app
     @State private var model = DashboardViewModel()
+    @State private var showSearch = false
 
     var body: some View {
         Screen(title: "Home", refresh: { await model.load() }) {
@@ -28,6 +29,18 @@ struct DashboardView: View {
         .onChange(of: isUnauthorized) { _, expired in
             if expired { app.handleSessionExpired() }
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Haptics.selection(); showSearch = true
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(Theme.inkSecondary)
+                }
+                .accessibilityLabel("Search transactions")
+            }
+        }
+        .sheet(isPresented: $showSearch) { GlobalSearchView() }
     }
 
     private var isUnauthorized: Bool {
