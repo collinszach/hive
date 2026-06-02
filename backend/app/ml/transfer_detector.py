@@ -4,8 +4,8 @@ Identifies transfers and payments that must be excluded from spending analytics.
 """
 import re
 
-# P2P payments — no longer excluded; Venmo/Zelle are real transactions
-# kept for subcategory classification only
+# P2P payments — Venmo/Zelle/Cash App/PayPal transfers. Business Rule #2:
+# these are ALWAYS transfers AND always excluded from spending analytics.
 _P2P_PATTERNS = re.compile(
     r"venmo|zelle|cash app|paypal transfer|cashapp",
     re.IGNORECASE,
@@ -57,13 +57,13 @@ def is_transfer(description: str) -> tuple[bool, bool]:
     Check if a transaction is a transfer that should be excluded from analytics.
 
     Returns (is_transfer, is_excluded):
-    - P2P (Venmo/Zelle/CashApp): (False, False) — real payments, show in spending
+    - P2P (Venmo/Zelle/Cash App/PayPal): (True, True) — Rule #2, ALWAYS excluded
     - Bank transfers / savings moves: (True, True)
     - Credit card autopayments: (True, True)
     - Normal transactions: (False, False)
     """
     if _P2P_PATTERNS.search(description):
-        return False, False  # Venmo/Zelle are real transactions, not excluded
+        return True, True  # Rule #2: Venmo/Zelle/Cash App are always excluded
 
     if _BANK_TRANSFER_PATTERNS.search(description):
         return True, True
