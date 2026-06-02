@@ -5,7 +5,15 @@ import SwiftUI
 /// `NavigationStack` so deep navigation never leaks across tabs.
 struct MainTabView: View {
     enum Tab: Hashable { case home, money, plan, insights, connect }
-    @State private var selection: Tab = .home
+    @State private var selection: Tab = {
+        #if DEBUG
+        // Dev: when jumping straight to Forecast, start on the Plan tab so the Home
+        // (Dashboard) tab never initializes — its load would 401 a synthetic dev token
+        // and trigger a global sign-out before the Forecast cover appears.
+        if ProcessInfo.processInfo.environment["HIVE_DEV_OPEN"] == "forecast" { return .plan }
+        #endif
+        return .home
+    }()
     @State private var router = NotificationRouter.shared
     @State private var devForecast = false
 

@@ -5,12 +5,18 @@ import Charts
 /// renders the projection: net-worth trajectory with a confidence band, the
 /// cash-runway trough, and the assumptions/flows that produced it.
 ///
-/// Read-only for now (scenario + horizon selection); editing assumptions, income,
-/// and life events lands in a follow-up. Blue throughout — this is not a rewards
-/// surface, so honey never appears here.
+/// Editable: tap a scenario to switch, Compare to overlay a what-if, the Assumptions
+/// "Edit" to tune rates/expenses, and the Income / Life-events "+" to add flows. Blue
+/// throughout — this is not a rewards surface, so honey never appears here.
 struct ForecastView: View {
     @State private var model = ForecastViewModel()
     @State private var showNewScenario = false
+    @State private var showAssumptions = false
+    @State private var showAddIncome = false
+    @State private var showAddEvent = false
+    @State private var incomeToDelete: IncomeStreamDTO?
+    @State private var eventToDelete: PlanEventDTO?
+    @State private var confirmDeleteScenario = false
 
     var body: some View {
         Screen(title: "Forecast", refresh: { await model.loadProjection() }) {
@@ -26,6 +32,38 @@ struct ForecastView: View {
                 .presentationDetents([.height(220)])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showAssumptions) {
+            if let a = model.currentAssumptions {
+                AssumptionsEditorSheet(current: a) { await model.saveAssumptions($0) }
+            }
+        }
+        .sheet(isPresented: $showAddIncome) {
+            IncomeFormSheet { await model.addIncome($0) }
+        }
+        .sheet(isPresented: $showAddEvent) {
+            EventFormSheet { await model.addEvent($0) }
+        }
+        .confirmationDialog("Remove this income?", isPresented: incomeDeletePresented, titleVisibility: .visible) {
+            Button("Remove", role: .destructive) {
+                if let s = incomeToDelete { Task { await model.deleteIncome(s) } }
+            }
+        } message: { Text(incomeToDelete?.name ?? "") }
+        .confirmationDialog("Remove this event?", isPresented: eventDeletePresented, titleVisibility: .visible) {
+            Button("Remove", role: .destructive) {
+                if let e = eventToDelete { Task { await model.deleteEvent(e) } }
+            }
+        } message: { Text(eventToDelete?.name ?? "") }
+        .confirmationDialog("Delete \(model.selectedScenario?.name ?? "scenario")?",
+                            isPresented: $confirmDeleteScenario, titleVisibility: .visible) {
+            Button("Delete scenario", role: .destructive) { Task { await model.deleteSelectedScenario() } }
+        } message: { Text("This removes its assumptions, income, and events.") }
+    }
+
+    private var incomeDeletePresented: Binding<Bool> {
+        Binding(get: { incomeToDelete != nil }, set: { if !$0 { incomeToDelete = nil } })
+    }
+    private var eventDeletePresented: Binding<Bool> {
+        Binding(get: { eventToDelete != nil }, set: { if !$0 { eventToDelete = nil } })
     }
 
     // MARK: Controls (scenario + horizon)
@@ -43,7 +81,40 @@ struct ForecastView: View {
                 }
             }
             .pickerStyle(.segmented)
+            if !model.comparableScenarios.isEmpty {
+                HStack {
+                    Text("Compare").hiveLabelStyle()
+                    Spacer()
+                    compareMenu
+                }
+            }
         }
+    }
+
+    private var compareMenu: some View {
+        Menu {
+            Button {
+                Task { await model.setCompare(nil) }
+            } label: {
+                if model.compareScenarioId == nil { Label("None", systemImage: "checkmark") } else { Text("None") }
+            }
+            Divider()
+            ForEach(model.comparableScenarios) { s in
+                Button {
+                    Task { await model.setCompare(s.id) }
+                } label: {
+                    if s.id == model.compareScenarioId { Label(s.name, systemImage: "checkmark") } else { Text(s.name) }
+                }
+            }
+        } label: {
+            HStack(spacing: Theme.Spacing.xs) {
+                Text(model.compareScenario?.name ?? "None")
+                    .font(.hiveBody(15, weight: .medium)).foregroundStyle(Theme.inkSecondary)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.inkTertiary)
+            }
+        }
+        .accessibilityLabel("Compare against: \(model.compareScenario?.name ?? "None"). Tap to change.")
     }
 
     private var scenarioMenu: some View {
@@ -64,6 +135,13 @@ struct ForecastView: View {
                 Haptics.selection(); showNewScenario = true
             } label: {
                 Label("New scenario", systemImage: "plus")
+            }
+            if model.selectedScenario?.isBaseline == false {
+                Button(role: .destructive) {
+                    Haptics.selection(); confirmDeleteScenario = true
+                } label: {
+                    Label("Delete scenario", systemImage: "trash")
+                }
             }
         } label: {
             HStack(spacing: Theme.Spacing.xs) {
@@ -98,7 +176,9 @@ struct ForecastView: View {
                 netWorthHero(resp).hiveEntrance(1)
                 trajectoryChart(resp).hiveEntrance(2)
                 runwayCallout(resp).hiveEntrance(3)
-                detailGrid(resp).hiveEntrance(4)
+                incomeSection.hiveEntrance(4)
+                eventsSection.hiveEntrance(5)
+                detailGrid(resp).hiveEntrance(6)
             }
         } skeleton: {
             VStack(spacing: Theme.Spacing.md) {
@@ -141,23 +221,42 @@ struct ForecastView: View {
              ($0.netWorthLow as NSDecimalNumber).doubleValue,
              ($0.netWorthHigh as NSDecimalNumber).doubleValue)
         }
+        let comparePoints: [(Date, Double)] = (model.compareProjection?.points ?? []).map {
+            ($0.monthDate, ($0.netWorth as NSDecimalNumber).doubleValue)
+        }
         return Card {
             VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                Text("Net worth trajectory").font(.hiveBody(13, weight: .medium))
-                    .foregroundStyle(Theme.inkSecondary)
-                Chart(points, id: \.0) { point in
-                    AreaMark(
-                        x: .value("Month", point.0),
-                        yStart: .value("Low", point.2),
-                        yEnd: .value("High", point.3)
-                    )
-                    .foregroundStyle(Theme.blue.opacity(0.12))
-                    .interpolationMethod(.monotone)
-
-                    LineMark(x: .value("Month", point.0), y: .value("Net worth", point.1))
-                        .foregroundStyle(Theme.blue)
-                        .lineStyle(StrokeStyle(lineWidth: 2))
+                HStack {
+                    Text("Net worth trajectory").font(.hiveBody(13, weight: .medium))
+                        .foregroundStyle(Theme.inkSecondary)
+                    Spacer()
+                    if let name = model.compareScenario?.name {
+                        compareLegend(selected: model.selectedScenario?.name ?? "This", compare: name)
+                    }
+                }
+                Chart {
+                    ForEach(points, id: \.0) { point in
+                        AreaMark(
+                            x: .value("Month", point.0),
+                            yStart: .value("Low", point.2),
+                            yEnd: .value("High", point.3)
+                        )
+                        .foregroundStyle(Theme.blue.opacity(0.12))
                         .interpolationMethod(.monotone)
+
+                        LineMark(x: .value("Month", point.0), y: .value("Net worth", point.1),
+                                 series: .value("Series", "selected"))
+                            .foregroundStyle(Theme.blue)
+                            .lineStyle(StrokeStyle(lineWidth: 2))
+                            .interpolationMethod(.monotone)
+                    }
+                    ForEach(comparePoints, id: \.0) { point in
+                        LineMark(x: .value("Month", point.0), y: .value("Net worth", point.1),
+                                 series: .value("Series", "compare"))
+                            .foregroundStyle(Theme.inkSecondary)
+                            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                            .interpolationMethod(.monotone)
+                    }
                 }
                 .frame(height: 200)
                 .chartXAxis {
@@ -211,6 +310,117 @@ struct ForecastView: View {
         }
     }
 
+    private func compareLegend(selected: String, compare: String) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            HStack(spacing: 4) {
+                Capsule().fill(Theme.blue).frame(width: 14, height: 2)
+                Text(selected).font(.hiveBody(10)).foregroundStyle(Theme.inkTertiary).lineLimit(1)
+            }
+            HStack(spacing: 4) {
+                Capsule().fill(Theme.inkSecondary).frame(width: 14, height: 2)
+                Text(compare).font(.hiveBody(10)).foregroundStyle(Theme.inkTertiary).lineLimit(1)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    // MARK: Income & events
+
+    private var incomeSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            sectionHeader(title: "Income", systemImage: "plus") { Haptics.selection(); showAddIncome = true }
+            switch model.incomeState {
+            case .loaded(let streams):
+                GroupedCard(data: streams) { s in
+                    flowRow(name: s.name,
+                            amount: s.monthlyAmount, suffix: "/mo",
+                            detail: dateRange(s.startDate, s.endDate),
+                            tint: Theme.income) { incomeToDelete = s }
+                }
+            default:
+                emptyFlowCard(message: "No income yet. Add a salary, stipend, or side income.")
+            }
+        }
+    }
+
+    private var eventsSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            sectionHeader(title: "Life events", systemImage: "plus") { Haptics.selection(); showAddEvent = true }
+            switch model.eventsState {
+            case .loaded(let events):
+                GroupedCard(data: events) { e in
+                    flowRow(name: e.name,
+                            amount: e.amount,
+                            suffix: e.recurrence == "once" ? "" : "·\(recurrenceShort(e.recurrence))",
+                            detail: eventDetail(e),
+                            tint: e.kind == "inflow" ? Theme.income : Theme.expense) { eventToDelete = e }
+                }
+            default:
+                emptyFlowCard(message: "No events yet. Add tuition, a home purchase, a windfall.")
+            }
+        }
+    }
+
+    private func sectionHeader(title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        HStack {
+            Text(title).hiveLabelStyle()
+            Spacer()
+            Button(action: action) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.blue)
+                    .frame(width: 30, height: 30)
+                    .background(Theme.blueDim, in: Circle())
+            }
+            .accessibilityLabel("Add \(title.lowercased())")
+        }
+        .padding(.leading, Theme.Spacing.xs)
+    }
+
+    private func flowRow(name: String, amount: Decimal, suffix: String, detail: String,
+                         tint: Color, onDelete: @escaping () -> Void) -> some View {
+        HStack(spacing: Theme.Spacing.md) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name).font(.hiveBody(15, weight: .medium)).foregroundStyle(Theme.inkPrimary).lineLimit(1)
+                Text(detail).font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary).lineLimit(1)
+            }
+            Spacer(minLength: Theme.Spacing.sm)
+            Text("\(amount.formatted(.currency(code: "USD").precision(.fractionLength(0))))\(suffix.isEmpty ? "" : " \(suffix)")")
+                .font(.hiveMono(14, weight: .medium)).foregroundStyle(tint).monospacedDigit()
+            Button(action: { Haptics.selection(); onDelete() }) {
+                Image(systemName: "minus.circle.fill")
+                    .font(.system(size: 18)).foregroundStyle(Theme.inkTertiary)
+            }
+            .accessibilityLabel("Remove \(name)")
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func emptyFlowCard(message: String) -> some View {
+        Card {
+            Text(message).font(.hiveBody(13)).foregroundStyle(Theme.inkTertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func dateRange(_ start: String, _ end: String?) -> String {
+        let s = ForecastFormat.monthYear(PlanningDateParser.parse(start))
+        guard let end else { return "from \(s)" }
+        return "\(s) – \(ForecastFormat.monthYear(PlanningDateParser.parse(end)))"
+    }
+
+    private func eventDetail(_ e: PlanEventDTO) -> String {
+        let when = ForecastFormat.monthYear(PlanningDateParser.parse(e.eventDate))
+        let to = e.target == "investment" ? "investments" : "cash"
+        if e.recurrence == "once" { return "\(when) · \(to)" }
+        return "from \(when) · \(to)"
+    }
+
+    private func recurrenceShort(_ r: String) -> String {
+        switch r {
+        case "monthly": "mo"; case "quarterly": "qtr"; case "semiannual": "6mo"; case "annual": "yr"; default: r
+        }
+    }
+
     private func detailGrid(_ resp: ProjectionResponse) -> some View {
         let rows: [(String, String)] = [
             ("Starting cash", resp.inputs.startingCash.formatted(.currency(code: "USD").precision(.fractionLength(0)))),
@@ -222,7 +432,21 @@ struct ForecastView: View {
             ("Assumed inflation", "\(resp.assumptions.annualInflationPct.formatted(.number.precision(.fractionLength(0...1))))% / yr"),
         ]
         return VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Assumptions").hiveLabelStyle()
+            HStack {
+                Text("Assumptions").hiveLabelStyle()
+                Spacer()
+                Button {
+                    Haptics.selection(); showAssumptions = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "slider.horizontal.3").font(.system(size: 11, weight: .semibold))
+                        Text("Edit").font(.hiveBody(13, weight: .medium))
+                    }
+                    .foregroundStyle(Theme.blue)
+                }
+                .accessibilityLabel("Edit assumptions")
+            }
+            .padding(.leading, Theme.Spacing.xs)
             GroupedCard(data: rows.map { ForecastRow(label: $0.0, value: $0.1) }) { r in
                 HStack {
                     Text(r.label).font(.hiveBody(14)).foregroundStyle(Theme.inkSecondary)
