@@ -18,6 +18,11 @@ enum DateOnly {
         parser.date(from: String(string.prefix(10)))
     }
 
+    /// "yyyy-MM-dd" string for a `Date` — the wire format for date-only API fields.
+    static func string(from date: Date) -> String {
+        parser.string(from: date)
+    }
+
     /// "Today", "Yesterday", else "Mon, Jun 1".
     static func relativeLabel(_ string: String) -> String {
         guard let date = parse(string) else { return string }

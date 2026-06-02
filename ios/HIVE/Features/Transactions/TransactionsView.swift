@@ -9,6 +9,7 @@ struct TransactionsView: View {
     @State private var selected: TransactionDTO?
     @State private var showFilters = false
     @State private var showOwed = false
+    @State private var showAdd = false
 
     var body: some View {
         Screen(title: "Money", refresh: { await model.refreshWithSync() }) {
@@ -44,6 +45,13 @@ struct TransactionsView: View {
         .onChange(of: isUnauthorized) { _, expired in if expired { app.handleSessionExpired() } }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+                Button { Haptics.selection(); showAdd = true } label: {
+                    Image(systemName: "plus")
+                        .foregroundStyle(Theme.blue)
+                }
+                .accessibilityLabel("Add transaction")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button { Haptics.selection(); showOwed = true } label: {
                     Image(systemName: "person.2")
                         .foregroundStyle(Theme.inkSecondary)
@@ -57,6 +65,11 @@ struct TransactionsView: View {
                         .foregroundStyle(model.hasActiveFilters ? Theme.blue : Theme.inkSecondary)
                 }
             }
+        }
+        .sheet(isPresented: $showAdd) {
+            AddTransactionView { body in await model.createManual(body) }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showOwed) {
             ReimbursementView()

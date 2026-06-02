@@ -74,6 +74,19 @@ struct TransactionPatch: Encodable {
     var notes: String?
 }
 
+/// Body for `POST /api/transactions` (manual cash/reimbursement entry). Mirrors
+/// `ManualTransactionRequest`. `date` is a "YYYY-MM-DD" string; `amount` follows the
+/// backend sign convention (positive = spend, negative = income/credit). Nil optional
+/// fields are skipped by the encoder. Field names convert to snake_case on the wire.
+struct ManualTransactionRequest: Encodable {
+    let date: String
+    let amount: Decimal
+    let merchant: String
+    var category: String?
+    var subcategory: String?
+    var notes: String?
+}
+
 // MARK: - Category splits
 
 /// One leg of a category split. Mirrors `SplitOut` from `backend/app/api/splits.py`.

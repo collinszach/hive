@@ -138,9 +138,9 @@ inline mark-settled / delete with haptics).
 
 ---
 
-## Tier 4 — Polish & smaller wins  ·  🔲 NOT STARTED
+## Tier 4 — Polish & smaller wins  ·  🟡 IN PROGRESS
 
-- **Manual transaction add `S`** — backend `ManualTransactionRequest` exists; add a "+" on Money for cash entries.
+- **Manual transaction add `S`** — ✅ DONE. `AddTransactionView` opens from a "+" on Money (`POST /api/transactions`). Expense/Income segmented control sets the backend sign (spend positive, income negative); merchant + date (capped at today) + optional Taxonomy category/subcategory + note. Saves via `TransactionsViewModel.createManual` then reloads the ledger. Files: `Features/Transactions/AddTransactionView.swift`, `ManualTransactionRequest` in `TransactionDTO.swift`, `DateOnly.string(from:)` helper.
 - **Net-worth / account detail `S`** — tap a Connect account → balance history + its transactions (filtered Money view).
 - **Redemption-nudge banner `S`** — surface `REDEMPTION_THRESHOLDS` crossings on Plan→Points and (later) as push (2.2).
 - **Global search `S`** — promote the Money search into an app-level search entry.

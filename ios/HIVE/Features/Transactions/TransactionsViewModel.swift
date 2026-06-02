@@ -91,6 +91,19 @@ final class TransactionsViewModel {
         }
     }
 
+    /// Create a manual (cash/reimbursement) transaction, then reload the ledger.
+    /// `amount` follows the backend's sign convention: positive = spend, negative =
+    /// income/credit. Returns true on success so the sheet can dismiss.
+    func createManual(_ body: ManualTransactionRequest) async -> Bool {
+        do {
+            try await api.send(.post("/api/transactions"), body: body)
+            await load()
+            return true
+        } catch {
+            return false
+        }
+    }
+
     private func endpoint() -> Endpoint {
         var query: [URLQueryItem] = [.init(name: "page_size", value: "100")]
         let trimmed = searchText.trimmingCharacters(in: .whitespaces)
