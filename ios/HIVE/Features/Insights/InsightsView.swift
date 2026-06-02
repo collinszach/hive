@@ -10,16 +10,19 @@ struct InsightsView: View {
     @State private var showNetWorthDetail = false
     @State private var selectedAnomaly: AnomalyDTO?
     @State private var showLeakageDetail = false
+    @State private var showChat = false
 
     var body: some View {
         Screen(title: "Insights", refresh: { await model.loadAll() }) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                netWorthSection.hiveEntrance(0)
-                anomaliesSection.hiveEntrance(1)
-                leakageSection.hiveEntrance(2)
+                assistantBanner.hiveEntrance(0)
+                netWorthSection.hiveEntrance(1)
+                anomaliesSection.hiveEntrance(2)
+                leakageSection.hiveEntrance(3)
             }
             .padding(.top, Theme.Spacing.sm)
         }
+        .navigationDestination(isPresented: $showChat) { ChatView() }
         .task { if model.netWorthState.value == nil { await model.loadAll() } }
         .sheet(isPresented: $showNetWorthDetail) {
             if let snaps = model.netWorthState.value {
@@ -48,6 +51,36 @@ struct InsightsView: View {
                     .presentationDragIndicator(.visible)
             }
         }
+    }
+
+    // MARK: AI assistant entry
+
+    private var assistantBanner: some View {
+        Button { Haptics.selection(); showChat = true } label: {
+            HStack(spacing: Theme.Spacing.md) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Theme.blue)
+                    .frame(width: 40, height: 40)
+                    .background(Theme.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Ask the assistant")
+                        .font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                    Text("Spending, budgets, points — in plain English.")
+                        .font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary).lineLimit(1)
+                }
+                Spacer(minLength: Theme.Spacing.sm)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.inkTertiary)
+            }
+            .padding(Theme.Spacing.md)
+            .frame(maxWidth: .infinity)
+            .background(Theme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                .stroke(Theme.borderDefault, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Net worth trend

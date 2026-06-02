@@ -21,7 +21,7 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | 1.2 Card Optimizer | ✅ | `CardOptimizerView` | ✅ `/api/points/optimize` |
 | 1.3 Settings / Account / Security screen | ✅ | ✅ `SettingsView` (account, sign-out, delete, lock toggle) | ✅ `DELETE /api/auth/account` |
 | 1.4 Biometric app-lock | ✅ | ✅ `LockState` + `LockScreenView` gating `RootView` | n/a |
-| 2.1 AI Chat | 🔲 | — | ✅ `/api/chat` |
+| 2.1 AI Chat | ✅ | `ChatView` (Insights → Assistant) | ✅ `/api/chat` |
 | 2.2 Push notifications | 🔲 | — | ⚠️ APNs device-token endpoint **missing** |
 | 2.3 Spending forecast | 🔲 | — | ✅ `/api/forecast/{category}` |
 | 3.1 StoreKit 2 IAP | 🔲 | — | ⚠️ receipt-validation endpoint **missing** |
@@ -83,12 +83,15 @@ Financial data locks behind Face ID on cold start + background timeout. `NSFaceI
 
 ## Tier 2 — High-value intelligence features (backend already supports)
 
-### 2.1 AI Chat — natural-language finance Q&A `L`  ·  P1  ·  🔲 NOT STARTED
-The marquee "intelligence" feature; `POST /api/chat` confirmed present, no native surface.
-- **UX:** A chat screen (new tab, or push from Home/Insights). Message bubbles, streaming if supported, suggested-prompt chips ("How much on dining this month?"), keyboard-aware scroll. Tappable references that deep-link to the cited transaction/budget.
-- **Backend (exists):** `POST /api/chat` (Claude Sonnet, prompt caching). Confirm streaming vs. single-response shape.
-- **Native:** scroll-to-bottom, `safeAreaInset` composer, send-on-return; **PII discipline** — never log message bodies or include tokens in context.
-- **DoD:** a question returns a grounded answer; references jump to the right screen; keyboard never covers the composer.
+### 2.1 AI Chat — natural-language finance Q&A `L`  ·  P1  ·  ✅ DONE
+The marquee "intelligence" feature, now native. `ChatView` is pushed from a prominent "Ask the assistant" banner at the top of Insights.
+- **UX (built):** message bubbles (user = blue, assistant = surface, text-selectable), animated typing indicator while a reply is in flight, empty state with four starter-prompt chips, auto-scroll to the latest message, dismissible inline error banner.
+- **Backend shape confirmed:** `POST /api/chat` is **single-response** (not streaming) → `{response, model_used}`; request `{message, conversation_history, use_claude}`. History (last turns) is sent each call.
+- **Native:** keyboard-aware `safeAreaInset(edge:.bottom)` composer (vertical-growing `TextField`, 1–5 lines), `scrollDismissesKeyboard(.interactively)`, send button enabled only on non-empty/idle. Model menu toggles Local (Ollama, default) vs Claude (Pro). **PII discipline:** message bodies are never logged; the auth token is attached by `APIClient` from the Keychain and never enters chat content.
+- **Error handling:** 402 → "Claude needs Pro, switch to Local"; 503 → "local AI offline"; else `APIError.userMessage`.
+- **Native files:** `Features/Chat/ChatView.swift`, `ChatViewModel.swift`; DTOs in `ChatDTO.swift`.
+- **Deferred:** tappable references that deep-link to a cited transaction/budget (backend returns prose only — no structured citations yet).
+- **DoD met:** a question returns a grounded answer; the keyboard never covers the composer; the view auto-scrolls.
 
 ### 2.2 Push notifications `L`  ·  P1  ·  🔲 NOT STARTED
 **Blocker:** no APNs device-token registration endpoint on the backend (verified absent) + no trigger wiring.
