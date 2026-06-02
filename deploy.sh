@@ -144,8 +144,10 @@ $COMPOSE up -d --remove-orphans
 echo "  Waiting for backend health check..."
 timeout 120 bash -c "until $COMPOSE ps backend | grep -q healthy; do sleep 3; done"
 
-echo "  Waiting for frontend health check..."
-timeout 120 bash -c "until $COMPOSE ps frontend | grep -q healthy; do sleep 3; done"
+# The web app is served by nginx (there is no separate `frontend` compose
+# service). nginx has no Docker healthcheck, so probe its HTTP port directly.
+echo "  Waiting for nginx (web) to serve..."
+timeout 120 bash -c 'until curl -fs -o /dev/null http://localhost:8080/api/health; do sleep 3; done'
 
 # ── Status ────────────────────────────────────────────────────────────────────
 echo ""
