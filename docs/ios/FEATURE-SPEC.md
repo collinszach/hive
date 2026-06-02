@@ -142,7 +142,7 @@ inline mark-settled / delete with haptics).
 
 - **Manual transaction add `S`** — ✅ DONE. `AddTransactionView` opens from a "+" on Money (`POST /api/transactions`). Expense/Income segmented control sets the backend sign (spend positive, income negative); merchant + date (capped at today) + optional Taxonomy category/subcategory + note. Saves via `TransactionsViewModel.createManual` then reloads the ledger. Files: `Features/Transactions/AddTransactionView.swift`, `ManualTransactionRequest` in `TransactionDTO.swift`, `DateOnly.string(from:)` helper.
 - **Net-worth / account detail `S`** — tap a Connect account → balance history + its transactions (filtered Money view).
-- **Redemption-nudge banner `S`** — surface `REDEMPTION_THRESHOLDS` crossings on Plan→Points and (later) as push (2.2).
+- **Redemption-nudge banner `S`** — ✅ DONE (in-app). Honey "Time to redeem" banner at the top of Plan→Points listing programs past their `REDEMPTION_THRESHOLDS` crossing (`ProgramSummary.aboveThreshold`); one ready program → tap opens its ledger, multiple → summary heads-up. Push delivery still pending 2.2. File: `Features/Plan/PlanView.swift` (`redemptionNudge`/`readyToRedeem`).
 - **Global search `S`** — promote the Money search into an app-level search entry.
 - **Accessibility pass `M`** — Dynamic Type, VoiceOver labels on icon-only controls (sync, share menu, optimizer), 44pt audit, reduced-motion. (Use `hive-ios-a11y-auditor` per screen.)
 - **Empty/error states + skeletons audit `S`** — ensure every new screen has the `LoadStateView` triad.

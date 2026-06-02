@@ -162,6 +162,9 @@ struct PlanView: View {
         ) { summary in
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 pointsHero(summary).hiveEntrance(1)
+                if !readyToRedeem(summary).isEmpty {
+                    redemptionNudge(readyToRedeem(summary)).hiveEntrance(2)
+                }
                 VStack(spacing: Theme.Spacing.md) {
                     ForEach(Array(summary.programs.enumerated()), id: \.element.id) { i, p in
                         Button {
@@ -179,6 +182,53 @@ struct PlanView: View {
                 SkeletonBlock(height: 96, cornerRadius: Theme.Radius.card)
                 SkeletonList(count: 4)
             }
+        }
+    }
+
+    /// Programs whose balance has crossed the redemption threshold (`REDEMPTION_THRESHOLDS`
+    /// on the backend), surfaced as a nudge so big balances don't sit idle.
+    private func readyToRedeem(_ s: PointsSummary) -> [ProgramSummary] {
+        s.programs.filter(\.aboveThreshold)
+    }
+
+    /// Honey nudge banner. One ready program → tap opens its ledger; multiple → a
+    /// summary heads-up directing attention to the cards below.
+    @ViewBuilder
+    private func redemptionNudge(_ ready: [ProgramSummary]) -> some View {
+        let names = ready.map(\.program)
+        let summary: String = {
+            switch names.count {
+            case 1: return "\(names[0]) is ready to redeem."
+            case 2: return "\(names[0]) and \(names[1]) are ready to redeem."
+            default: return "\(names[0]) and \(names.count - 1) more are ready to redeem."
+            }
+        }()
+        let banner = RewardsCard {
+            HStack(spacing: Theme.Spacing.md) {
+                Image(systemName: "gift.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Theme.honeyBright)
+                    .frame(width: 40, height: 40)
+                    .background(Theme.honeyBright.opacity(0.14), in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Time to redeem").font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                    Text(summary).font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: Theme.Spacing.sm)
+                if ready.count == 1 {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.inkTertiary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
+        if ready.count == 1, let only = ready.first {
+            Button { Haptics.selection(); ledgerProgram = only } label: { banner }
+                .buttonStyle(.plain)
+        } else {
+            banner
         }
     }
 
