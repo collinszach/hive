@@ -89,6 +89,9 @@ STABILITY.md
 *.webp
 screenshots/
 .vercel
+
+# ...but iOS asset catalogs are source, not dev photos — keep their images tracked.
+!ios/**/Assets.xcassets/**
 frontend/www/
 frontend/ios/App/Pods/
 frontend/ios/App/build/
