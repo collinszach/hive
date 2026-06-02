@@ -12,7 +12,7 @@ from typing import Optional
 
 import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -564,6 +564,8 @@ _ADVISOR_SYSTEM = (
 
 
 class AdvisorResponse(BaseModel):
+    # `model_used` would otherwise collide with pydantic's protected `model_` namespace.
+    model_config = ConfigDict(protected_namespaces=())
     summary: str
     risks: list[dict]
     suggestions: list[dict]
