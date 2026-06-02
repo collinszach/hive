@@ -10,6 +10,7 @@ struct ConnectView: View {
     @State private var showSettings = false
     @State private var showLinkChooser = false
     @State private var snapTradeTarget: SnapTradeTarget?
+    @State private var selectedAccount: AccountDTO?
     @State private var plaidLink = PlaidLinkCoordinator()
 
     /// Wrapper so a SnapTrade portal URL can drive a `.sheet(item:)`.
@@ -46,6 +47,9 @@ struct ConnectView: View {
             }
         }
         .navigationDestination(isPresented: $showSettings) { SettingsView() }
+        .navigationDestination(item: $selectedAccount) { account in
+            AccountDetailView(account: account)
+        }
         .sheet(isPresented: $showLinkChooser) {
             LinkAccountSheet(
                 onPlaid: { Task { await startPlaidLink() } },
@@ -182,7 +186,12 @@ struct ConnectView: View {
             .padding(.horizontal, Theme.Spacing.xs)
 
             GroupedCard(data: inst.accounts) { account in
-                accountRow(account)
+                Button {
+                    Haptics.selection(); selectedAccount = account
+                } label: {
+                    accountRow(account)
+                }
+                .buttonStyle(.plain)
             }
 
             if let err = inst.friendlyError {
@@ -254,6 +263,9 @@ struct ConnectView: View {
                         .font(.hiveMono(11)).foregroundStyle(Theme.inkTertiary)
                 }
             }
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Theme.inkTertiary)
         }
         .contentShape(Rectangle())
     }
