@@ -272,6 +272,7 @@ struct TransactionDetailView: View {
                     .frame(width: 32, height: 32)
                     .contentShape(Rectangle())
             }
+            .accessibilityLabel("Share options")
         }
     }
 

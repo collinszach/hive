@@ -142,6 +142,7 @@ struct ChatView: View {
                         .background(canSend ? Theme.blue : Theme.elevated, in: Circle())
                 }
                 .disabled(!canSend)
+                .accessibilityLabel("Send message")
             }
             .padding(.horizontal, Theme.Spacing.lg)
             .padding(.vertical, Theme.Spacing.sm)
@@ -163,6 +164,7 @@ struct ChatView: View {
                 Image(systemName: "xmark").font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Theme.inkTertiary)
             }
+            .accessibilityLabel("Dismiss error")
         }
         .padding(.horizontal, Theme.Spacing.lg)
         .padding(.vertical, Theme.Spacing.sm)
@@ -181,6 +183,7 @@ struct ChatView: View {
             Image(systemName: "cpu")
                 .foregroundStyle(Theme.inkSecondary)
         }
+        .accessibilityLabel("Choose AI model")
     }
 }
 

@@ -26,7 +26,7 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | 2.3 Spending forecast | ✅ | done | ✅ `/api/forecast/{category}` |
 | 3.1 StoreKit 2 IAP | 🔲 | — | ⚠️ receipt-validation endpoint **missing** |
 | 3.2 App Store readiness | 🟡 | `PrivacyInfo.xcprivacy` + usage strings | — |
-| Tier 4 polish (manual add ✅, acct detail ✅, redemption banner ✅, search ✅, a11y 🔲, empty-state audit 🔲) | 🟡 | partial | mostly backed |
+| Tier 4 polish (manual add ✅, acct detail ✅, redemption banner ✅, search ✅, empty-state audit ✅, a11y 🟡) | 🟡 | partial | mostly backed |
 
 **MVP-to-submit critical path that's still open:** 3.2 store readiness. (1.2 Optimizer ✅, 1.3 Settings + delete-account ✅, 1.4 Biometric lock ✅.)
 
@@ -149,8 +149,8 @@ inline mark-settled / delete with haptics).
 - **Net-worth / account detail `S`** — ✅ DONE. Tap a Connect account row → `AccountDetailView`: balance summary card (hero balance, institution·mask, detail rows for available / credit limit / statement balance / type) plus a "Recent activity" ledger loading `GET /api/transactions?account_id=…&page_size=50&include_pending=true` (all-time, newest first), date-grouped, reusing `TransactionRow` + the `TransactionDetailView` sheet. Files: `Features/Connect/AccountDetailView.swift` (view + `AccountDetailViewModel`), `ConnectView.swift` (row → `Button` + `navigationDestination(item:)` + trailing chevron).
 - **Redemption-nudge banner `S`** — ✅ DONE (in-app). Honey "Time to redeem" banner at the top of Plan→Points listing programs past their `REDEMPTION_THRESHOLDS` crossing (`ProgramSummary.aboveThreshold`); one ready program → tap opens its ledger, multiple → summary heads-up. Push delivery still pending 2.2. File: `Features/Plan/PlanView.swift` (`redemptionNudge`/`readyToRedeem`).
 - **Global search `S`** — ✅ DONE. Magnifying-glass in the Home toolbar opens `GlobalSearchView`, a self-contained sheet that searches transactions across all accounts and all time (`/api/transactions?search=…&search_all=true&include_pending=true`), date-grouped, reusing `TransactionRow` + the `TransactionDetailView` sheet (edits re-query). Files: `Features/Search/GlobalSearchView.swift` (view + `GlobalSearchViewModel`), `Features/Dashboard/DashboardView.swift` (toolbar button + sheet).
-- **Accessibility pass `M`** — Dynamic Type, VoiceOver labels on icon-only controls (sync, share menu, optimizer), 44pt audit, reduced-motion. (Use `hive-ios-a11y-auditor` per screen.)
-- **Empty/error states + skeletons audit `S`** — ensure every new screen has the `LoadStateView` triad.
+- **Accessibility pass `M`** — 🟡 STARTED. VoiceOver labels added to icon-only controls: Home search, chat send / dismiss-error / model-menu, Money owed + filters (state-aware), transaction detail share-options menu (existing labels: add-transaction, Connect/Settings gear, sync buttons carry text). **Remaining (best via `hive-ios-a11y-auditor` per screen):** Dynamic Type sweep, focus/reading order, 44pt touch-target audit, reduced-motion, contrast.
+- **Empty/error states + skeletons audit `S`** — ✅ DONE. Audited every feature view: all async-list screens carry the `LoadStateView` triad (loading skeleton / empty / failed+retry) or an explicit per-section `switch` (Insights, Chat). "NO" hits are forms/editors (sign-in, budget/share/split editors, filters, add-txn, settings) and pre-loaded detail views (leakage) that legitimately don't load a collection.
 
 ---
 

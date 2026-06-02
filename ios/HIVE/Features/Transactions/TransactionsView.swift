@@ -56,6 +56,7 @@ struct TransactionsView: View {
                     Image(systemName: "person.2")
                         .foregroundStyle(Theme.inkSecondary)
                 }
+                .accessibilityLabel("Owed to you")
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { Haptics.selection(); showFilters = true } label: {
@@ -64,6 +65,7 @@ struct TransactionsView: View {
                         : "line.3.horizontal.decrease.circle")
                         .foregroundStyle(model.hasActiveFilters ? Theme.blue : Theme.inkSecondary)
                 }
+                .accessibilityLabel(model.hasActiveFilters ? "Filters, active" : "Filters")
             }
         }
         .sheet(isPresented: $showAdd) {
