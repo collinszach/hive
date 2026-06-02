@@ -177,6 +177,7 @@ struct TransactionRow: View {
                 .frame(width: 34, height: 34)
                 .background(Theme.elevated)
                 .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(tx.displayName)
@@ -202,6 +203,7 @@ struct TransactionRow: View {
                       signed: tx.isCredit)
         }
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -217,12 +219,13 @@ struct FilterChip: View {
                 .font(.hiveBody(13, weight: .medium))
                 .foregroundStyle(isSelected ? Theme.blue : Theme.inkSecondary)
                 .padding(.horizontal, Theme.Spacing.md)
-                .frame(height: 34)
+                .frame(minHeight: Theme.minTouchTarget)
                 .background(isSelected ? Theme.blueDim : Theme.surface)
                 .clipShape(Capsule())
                 .overlay(Capsule().stroke(
                     isSelected ? Theme.blueBorder : Theme.borderDefault, lineWidth: 1))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }

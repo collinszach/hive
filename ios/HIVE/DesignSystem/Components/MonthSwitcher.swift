@@ -10,7 +10,7 @@ struct MonthSwitcher: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
-            stepButton(system: "chevron.left", disabled: false) {
+            stepButton(system: "chevron.left", disabled: false, label: "Previous month") {
                 month = MonthHelper.previous(month)
                 Haptics.selection()
                 onChange()
@@ -23,7 +23,7 @@ struct MonthSwitcher: View {
                 .contentTransition(.numericText())
 
             let atCurrent = MonthHelper.isCurrent(month)
-            stepButton(system: "chevron.right", disabled: atCurrent) {
+            stepButton(system: "chevron.right", disabled: atCurrent, label: "Next month") {
                 month = MonthHelper.next(month)
                 Haptics.selection()
                 onChange()
@@ -33,7 +33,7 @@ struct MonthSwitcher: View {
         .animation(.easeOut(duration: 0.2), value: month)
     }
 
-    private func stepButton(system: String, disabled: Bool, action: @escaping () -> Void) -> some View {
+    private func stepButton(system: String, disabled: Bool, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: system)
                 .font(.system(size: 14, weight: .semibold))
@@ -43,5 +43,6 @@ struct MonthSwitcher: View {
         }
         .buttonStyle(.plain)
         .disabled(disabled)
+        .accessibilityLabel(label)
     }
 }

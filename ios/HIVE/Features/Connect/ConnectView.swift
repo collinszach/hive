@@ -157,10 +157,12 @@ struct ConnectView: View {
     /// month-over-month delta and the asset growth line.
     private func changeIndicator(_ change: Decimal, suffix: String?, size: CGFloat = 13) -> some View {
         let up = change > 0
+        let amountText = abs(change).formatted(.currency(code: "USD").precision(.fractionLength(0)))
         return HStack(spacing: 3) {
             Image(systemName: up ? "arrow.up.right" : "arrow.down.right")
                 .font(.system(size: size - 2, weight: .bold))
-            Text(abs(change).formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                .accessibilityHidden(true)
+            Text(amountText)
                 .font(.hiveMono(size, weight: .medium))
                 .monospacedDigit()
             if let suffix {
@@ -168,6 +170,8 @@ struct ConnectView: View {
             }
         }
         .foregroundStyle(up ? Theme.income : Theme.expense)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(up ? "Up" : "Down") \(amountText)\(suffix.map { " " + $0 } ?? "")")
     }
 
     // MARK: One institution
@@ -232,6 +236,7 @@ struct ConnectView: View {
         }
         .buttonStyle(.plain)
         .disabled(model.syncingItemId != nil)
+        .accessibilityLabel(isSyncing ? "Syncing \(inst.institutionName)" : "Sync \(inst.institutionName)")
     }
 
     private func accountRow(_ account: AccountDTO) -> some View {
@@ -242,6 +247,7 @@ struct ConnectView: View {
                 .frame(width: 34, height: 34)
                 .background(Theme.elevated)
                 .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(account.name)
@@ -266,8 +272,10 @@ struct ConnectView: View {
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Theme.inkTertiary)
+                .accessibilityHidden(true)
         }
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
     }
 
     private func accountIcon(_ a: AccountDTO) -> String {

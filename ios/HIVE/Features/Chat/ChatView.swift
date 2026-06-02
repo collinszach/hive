@@ -78,6 +78,7 @@ struct ChatView: View {
                     Image(systemName: "sparkles")
                         .font(.system(size: 28, weight: .medium))
                         .foregroundStyle(Theme.blue)
+                        .accessibilityHidden(true)
                     Text("Ask about your money")
                         .font(.hiveBody(20, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
                     Text("Spending, budgets, points, and trends — grounded in your linked accounts.")
@@ -99,6 +100,7 @@ struct ChatView: View {
                                 Image(systemName: "arrow.up.right")
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundStyle(Theme.inkTertiary)
+                                    .accessibilityHidden(true)
                             }
                             .frame(maxWidth: .infinity, minHeight: Theme.minTouchTarget, alignment: .leading)
                             .padding(.horizontal, Theme.Spacing.md)
@@ -144,7 +146,7 @@ struct ChatView: View {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(canSend ? Theme.base : Theme.inkGhost)
-                        .frame(width: 36, height: 36)
+                        .frame(width: 44, height: 44)
                         .background(canSend ? Theme.blue : Theme.elevated, in: Circle())
                 }
                 .disabled(!canSend)
@@ -164,6 +166,7 @@ struct ChatView: View {
         HStack(spacing: Theme.Spacing.sm) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 12)).foregroundStyle(Theme.warning)
+                .accessibilityHidden(true)
             Text(text).font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
             Spacer()
             if model.proGateHit {
@@ -179,6 +182,7 @@ struct ChatView: View {
             Button { model.errorText = nil; model.proGateHit = false } label: {
                 Image(systemName: "xmark").font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Theme.inkTertiary)
+                    .frame(minWidth: 44, minHeight: 44)
             }
             .accessibilityLabel("Dismiss error")
         }
@@ -227,6 +231,8 @@ private struct ChatBubble: View {
                 )
             if !isUser { Spacer(minLength: Theme.Spacing.xl) }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(isUser ? "You: \(message.content)" : "Assistant: \(message.content)")
     }
 }
 
@@ -234,6 +240,7 @@ private struct ChatBubble: View {
 
 private struct TypingIndicator: View {
     @State private var phase = 0.0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 4) {
@@ -251,6 +258,7 @@ private struct TypingIndicator: View {
         .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
             .stroke(Theme.borderDefault, lineWidth: 1))
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: false)) {
                 phase = 3
             }

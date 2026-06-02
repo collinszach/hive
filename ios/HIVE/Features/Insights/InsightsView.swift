@@ -64,6 +64,7 @@ struct InsightsView: View {
                     .foregroundStyle(Theme.blue)
                     .frame(width: 40, height: 40)
                     .background(Theme.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Ask the assistant")
                         .font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
@@ -73,6 +74,7 @@ struct InsightsView: View {
                 Spacer(minLength: Theme.Spacing.sm)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.inkTertiary)
+                    .accessibilityHidden(true)
             }
             .padding(Theme.Spacing.md)
             .frame(maxWidth: .infinity)
@@ -82,6 +84,8 @@ struct InsightsView: View {
                 .stroke(Theme.borderDefault, lineWidth: 1))
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Opens the assistant")
     }
 
     // MARK: Net worth trend
@@ -115,15 +119,20 @@ struct InsightsView: View {
                 HStack(spacing: Theme.Spacing.xs) {
                     Image(systemName: up ? "arrow.up.right" : "arrow.down.right")
                         .font(.system(size: 12, weight: .bold))
+                        .accessibilityHidden(true)
                     Text(abs(change).formatted(.currency(code: "USD").precision(.fractionLength(0))))
                         .font(.hiveMono(13, weight: .medium))
                     Text("· \(model.trendDays)d").font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary)
                 }
                 .foregroundStyle(up ? Theme.income : Theme.expense)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(up ? "Up" : "Down") \(abs(change).formatted(.currency(code: "USD").precision(.fractionLength(0)))) over \(model.trendDays) days")
             }
 
             trendChart(snaps)
                 .frame(height: 140)
+                .accessibilityElement()
+                .accessibilityLabel("Net worth trend over \(model.trendDays) days, currently \(model.currentNetWorth.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Theme.Spacing.lg)
@@ -243,6 +252,7 @@ struct InsightsView: View {
                     Image(systemName: nudge.over ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                         .font(.system(size: 14))
                         .foregroundStyle(nudge.over ? Theme.warning : Theme.income)
+                        .accessibilityHidden(true)
                     Text(nudge.text)
                         .font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -312,6 +322,7 @@ struct InsightsView: View {
             sectionCard(title: "To review") {
                 HStack(spacing: Theme.Spacing.sm) {
                     Image(systemName: "checkmark.seal.fill").foregroundStyle(Theme.income)
+                        .accessibilityHidden(true)
                     Text("Nothing flagged — your spending looks normal.")
                         .font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
                 }
@@ -364,6 +375,7 @@ struct InsightsView: View {
                         Text("See what to do differently")
                             .font(.hiveBody(13, weight: .medium))
                         Image(systemName: "arrow.right").font(.system(size: 11, weight: .bold))
+                            .accessibilityHidden(true)
                     }
                     .foregroundStyle(Theme.honeyBright)
                     .frame(maxWidth: .infinity, minHeight: Theme.minTouchTarget)
@@ -426,24 +438,34 @@ struct AnomalyCard: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(anomaly.transaction?.displayName ?? "Transaction")
-                        .font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
-                        .lineLimit(1)
-                    Spacer()
-                    if let amount = anomaly.transaction?.amount {
-                        MoneyText(amount: amount, size: 16, weight: .semibold)
+                Button { onTap?() } label: {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(anomaly.transaction?.displayName ?? "Transaction")
+                                .font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                                .lineLimit(1)
+                            Spacer()
+                            if let amount = anomaly.transaction?.amount {
+                                MoneyText(amount: amount, size: 16, weight: .semibold)
+                            }
+                            if onTap != nil {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Theme.inkTertiary)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                        Text(anomaly.reason)
+                            .font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(2)
                     }
-                    if onTap != nil {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Theme.inkTertiary)
-                    }
+                    .contentShape(Rectangle())
                 }
-                Text(anomaly.reason)
-                    .font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .lineLimit(2)
+                .buttonStyle(.plain)
+                .disabled(onTap == nil)
+                .accessibilityElement(children: .combine)
+                .accessibilityHint(onTap == nil ? "" : "Opens details")
 
                 HStack(spacing: Theme.Spacing.sm) {
                     if isReviewing {
@@ -463,8 +485,6 @@ struct AnomalyCard: View {
                 }
                 .padding(.top, Theme.Spacing.xs)
             }
-            .contentShape(Rectangle())
-            .onTapGesture { onTap?() }
         }
     }
 }
@@ -484,17 +504,22 @@ struct LeakageRow: View {
                     HStack(spacing: Theme.Spacing.xs) {
                         Text(CardCatalog.name(entry.actualCardSlug))
                             .font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
+                            .accessibilityLabel("used \(CardCatalog.name(entry.actualCardSlug))")
                         Image(systemName: "arrow.right").font(.system(size: 9, weight: .bold))
                             .foregroundStyle(Theme.inkTertiary)
+                            .accessibilityHidden(true)
                         Text(CardCatalog.name(entry.bestCardSlug))
                             .font(.hiveBody(12, weight: .medium)).foregroundStyle(Theme.honeyBright)
+                            .accessibilityLabel("best card \(CardCatalog.name(entry.bestCardSlug))")
                     }
                     .lineLimit(1)
                 }
                 Spacer(minLength: Theme.Spacing.sm)
                 Text("+\(entry.leakageDollars.formatted(.currency(code: "USD")))")
                     .font(.hiveMono(14, weight: .medium)).foregroundStyle(Theme.honeyBright)
+                    .accessibilityLabel("\(entry.leakageDollars.formatted(.currency(code: "USD"))) missed")
             }
+            .accessibilityElement(children: .combine)
         }
     }
 }

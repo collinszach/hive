@@ -125,6 +125,9 @@ struct DashboardView: View {
                     }
                 }
                 .frame(height: CGFloat(categories.count) * 32 + 24)
+                .accessibilityElement()
+                .accessibilityLabel("Top spending categories")
+                .accessibilityValue(categories.map { "\($0.category) \($0.total.formatted(.currency(code: "USD").precision(.fractionLength(0))))" }.joined(separator: ", "))
             }
         }
     }
@@ -136,6 +139,7 @@ struct DashboardView: View {
             HStack(spacing: Theme.Spacing.md) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(Theme.warning)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(a.count) flagged transaction\(a.count == 1 ? "" : "s")")
                         .font(.hiveBody(15, weight: .semibold))
@@ -149,6 +153,7 @@ struct DashboardView: View {
                 }
                 Spacer()
             }
+            .accessibilityElement(children: .combine)
         }
     }
 
@@ -172,6 +177,7 @@ struct DashboardView: View {
                         MoneyText(amount: balance, size: 16)
                     }
                 }
+                .accessibilityElement(children: .combine)
             }
         }
     }

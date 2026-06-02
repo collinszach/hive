@@ -13,6 +13,7 @@ struct EmptyStateView: View {
             Image(systemName: icon)
                 .font(.system(size: 34, weight: .light))
                 .foregroundStyle(Theme.inkTertiary)
+                .accessibilityHidden(true)
             Text(title)
                 .font(.hiveBody(17, weight: .semibold))
                 .foregroundStyle(Theme.inkPrimary)
@@ -43,6 +44,7 @@ struct ErrorStateView: View {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 34, weight: .light))
                 .foregroundStyle(Theme.warning)
+                .accessibilityHidden(true)
             Text(error.userMessage)
                 .font(.hiveBody(15))
                 .foregroundStyle(Theme.inkSecondary)
@@ -58,17 +60,21 @@ struct ErrorStateView: View {
 }
 
 /// Primary button style: blue fill, 44pt min target, press scale + haptic.
+/// Fill is `blueHover` (#2563EB) so white label text clears WCAG AA 4.5:1 (the lighter
+/// `blue` only reached 3.7:1 against white).
 struct HivePrimaryButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.hiveBody(16, weight: .semibold))
             .foregroundStyle(.white)
             .padding(.horizontal, Theme.Spacing.lg)
             .frame(minHeight: Theme.minTouchTarget)
-            .background(Theme.blue)
+            .background(Theme.blueHover)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .scaleEffect((!reduceMotion && configuration.isPressed) ? 0.97 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
@@ -76,6 +82,7 @@ struct HivePrimaryButtonStyle: ButtonStyle {
 /// a quiet alternative to the blue primary; `.tint(...)` overrides the label color.
 struct HiveSecondaryButtonStyle: ButtonStyle {
     @Environment(\.tintColor) private var tint
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -87,8 +94,8 @@ struct HiveSecondaryButtonStyle: ButtonStyle {
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
                 .stroke(Theme.borderDefault, lineWidth: 1))
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .scaleEffect((!reduceMotion && configuration.isPressed) ? 0.97 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 

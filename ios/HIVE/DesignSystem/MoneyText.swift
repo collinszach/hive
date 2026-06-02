@@ -58,6 +58,9 @@ struct MoneyHero: View {
                 .foregroundStyle(Theme.inkSecondary)
                 .baselineOffset(size * 0.06)
         }
+        // VoiceOver reads the split whole/cents Text nodes as one currency value.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(formatted)
     }
 
     // "$1,234" + ".56" — split on the locale decimal separator after formatting.

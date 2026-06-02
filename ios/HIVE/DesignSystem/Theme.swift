@@ -31,7 +31,7 @@ enum Theme {
     // MARK: Text ramp
     static let inkPrimary   = Color(hex: 0xF0F2F5) // primary text
     static let inkSecondary = Color(hex: 0x9CA3AF) // secondary / small body
-    static let inkTertiary  = Color(hex: 0x6B7280) // large/secondary labels only — fails 4.5:1 as body on surface
+    static let inkTertiary  = Color(hex: 0x7F8796) // muted labels/captions — meets ~4.6:1 on surface (WCAG AA small text)
     static let inkGhost     = Color(hex: 0x4B5563) // disabled / placeholder ONLY, never informational
 
     // MARK: Semantic

@@ -7,6 +7,7 @@ struct PlanView: View {
     enum Segment: String, CaseIterable { case budgets = "Budgets", points = "Points" }
 
     @Environment(AppState.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model = PlanViewModel()
     @State private var segment: Segment = .budgets
     @State private var budgetEditor: BudgetEditorTarget?
@@ -30,7 +31,7 @@ struct PlanView: View {
                 }
             }
             .padding(.top, Theme.Spacing.sm)
-            .animation(.easeOut(duration: 0.2), value: segment)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: segment)
         }
         .toolbar {
             if segment == .points {
@@ -210,6 +211,7 @@ struct PlanView: View {
                     .foregroundStyle(Theme.honeyBright)
                     .frame(width: 40, height: 40)
                     .background(Theme.honeyBright.opacity(0.14), in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Time to redeem").font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
                     Text(summary).font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
@@ -219,9 +221,11 @@ struct PlanView: View {
                 if ready.count == 1 {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.inkTertiary)
+                        .accessibilityHidden(true)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
         }
 
         if ready.count == 1, let only = ready.first {
@@ -282,6 +286,7 @@ struct BudgetRowCard: View {
                 }
             }
         }
+        .accessibilityElement(children: .combine)
     }
 
     private var barColor: Color {
@@ -320,6 +325,7 @@ struct ProgramCard: View {
                 }
             }
         }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -342,5 +348,6 @@ struct ProgressBar: View {
         }
         .frame(height: height)
         .clipShape(Capsule())
+        .accessibilityHidden(true)
     }
 }

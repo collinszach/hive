@@ -94,6 +94,7 @@ struct SettingsView: View {
                         if iap.isPaid {
                             Image(systemName: "checkmark.seal.fill")
                                 .font(.system(size: 18)).foregroundStyle(Theme.blue)
+                                .accessibilityHidden(true)
                         }
                     }
                     .frame(minHeight: Theme.minTouchTarget - 2 * Theme.Spacing.md)
@@ -277,6 +278,7 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             .disabled(model.username.isEmpty)
+            .accessibilityHint(model.username.isEmpty ? "Loading your account details" : "Opens a confirmation step")
 
             Text("Deleting your account permanently removes your linked accounts, transactions, budgets, and points. This can't be undone.")
                 .font(.hiveBody(12))
@@ -304,6 +306,7 @@ struct SettingsView: View {
                 .lineLimit(1).truncationMode(.middle)
         }
         .frame(minHeight: Theme.minTouchTarget - 2 * Theme.Spacing.md)
+        .accessibilityElement(children: .combine)
     }
 
     private static let dateFormatter: DateFormatter = {
@@ -393,16 +396,20 @@ private struct DeleteAccountSheet: View {
 }
 
 /// Red-filled destructive button — only for irreversible actions (account deletion).
+/// Fill is a darkened red (#B91C1C) so white label text clears WCAG AA 4.5:1 (the
+/// lighter `expense` red only reached ~3.8:1 against white).
 private struct HiveDestructiveButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.hiveBody(16, weight: .semibold))
             .foregroundStyle(.white)
             .padding(.horizontal, Theme.Spacing.lg)
             .frame(minHeight: Theme.minTouchTarget)
-            .background(Theme.expense)
+            .background(Color(hex: 0xB91C1C))
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .scaleEffect((!reduceMotion && configuration.isPressed) ? 0.97 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
