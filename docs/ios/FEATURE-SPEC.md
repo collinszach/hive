@@ -24,11 +24,11 @@ Verified against the Swift source in `ios/HIVE/`. What's shipped vs. what's left
 | 2.1 AI Chat | ✅ | `ChatView` (Insights → Assistant) | ✅ `/api/chat` |
 | 2.2 Push notifications | ✅ | code done | APNs endpoint + sender + 2 triggers (anomaly, weekly) built; ⚙️ runtime-only: NUC `.env` + `.p8` + migration (see 2.2 runbook) |
 | 2.3 Spending forecast | ✅ | done | ✅ `/api/forecast/{category}` |
-| 3.1 StoreKit 2 IAP | 🔲 | — | ⚠️ receipt-validation endpoint **missing** |
+| 3.1 StoreKit 2 IAP | ✅ | Paywall + IAPManager + Settings/chat wiring | `/api/iap/apple/verify` + notifications webhook + `app/iap/apple.py`; ⚙️ runtime-only: ASC products + Apple root CA + NUC `.env` + migration (see 3.1 runbook) |
 | 3.2 App Store readiness | 🟡 | `PrivacyInfo.xcprivacy` + usage strings | — |
 | Tier 4 polish (manual add ✅, acct detail ✅, redemption banner ✅, search ✅, empty-state audit ✅, a11y 🟡) | 🟡 | partial | mostly backed |
 
-**MVP-to-submit critical path that's still open:** 3.2 store readiness. (1.2 Optimizer ✅, 1.3 Settings + delete-account ✅, 1.4 Biometric lock ✅.)
+**MVP-to-submit critical path that's still open:** 3.2 store readiness. (1.2 Optimizer ✅, 1.3 Settings + delete-account ✅, 1.4 Biometric lock ✅, 3.1 IAP ✅ code.)
 
 ## Where the app is today (✅ shipped)
 
@@ -139,10 +139,18 @@ inline mark-settled / delete with haptics).
 
 ## Tier 3 — Monetization & store readiness
 
-### 3.1 StoreKit 2 subscriptions (IAP) `L`  ·  P1 for App Store  ·  🔲 NOT STARTED
-- **UX:** Paywall describing tiers/entitlements; restore-purchases; manage-subscription deep link. Gate any premium features behind entitlement (mirror backend `require_plaid`/`require_snaptrade` gates — self-hosted single-user should stay entitled).
-- **Native:** StoreKit 2 `Product`/`Transaction.currentEntitlements`; server receipt validation endpoint (**spec on backend**); entitlement cached + revalidated on launch.
-- **DoD:** sandbox purchase unlocks the gated feature; restore works; expiry re-locks.
+### 3.1 StoreKit 2 subscriptions (IAP) `L`  ·  P1 for App Store  ·  ✅ DONE (code) — runbook below for ASC + NUC
+- **UX:** `Features/Paywall/PaywallView.swift` — Starter/Pro tiers, Monthly/Annual toggle, StoreKit-fetched prices, Restore button, terms/privacy links, current-plan badge. Presented from Settings → **Plan** section and from the Chat Pro-gate (402 → "Upgrade" affordance in the error banner). Blue accent only (not a rewards surface).
+- **Native:** `Features/Paywall/IAPManager.swift` (`@MainActor @Observable` singleton) — `loadProducts()`, `purchase()`, `restore()` (`AppStore.sync()` + `currentEntitlements`), and a long-lived `Transaction.updates` listener for renewals/refunds. Started + status-refreshed at launch in `MainTabView`. Product IDs match backend `PRODUCT_TIERS`: `com.zacharyjcollins.hive.{starter,pro}.{monthly,annual}`.
+- **No client-side trust:** every StoreKit JWS (`VerificationResult.jwsRepresentation`) is POSTed to `POST /api/iap/apple/verify`; the backend verifies the signature against Apple's public root CAs (`app-store-server-library` `SignedDataVerifier`) and writes the plan. UI reads entitlement back from `GET /api/billing/status` (`BillingStatus` DTO) — the server is the source of truth.
+- **Backend:** `app/iap/apple.py` (fail-safe verifier, mirrors APNs `configured` pattern), `app/api/iap.py` (`/apple/verify` auth'd + `/apple/notifications` Apple-signed webhook), `plan_source` column on `users` so Apple/Stripe sources don't silently clobber. Migration `u9v0w1x2y3z4_add_apple_iap_columns`.
+- **DoD (remaining, manual/runtime):**
+  1. **App Store Connect:** create 4 auto-renewable subscriptions with the exact product IDs above (2 groups: Starter, Pro; Monthly + Annual each). Add localized display name/price, review screenshot.
+  2. **Apple root CA:** download `AppleRootCA-G3.cer` (+G2) from https://www.apple.com/certificateauthority/ → place in the dir mounted at `APPLE_ROOT_CA_DIR` on the NUC (public certs, not committed).
+  3. **NUC env:** set `APPLE_IAP_BUNDLE_ID`, `APPLE_IAP_ENVIRONMENT` (Sandbox for TestFlight), `APPLE_IAP_APP_APPLE_ID`, `APPLE_ROOT_CA_DIR`, `APPLE_IAP_ENABLE_ONLINE_CHECKS` (see `.env.example`).
+  4. **Notification webhook:** in ASC → App Information → App Store Server Notifications V2, set URL to `https://<domain>/api/iap/apple/notifications` (sandbox + prod).
+  5. **DB migration:** `alembic upgrade head` on the NUC (adds `apple_original_transaction_id` + `plan_source`).
+  6. **Verify:** sandbox purchase unlocks Pro (chat works); Restore re-grants on a fresh install; a sandbox renewal/refund notification flips the plan.
 
 ### 3.2 App Store readiness `M`  ·  P0 for submission  ·  🟡 IN PROGRESS
 - **Done (code/config):**

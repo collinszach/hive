@@ -23,6 +23,7 @@ from app.api.chat import router as chat_router
 from app.api.dashboard import router as dashboard_router
 from app.api.forecast import router as forecast_router
 from app.api.goals import router as goals_router
+from app.api.iap import router as iap_router
 from app.api.income import router as income_router
 from app.api.insights import router as insights_router
 from app.api.merchants import router as merchants_router
@@ -160,6 +161,7 @@ app.include_router(chat_router)
 app.include_router(dashboard_router)
 app.include_router(forecast_router)
 app.include_router(goals_router)
+app.include_router(iap_router)
 app.include_router(income_router)
 app.include_router(insights_router)
 app.include_router(merchants_router)

@@ -7,6 +7,7 @@ import SwiftUI
 struct ChatView: View {
     @State private var model = ChatViewModel()
     @State private var draft = ""
+    @State private var showPaywall = false
     @FocusState private var composerFocused: Bool
 
     var body: some View {
@@ -24,6 +25,11 @@ struct ChatView: View {
             ToolbarItem(placement: .topBarTrailing) { modelMenu }
         }
         .safeAreaInset(edge: .bottom) { composer }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(reason: "Unlock the AI assistant with the Pro plan.")
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: Conversation
@@ -160,7 +166,17 @@ struct ChatView: View {
                 .font(.system(size: 12)).foregroundStyle(Theme.warning)
             Text(text).font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
             Spacer()
-            Button { model.errorText = nil } label: {
+            if model.proGateHit {
+                Button {
+                    Haptics.selection(); showPaywall = true
+                } label: {
+                    Text("Upgrade")
+                        .font(.hiveBody(12, weight: .semibold))
+                        .foregroundStyle(Theme.blue)
+                }
+                .accessibilityLabel("Upgrade to Pro")
+            }
+            Button { model.errorText = nil; model.proGateHit = false } label: {
                 Image(systemName: "xmark").font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Theme.inkTertiary)
             }

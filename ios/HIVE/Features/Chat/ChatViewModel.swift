@@ -16,6 +16,9 @@ final class ChatViewModel {
     private(set) var isSending = false
     /// Transient, dismissible error banner text (nil = no error).
     var errorText: String?
+    /// Set when the user hits the Pro-only gate (HTTP 402) — the error banner then
+    /// offers an Upgrade affordance. Cleared when the banner is dismissed.
+    var proGateHit = false
     /// Local (Ollama) by default; the self-hosted single-user case stays free/local.
     var useClaude = false
 
@@ -62,7 +65,8 @@ final class ChatViewModel {
         Haptics.error()
         switch error {
         case .server(let status) where status == 402:
-            errorText = "Claude chat needs the Pro plan. Switch to Local to keep going."
+            errorText = "Claude chat needs the Pro plan. Upgrade, or switch to Local to keep going."
+            proGateHit = true
         case .server(let status) where status == 503:
             errorText = "The local AI (Ollama) is offline. Try again, or switch models."
         default:

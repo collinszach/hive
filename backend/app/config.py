@@ -88,6 +88,19 @@ class Settings(BaseSettings):
     stripe_starter_price_id: str = ""
     stripe_pro_price_id: str = ""
 
+    # Apple StoreKit 2 in-app purchase (iOS).
+    # Product IDs are created in App Store Connect and must match the iOS app's
+    # IAPManager.productIDs. apple_iap_environment is "Sandbox" (dev/TestFlight) or
+    # "Production". app_apple_id is the numeric App Store app id (needed only to verify
+    # production App Store Server Notifications). apple_root_ca_dir holds Apple's public
+    # root CA .cer/.der files used to verify the signed JWS chain (download from
+    # apple.com/certificateauthority — not secret, but kept out of git for cleanliness).
+    apple_iap_bundle_id: str = "com.zacharyjcollins.hive"
+    apple_iap_environment: str = "Sandbox"
+    apple_iap_app_apple_id: int = 0
+    apple_root_ca_dir: str = ""
+    apple_iap_enable_online_checks: bool = True
+
     # Google OAuth
     google_client_id: str = ""
     google_client_secret: str = ""

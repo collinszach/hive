@@ -41,6 +41,10 @@ struct MainTabView: View {
             // Re-register opted-in devices so the backend has a fresh token, and
             // route any notification that launched the app cold.
             await PushManager.shared.registerIfAuthorized()
+            // Start the StoreKit transaction listener and sync current entitlement so
+            // renewals/refunds reflect even without opening the paywall.
+            IAPManager.shared.startObserving()
+            await IAPManager.shared.refreshStatus()
             if let route = router.pending {
                 selection = route
                 router.pending = nil

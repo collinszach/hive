@@ -58,3 +58,11 @@ class User(Base):
     stripe_subscription_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     stripe_status: Mapped[str | None] = mapped_column(Text, nullable=True)
     plan_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Apple StoreKit subscriptions. originalTransactionId is the stable per-user key the
+    # App Store Server Notifications webhook looks up on renew/expire/refund. plan_source
+    # records who owns the current entitlement ("stripe" | "apple") so the two billing
+    # paths never clobber each other.
+    apple_original_transaction_id: Mapped[str | None] = mapped_column(
+        Text, nullable=True, index=True
+    )
+    plan_source: Mapped[str | None] = mapped_column(Text, nullable=True)

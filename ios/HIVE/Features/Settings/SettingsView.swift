@@ -10,22 +10,31 @@ struct SettingsView: View {
     @Environment(LockState.self) private var lock
     @State private var model = SettingsViewModel()
     @State private var push = PushManager.shared
+    @State private var iap = IAPManager.shared
     @State private var confirmingSignOut = false
     @State private var showDeleteSheet = false
+    @State private var showPaywall = false
 
     var body: some View {
         Screen(title: "Settings", refresh: { await model.load() }) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 accountSection.hiveEntrance(0)
-                notificationsSection.hiveEntrance(1)
-                securitySection.hiveEntrance(2)
-                aboutSection.hiveEntrance(3)
-                dangerSection.hiveEntrance(4)
+                planSection.hiveEntrance(1)
+                notificationsSection.hiveEntrance(2)
+                securitySection.hiveEntrance(3)
+                aboutSection.hiveEntrance(4)
+                dangerSection.hiveEntrance(5)
             }
             .padding(.top, Theme.Spacing.sm)
         }
         .task { if model.state.value == nil { await model.load() } }
         .task { await push.refreshStatus() }
+        .task { await iap.refreshStatus() }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .confirmationDialog("Sign out of HIVE?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
             Button("Sign out", role: .destructive) { app.signOut() }
             Button("Cancel", role: .cancel) {}
@@ -63,6 +72,60 @@ struct SettingsView: View {
             rows.append(InfoRow(label: "Last sign-in", value: Self.dateFormatter.string(from: last)))
         }
         return rows
+    }
+
+    // MARK: Plan — subscription / upgrade (FEATURE-SPEC 3.1)
+
+    @ViewBuilder
+    private var planSection: some View {
+        section("Plan") {
+            Card(padding: Theme.Spacing.md) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(planTitle)
+                                .font(.hiveBody(15, weight: .medium))
+                                .foregroundStyle(Theme.inkPrimary)
+                            Text(planSubtitle)
+                                .font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer()
+                        if iap.isPaid {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 18)).foregroundStyle(Theme.blue)
+                        }
+                    }
+                    .frame(minHeight: Theme.minTouchTarget - 2 * Theme.Spacing.md)
+
+                    // Stripe-managed plans can't be changed in-app (App Store rules).
+                    if !(iap.isPaid && !(iap.billing?.managedByApple ?? false)) {
+                        Button {
+                            Haptics.selection(); showPaywall = true
+                        } label: {
+                            Text(iap.isPaid ? "Change plan" : "Upgrade")
+                                .font(.hiveBody(14, weight: .semibold))
+                                .foregroundStyle(Theme.blue)
+                                .frame(minHeight: Theme.minTouchTarget, alignment: .leading)
+                        }
+                    } else {
+                        Text("Manage your subscription on the web.")
+                            .font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary)
+                    }
+                }
+            }
+        }
+    }
+
+    private var planTitle: String {
+        guard let plan = iap.billing?.plan else { return "Free plan" }
+        return "\(plan.capitalized) plan"
+    }
+
+    private var planSubtitle: String {
+        if iap.isPro { return "AI chat, investments, and up to 10 linked accounts." }
+        if iap.isPaid { return "Daily sync, budgets, points, and up to 3 accounts." }
+        return "Upgrade to link more accounts and unlock the AI assistant."
     }
 
     // MARK: Notifications — push opt-in (FEATURE-SPEC 2.2)
