@@ -16,6 +16,9 @@ from app.models.points_ledger import PointsLedger  # noqa: F401
 from app.models.subscription import Subscription  # noqa: F401
 from app.models.transaction import Transaction  # noqa: F401
 from app.models.plan_event import PlanEvent  # noqa: F401
+from app.models.plan_scenario import PlanScenario  # noqa: F401
+from app.models.plan_assumption import PlanAssumption  # noqa: F401
+from app.models.income_stream import IncomeStream  # noqa: F401
 from app.models.user import User  # noqa: F401
 
 __all__ = [
@@ -28,10 +31,13 @@ __all__ = [
     "EarnRule",
     "Goal",
     "GoalType",
+    "IncomeStream",
     "Insight",
     "NetWorthSnapshot",
     "PlaidLink",
+    "PlanAssumption",
     "PlanEvent",
+    "PlanScenario",
     "PointsBalance",
     "PointsLedger",
     "Subscription",
