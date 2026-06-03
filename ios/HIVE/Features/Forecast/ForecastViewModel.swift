@@ -182,7 +182,9 @@ final class ForecastViewModel {
             emergencyFloor: a.emergencyFloor,
             autoInvestSurplus: a.autoInvestSurplus,
             bandSpreadPct: a.bandSpreadPct,
-            baseMonthlyExpenses: a.baseMonthlyExpenses
+            baseMonthlyExpenses: a.baseMonthlyExpenses,
+            startingCashOverride: a.startingCashOverride,
+            startingInvestmentsOverride: a.startingInvestmentsOverride
         )
         switch s.assumption {
         case "annual_return_pct":
@@ -303,6 +305,37 @@ final class ForecastViewModel {
         }
     }
 
+    @discardableResult
+    func updateIncome(_ id: String, _ body: IncomeStreamCreateBody) async -> Bool {
+        do {
+            try await api.send(Endpoint(method: .put, path: "/api/planning/income/\(id)"), body: body)
+            Haptics.success()
+            advisorState = nil
+            await loadDetails(); await loadProjection()
+            return true
+        } catch {
+            Haptics.error()
+            return false
+        }
+    }
+
+    /// Predict an editable income stream from the user's recent take-home pay. Returns false
+    /// (with no change) when there's no detectable income to predict from.
+    @discardableResult
+    func predictIncomeFromHistory() async -> Bool {
+        guard let id = selectedScenarioId else { return false }
+        do {
+            try await api.sendVoid(.post("/api/planning/scenarios/\(id)/income/from-history"))
+            Haptics.success()
+            advisorState = nil
+            await loadDetails(); await loadProjection()
+            return true
+        } catch {
+            Haptics.error()
+            return false
+        }
+    }
+
     func deleteIncome(_ stream: IncomeStreamDTO) async {
         do {
             try await api.sendVoid(Endpoint(method: .delete, path: "/api/planning/income/\(stream.id)"))
@@ -321,6 +354,20 @@ final class ForecastViewModel {
         guard let id = selectedScenarioId else { return false }
         do {
             try await api.send(.post("/api/planning/scenarios/\(id)/events"), body: body)
+            Haptics.success()
+            advisorState = nil
+            await loadDetails(); await loadProjection()
+            return true
+        } catch {
+            Haptics.error()
+            return false
+        }
+    }
+
+    @discardableResult
+    func updateEvent(_ id: String, _ body: EventCreateBody) async -> Bool {
+        do {
+            try await api.send(Endpoint(method: .put, path: "/api/planning/events/\(id)"), body: body)
             Haptics.success()
             advisorState = nil
             await loadDetails(); await loadProjection()

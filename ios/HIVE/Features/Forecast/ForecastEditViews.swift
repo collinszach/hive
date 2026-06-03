@@ -19,6 +19,9 @@ struct AssumptionsEditorSheet: View {
     @State private var autoInvest: Bool
     @State private var overrideExpenses: Bool
     @State private var expenseAmount: Decimal?
+    @State private var overrideStart: Bool
+    @State private var startCash: Decimal?
+    @State private var startInvestments: Decimal?
     @State private var isSaving = false
 
     init(current: AssumptionsDTO, onSave: @escaping (_ body: AssumptionsUpdateBody) async -> Bool) {
@@ -32,6 +35,10 @@ struct AssumptionsEditorSheet: View {
         _autoInvest = State(initialValue: current.autoInvestSurplus)
         _overrideExpenses = State(initialValue: current.baseMonthlyExpenses != nil)
         _expenseAmount = State(initialValue: current.baseMonthlyExpenses)
+        _overrideStart = State(initialValue: current.startingCashOverride != nil
+                               || current.startingInvestmentsOverride != nil)
+        _startCash = State(initialValue: current.startingCashOverride)
+        _startInvestments = State(initialValue: current.startingInvestmentsOverride)
     }
 
     var body: some View {
@@ -41,6 +48,7 @@ struct AssumptionsEditorSheet: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                         ratesSection
+                        startingSection
                         expensesSection
                         cashSection
                     }
@@ -81,6 +89,32 @@ struct AssumptionsEditorSheet: View {
                 }
             }
             Text("All rates are annual. The band widens the shaded range around the projected line.")
+                .font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary)
+                .padding(.leading, Theme.Spacing.xs)
+        }
+    }
+
+    private var startingSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text("Starting position").hiveLabelStyle().padding(.leading, Theme.Spacing.xs)
+            Card {
+                VStack(spacing: 0) {
+                    Toggle(isOn: $overrideStart.animation()) {
+                        Text("Assume a starting balance").font(.hiveBody(15)).foregroundStyle(Theme.inkPrimary)
+                    }
+                    .tint(Theme.blue)
+                    .frame(minHeight: Theme.minTouchTarget)
+                    if overrideStart {
+                        Divider().overlay(Theme.borderDefault)
+                        CurrencyRow(label: "Cash at start", value: $startCash)
+                        Divider().overlay(Theme.borderDefault)
+                        CurrencyRow(label: "Investments at start", value: $startInvestments)
+                    }
+                }
+            }
+            Text(overrideStart
+                 ? "Projecting from these assumed balances instead of your live accounts — e.g. the cash you expect to have when the program begins."
+                 : "Using your live account balances as the t=0 starting point.")
                 .font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary)
                 .padding(.leading, Theme.Spacing.xs)
         }
@@ -137,7 +171,9 @@ struct AssumptionsEditorSheet: View {
             emergencyFloor: floor ?? 0,
             autoInvestSurplus: autoInvest,
             bandSpreadPct: bandSpreadPct,
-            baseMonthlyExpenses: overrideExpenses ? (expenseAmount ?? 0) : nil
+            baseMonthlyExpenses: overrideExpenses ? (expenseAmount ?? 0) : nil,
+            startingCashOverride: overrideStart ? (startCash ?? 0) : nil,
+            startingInvestmentsOverride: overrideStart ? (startInvestments ?? 0) : nil
         )
         if await onSave(body) { dismiss() }
     }
@@ -146,20 +182,37 @@ struct AssumptionsEditorSheet: View {
 // MARK: - Income form
 
 struct IncomeFormSheet: View {
+    /// When non-nil, the form edits this stream in place instead of creating a new one.
+    var existing: IncomeStreamDTO? = nil
     let onSave: (_ body: IncomeStreamCreateBody) async -> Bool
     @Environment(\.dismiss) private var dismiss
 
-    @State private var name = ""
+    @State private var name: String
     @State private var amount: Decimal?
-    @State private var startDate = Date()
-    @State private var hasEnd = false
-    @State private var endDate = Date()
-    @State private var growthPct: Double = 0
-    @State private var taxable = true
+    @State private var startDate: Date
+    @State private var hasEnd: Bool
+    @State private var endDate: Date
+    @State private var growthPct: Double
+    @State private var taxable: Bool
     @State private var isSaving = false
 
+    init(existing: IncomeStreamDTO? = nil,
+         onSave: @escaping (_ body: IncomeStreamCreateBody) async -> Bool) {
+        self.existing = existing
+        self.onSave = onSave
+        _name = State(initialValue: existing?.name ?? "")
+        _amount = State(initialValue: existing?.monthlyAmount)
+        _startDate = State(initialValue: existing.map { PlanningDateParser.parse($0.startDate) } ?? Date())
+        _hasEnd = State(initialValue: existing?.endDate != nil)
+        _endDate = State(initialValue: existing?.endDate.map { PlanningDateParser.parse($0) } ?? Date())
+        _growthPct = State(initialValue: existing?.growthPct ?? 0)
+        _taxable = State(initialValue: existing?.taxable ?? true)
+    }
+
+    // A $0 amount is allowed on purpose — it records an unpaid / no-income period (e.g. an
+    // unpaid internship or a no-income stretch of a program). Only the name is required.
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty && (amount ?? 0) > 0 && !isSaving
+        !name.trimmingCharacters(in: .whitespaces).isEmpty && (amount ?? 0) >= 0 && !isSaving
     }
 
     var body: some View {
@@ -194,7 +247,7 @@ struct IncomeFormSheet: View {
                 }
                 .scrollDismissesKeyboard(.interactively)
             }
-            .navigationTitle("Add income")
+            .navigationTitle(existing == nil ? "Add income" : "Edit income")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -248,6 +301,8 @@ struct IncomeFormSheet: View {
 // MARK: - Life-event form
 
 struct EventFormSheet: View {
+    /// When non-nil, the form edits this event in place instead of creating a new one.
+    var existing: PlanEventDTO? = nil
     let onSave: (_ body: EventCreateBody) async -> Bool
     @Environment(\.dismiss) private var dismiss
 
@@ -263,18 +318,40 @@ struct EventFormSheet: View {
             case .semiannual: "semiannual"; case .annual: "annual"
             }
         }
+        init(apiValue: String) {
+            switch apiValue {
+            case "monthly": self = .monthly; case "quarterly": self = .quarterly
+            case "semiannual": self = .semiannual; case "annual": self = .annual
+            default: self = .once
+            }
+        }
     }
 
-    @State private var name = ""
+    @State private var name: String
     @State private var amount: Decimal?
-    @State private var direction: Direction = .outflow
-    @State private var target: Target = .cash
-    @State private var recurrence: Recurrence = .once
-    @State private var eventDate = Date()
-    @State private var hasEnd = false
-    @State private var endDate = Date()
-    @State private var growthPct: Double = 0
+    @State private var direction: Direction
+    @State private var target: Target
+    @State private var recurrence: Recurrence
+    @State private var eventDate: Date
+    @State private var hasEnd: Bool
+    @State private var endDate: Date
+    @State private var growthPct: Double
     @State private var isSaving = false
+
+    init(existing: PlanEventDTO? = nil,
+         onSave: @escaping (_ body: EventCreateBody) async -> Bool) {
+        self.existing = existing
+        self.onSave = onSave
+        _name = State(initialValue: existing?.name ?? "")
+        _amount = State(initialValue: existing?.amount)
+        _direction = State(initialValue: existing?.kind == "inflow" ? .inflow : .outflow)
+        _target = State(initialValue: existing?.target == "investment" ? .investment : .cash)
+        _recurrence = State(initialValue: Recurrence(apiValue: existing?.recurrence ?? "once"))
+        _eventDate = State(initialValue: existing.map { PlanningDateParser.parse($0.eventDate) } ?? Date())
+        _hasEnd = State(initialValue: existing?.endDate != nil)
+        _endDate = State(initialValue: existing?.endDate.map { PlanningDateParser.parse($0) } ?? Date())
+        _growthPct = State(initialValue: existing?.growthPct ?? 0)
+    }
 
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && (amount ?? 0) > 0 && !isSaving
@@ -312,7 +389,7 @@ struct EventFormSheet: View {
                 }
                 .scrollDismissesKeyboard(.interactively)
             }
-            .navigationTitle("Add event")
+            .navigationTitle(existing == nil ? "Add event" : "Edit event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

@@ -118,6 +118,10 @@ def _assumptions_dict(a: PlanAssumption) -> dict:
         "auto_invest_surplus": a.auto_invest_surplus,
         "band_spread_pct": float(a.band_spread_pct),
         "base_monthly_expenses": float(a.base_monthly_expenses) if a.base_monthly_expenses is not None else None,
+        "starting_cash_override": float(a.starting_cash_override) if a.starting_cash_override is not None else None,
+        "starting_investments_override": (
+            float(a.starting_investments_override) if a.starting_investments_override is not None else None
+        ),
     }
 
 
@@ -322,6 +326,8 @@ class AssumptionsUpdate(BaseModel):
     auto_invest_surplus: Optional[bool] = None
     band_spread_pct: Optional[float] = None
     base_monthly_expenses: Optional[float] = None  # null clears the override (back to auto)
+    starting_cash_override: Optional[float] = None  # null = use live cash balance at t=0
+    starting_investments_override: Optional[float] = None  # null = use live investment balance at t=0
 
 
 @router.get("/scenarios/{scenario_id}/assumptions")
@@ -374,6 +380,55 @@ async def create_income(scenario_id: str, body: IncomeStreamBody, session: Async
         growth_pct=body.growth_pct, taxable=body.taxable,
     )
     session.add(stream)
+    await session.flush()
+    return _income_dict(stream)
+
+
+@router.post("/scenarios/{scenario_id}/income/from-history", status_code=201)
+async def create_income_from_history(scenario_id: str, session: AsyncSession = Depends(get_db)) -> dict:
+    """Seed an *editable* income stream predicted from the user's recent take-home pay.
+
+    The amount comes from the trailing ~3-month average (so it reflects the latest raise),
+    seeded with a default forward raise so future growth is modeled. The user edits it like
+    any other stream. Returns 422 if there's no detectable income to predict from."""
+    scenario = await _get_scenario_or_404(session, scenario_id)
+    today = date.today()
+    anchor = date(today.year, today.month, 1)
+    monthly = await _baseline_monthly_income(session, anchor)
+    if monthly <= 0:
+        raise HTTPException(
+            status_code=422,
+            detail="No recent income found to predict from. Add an income stream manually.",
+        )
+    stream = IncomeStream(
+        scenario_id=scenario.id, name="Income (from history)", kind=None,
+        monthly_amount=round(monthly, 2), start_date=anchor, end_date=None,
+        growth_pct=3.0,  # default annual raise — editable
+        taxable=True,
+    )
+    session.add(stream)
+    await session.flush()
+    return _income_dict(stream)
+
+
+@router.put("/income/{stream_id}")
+async def update_income(stream_id: str, body: IncomeStreamBody, session: AsyncSession = Depends(get_db)) -> dict:
+    """Edit an existing income stream in place (amount, dates, growth, taxability)."""
+    try:
+        sid = uuid_mod.UUID(stream_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid stream id")
+    result = await session.execute(select(IncomeStream).where(IncomeStream.id == sid))
+    stream = result.scalar_one_or_none()
+    if stream is None:
+        raise HTTPException(status_code=404, detail="Income stream not found")
+    stream.name = body.name
+    stream.kind = body.kind
+    stream.monthly_amount = body.monthly_amount
+    stream.start_date = _parse_date(body.start_date)
+    stream.end_date = _parse_date(body.end_date) if body.end_date else None
+    stream.growth_pct = body.growth_pct
+    stream.taxable = body.taxable
     await session.flush()
     return _income_dict(stream)
 
@@ -439,6 +494,32 @@ async def create_event(scenario_id: str, body: EventBody, session: AsyncSession 
     return _event_dict(event)
 
 
+@router.put("/events/{event_id}")
+async def update_event(event_id: str, body: EventBody, session: AsyncSession = Depends(get_db)) -> dict:
+    """Edit an existing life event in place."""
+    body._validate()
+    try:
+        eid = uuid_mod.UUID(event_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid event id")
+    result = await session.execute(select(PlanEvent).where(PlanEvent.id == eid))
+    event = result.scalar_one_or_none()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    event.name = body.name
+    event.amount = body.amount
+    event.event_date = _parse_date(body.event_date)
+    event.end_date = _parse_date(body.end_date) if body.end_date else None
+    event.kind = body.kind
+    event.target = body.target
+    event.recurrence = body.recurrence
+    event.growth_pct = body.growth_pct
+    event.category = body.category
+    event.notes = body.notes
+    await session.flush()
+    return _event_dict(event)
+
+
 @router.delete("/events/{event_id}", status_code=204)
 async def delete_event(event_id: str, session: AsyncSession = Depends(get_db)):
     try:
@@ -490,16 +571,38 @@ async def _starting_balances(session: AsyncSession) -> tuple[float, float]:
 
 
 async def _baseline_monthly_expenses(session: AsyncSession, anchor: date) -> float:
-    cutoff = anchor - timedelta(days=90)
+    """Average monthly spend over the last ~12 months — the user's *usual* spending, which
+    smooths out recent spikes. Divides by the number of months that actually have data so a
+    short transaction history isn't diluted toward zero."""
+    cutoff = anchor - timedelta(days=365)
     row = (await session.execute(text(
         """
-        SELECT COALESCE(SUM(amount), 0) / 3.0 AS e
+        SELECT COALESCE(SUM(amount), 0) AS total,
+               GREATEST(COUNT(DISTINCT date_trunc('month', date)), 1) AS months
         FROM transactions
         WHERE date >= :cutoff AND amount > 0
           AND NOT is_excluded AND NOT is_transfer AND NOT pending
         """
     ), {"cutoff": cutoff})).fetchone()
-    return float(row.e or 0)
+    return float(row.total or 0) / float(row.months or 1)
+
+
+async def _baseline_monthly_income(session: AsyncSession, anchor: date) -> float:
+    """Average monthly take-home income over the last ~3 months — a *recent* window on purpose,
+    so it reflects the user's current pay level (latest raise) rather than diluting it with older,
+    lower pay. Income = inflows (amount < 0 in our sign convention), excluding transfers
+    (Venmo/Zelle/Cash App are already is_transfer/is_excluded). Returns a positive monthly figure."""
+    cutoff = anchor - timedelta(days=92)
+    row = (await session.execute(text(
+        """
+        SELECT COALESCE(SUM(-amount), 0) AS total,
+               GREATEST(COUNT(DISTINCT date_trunc('month', date)), 1) AS months
+        FROM transactions
+        WHERE date >= :cutoff AND amount < 0
+          AND NOT is_excluded AND NOT is_transfer AND NOT pending
+        """
+    ), {"cutoff": cutoff})).fetchone()
+    return max(float(row.total or 0) / float(row.months or 1), 0.0)
 
 
 async def _compute_projection(
@@ -512,6 +615,12 @@ async def _compute_projection(
     anchor = date(today.year, today.month, 1)
 
     starting_cash, starting_investments = await _starting_balances(session)
+    # A scenario may override the starting position — e.g. "assume I'll have $X net cash when
+    # the program starts" — instead of anchoring to today's live balances. NULL keeps live.
+    if a.starting_cash_override is not None:
+        starting_cash = float(a.starting_cash_override)
+    if a.starting_investments_override is not None:
+        starting_investments = float(a.starting_investments_override)
     if a.base_monthly_expenses is not None:
         base_expenses = float(a.base_monthly_expenses)
     else:

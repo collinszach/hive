@@ -16,6 +16,8 @@ struct ForecastView: View {
     @State private var showAddEvent = false
     @State private var incomeToDelete: IncomeStreamDTO?
     @State private var eventToDelete: PlanEventDTO?
+    @State private var incomeToEdit: IncomeStreamDTO?
+    @State private var eventToEdit: PlanEventDTO?
     @State private var confirmDeleteScenario = false
 
     var body: some View {
@@ -42,6 +44,12 @@ struct ForecastView: View {
         }
         .sheet(isPresented: $showAddEvent) {
             EventFormSheet { await model.addEvent($0) }
+        }
+        .sheet(item: $incomeToEdit) { stream in
+            IncomeFormSheet(existing: stream) { await model.updateIncome(stream.id, $0) }
+        }
+        .sheet(item: $eventToEdit) { event in
+            EventFormSheet(existing: event) { await model.updateEvent(event.id, $0) }
         }
         .confirmationDialog("Remove this income?", isPresented: incomeDeletePresented, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
@@ -343,19 +351,44 @@ struct ForecastView: View {
 
     private var incomeSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            sectionHeader(title: "Income", systemImage: "plus") { Haptics.selection(); showAddIncome = true }
+            incomeHeader
             switch model.incomeState {
             case .loaded(let streams):
                 GroupedCard(data: streams) { s in
                     flowRow(name: s.name,
                             amount: s.monthlyAmount, suffix: "/mo",
                             detail: dateRange(s.startDate, s.endDate),
-                            tint: Theme.income) { incomeToDelete = s }
+                            tint: Theme.income,
+                            onTap: { incomeToEdit = s },
+                            onDelete: { incomeToDelete = s })
                 }
             default:
-                emptyFlowCard(message: "No income yet. Add a salary, stipend, or side income.")
+                emptyFlowCard(message: "No income yet. Add a salary, stipend, or side income — or predict it from your history.")
             }
         }
+    }
+
+    /// Income header with a menu: add manually, or predict an editable stream from history.
+    private var incomeHeader: some View {
+        HStack {
+            Text("Income").hiveLabelStyle()
+            Spacer()
+            Menu {
+                Button { Haptics.selection(); showAddIncome = true } label: {
+                    Label("Add income", systemImage: "plus")
+                }
+                Button { Haptics.selection(); Task { await model.predictIncomeFromHistory() } } label: {
+                    Label("Predict from history", systemImage: "wand.and.stars")
+                }
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.blue)
+                    .frame(width: 30, height: 30)
+                    .background(Theme.blueDim, in: Circle())
+            }
+            .accessibilityLabel("Add income")
+        }
+        .padding(.leading, Theme.Spacing.xs)
     }
 
     private var eventsSection: some View {
@@ -368,7 +401,9 @@ struct ForecastView: View {
                             amount: e.amount,
                             suffix: e.recurrence == "once" ? "" : "·\(recurrenceShort(e.recurrence))",
                             detail: eventDetail(e),
-                            tint: e.kind == "inflow" ? Theme.income : Theme.expense) { eventToDelete = e }
+                            tint: e.kind == "inflow" ? Theme.income : Theme.expense,
+                            onTap: { eventToEdit = e },
+                            onDelete: { eventToDelete = e })
                 }
             default:
                 emptyFlowCard(message: "No events yet. Add tuition, a home purchase, a windfall.")
@@ -565,22 +600,30 @@ struct ForecastView: View {
     }
 
     private func flowRow(name: String, amount: Decimal, suffix: String, detail: String,
-                         tint: Color, onDelete: @escaping () -> Void) -> some View {
+                         tint: Color, onTap: @escaping () -> Void,
+                         onDelete: @escaping () -> Void) -> some View {
         HStack(spacing: Theme.Spacing.md) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(name).font(.hiveBody(15, weight: .medium)).foregroundStyle(Theme.inkPrimary).lineLimit(1)
-                Text(detail).font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary).lineLimit(1)
+            Button(action: { Haptics.selection(); onTap() }) {
+                HStack(spacing: Theme.Spacing.md) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(name).font(.hiveBody(15, weight: .medium)).foregroundStyle(Theme.inkPrimary).lineLimit(1)
+                        Text(detail).font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary).lineLimit(1)
+                    }
+                    Spacer(minLength: Theme.Spacing.sm)
+                    Text("\(amount.formatted(.currency(code: "USD").precision(.fractionLength(0))))\(suffix.isEmpty ? "" : " \(suffix)")")
+                        .font(.hiveMono(14, weight: .medium)).foregroundStyle(tint).monospacedDigit()
+                }
+                .contentShape(Rectangle())
             }
-            Spacer(minLength: Theme.Spacing.sm)
-            Text("\(amount.formatted(.currency(code: "USD").precision(.fractionLength(0))))\(suffix.isEmpty ? "" : " \(suffix)")")
-                .font(.hiveMono(14, weight: .medium)).foregroundStyle(tint).monospacedDigit()
+            .buttonStyle(.plain)
+            .accessibilityHint("Edit \(name)")
             Button(action: { Haptics.selection(); onDelete() }) {
                 Image(systemName: "minus.circle.fill")
                     .font(.system(size: 18)).foregroundStyle(Theme.inkTertiary)
             }
+            .buttonStyle(.plain)
             .accessibilityLabel("Remove \(name)")
         }
-        .accessibilityElement(children: .combine)
     }
 
     private func emptyFlowCard(message: String) -> some View {

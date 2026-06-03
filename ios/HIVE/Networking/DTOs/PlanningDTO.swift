@@ -32,6 +32,10 @@ struct AssumptionsDTO: Decodable {
     let autoInvestSurplus: Bool
     let bandSpreadPct: Double
     let baseMonthlyExpenses: Decimal?
+    /// `nil` → use live account balances at t=0; a value → assume this starting position
+    /// (e.g. anticipated net cash/investments at the start of the modeled program).
+    let startingCashOverride: Decimal?
+    let startingInvestmentsOverride: Decimal?
 }
 
 /// Echo of what fed the engine. Mirrors the `inputs` block of `get_projection`.
@@ -191,6 +195,9 @@ struct AssumptionsUpdateBody: Encodable {
     var bandSpreadPct: Double
     /// `nil` → auto-derive; a value → override.
     var baseMonthlyExpenses: Decimal?
+    /// `nil` → use live balances at t=0; a value → assume this starting position.
+    var startingCashOverride: Decimal?
+    var startingInvestmentsOverride: Decimal?
 
     private enum CodingKeys: String, CodingKey {
         case annualReturnPct = "annual_return_pct"
@@ -200,6 +207,8 @@ struct AssumptionsUpdateBody: Encodable {
         case autoInvestSurplus = "auto_invest_surplus"
         case bandSpreadPct = "band_spread_pct"
         case baseMonthlyExpenses = "base_monthly_expenses"
+        case startingCashOverride = "starting_cash_override"
+        case startingInvestmentsOverride = "starting_investments_override"
     }
 
     func encode(to encoder: Encoder) throws {
@@ -210,8 +219,11 @@ struct AssumptionsUpdateBody: Encodable {
         try c.encode(emergencyFloor, forKey: .emergencyFloor)
         try c.encode(autoInvestSurplus, forKey: .autoInvestSurplus)
         try c.encode(bandSpreadPct, forKey: .bandSpreadPct)
-        // Explicit encode (not encodeIfPresent) so nil serializes as JSON null.
+        // Explicit encode (not encodeIfPresent) so nil serializes as JSON null — clearing
+        // an override back to the live/auto value.
         try c.encode(baseMonthlyExpenses, forKey: .baseMonthlyExpenses)
+        try c.encode(startingCashOverride, forKey: .startingCashOverride)
+        try c.encode(startingInvestmentsOverride, forKey: .startingInvestmentsOverride)
     }
 }
 

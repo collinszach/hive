@@ -24,3 +24,7 @@ class PlanAssumption(Base):
     band_spread_pct: Mapped[Decimal] = mapped_column(Numeric(5, 2), server_default="3.00")
     # NULL = auto-derive from the last 3 months of transactions; set = explicit override.
     base_monthly_expenses: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    # NULL = use live account balances at t=0; set = "assume I'll have this much" (e.g. the
+    # anticipated net cash/investments at the start of a program the scenario models).
+    starting_cash_override: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    starting_investments_override: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
