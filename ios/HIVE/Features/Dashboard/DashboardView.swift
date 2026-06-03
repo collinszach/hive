@@ -1,33 +1,39 @@
 import SwiftUI
-import Charts
 
-/// Home tab — spend totals, top categories, account balances, and an anomaly nudge,
-/// from `GET /api/dashboard/summary`.
+/// Home tab — the command center. Composed of independent, self-contained **sections**
+/// (one file each under `Features/Dashboard/Sections/`), each owning its own data load,
+/// skeleton, empty, and error state. See `docs/ios/HOME-SCREEN-SPEC.md`.
+///
+/// ## Section contract
+/// Every section is a `View` with the initializer:
+/// ```swift
+/// init(token: Int, onAuthExpired: @escaping () -> Void)
+/// ```
+/// - `token` — a refresh token; the section reloads via `.task(id: token)`. Pull-to-refresh
+///   on Home increments it, re-running every section concurrently.
+/// - `onAuthExpired` — called when a section sees `.unauthorized` / `.notAuthenticated`,
+///   so the one global sign-out path (`AppState.handleSessionExpired`) still fires.
+///
+/// A section that has no data hides itself (renders `EmptyView`), so Home never shows an
+/// empty block. Sections load independently — one slow or failed call never blanks Home.
 struct DashboardView: View {
     @Environment(AppState.self) private var app
-    @State private var model = DashboardViewModel()
+    @State private var refreshToken = 0
     @State private var showSearch = false
 
     var body: some View {
-        Screen(title: "Home", refresh: { await model.load() }) {
-            LoadStateView(
-                state: model.state,
-                emptyTitle: "No activity yet",
-                emptyMessage: "Link an account to see your spending here.",
-                onRetry: { Task { await model.load() } }
-            ) { summary in
-                content(summary)
-            } skeleton: {
-                VStack(spacing: Theme.Spacing.md) {
-                    SkeletonBlock(height: 110, cornerRadius: Theme.Radius.card)
-                    SkeletonBlock(height: 200, cornerRadius: Theme.Radius.card)
-                    SkeletonList(count: 3)
-                }
+        Screen(title: "Home", refresh: { await refreshAll() }) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                HomeGreetingSection(showSearch: $showSearch)
+                HomeSafeToSpendSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(0)
+                HomeAttentionSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(1)
+                HomeGlanceSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(2)
+                HomeNetWorthSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(3)
+                HomeCategoriesSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(4)
+                HomeAccountsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(5)
+                HomeGoalsPointsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(6)
             }
-        }
-        .task { if model.state.value == nil { await model.load() } }
-        .onChange(of: isUnauthorized) { _, expired in
-            if expired { app.handleSessionExpired() }
+            .padding(.top, Theme.Spacing.sm)
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -43,153 +49,12 @@ struct DashboardView: View {
         .sheet(isPresented: $showSearch) { GlobalSearchView() }
     }
 
-    private var isUnauthorized: Bool {
-        if case .failed(.unauthorized) = model.state { return true }
-        if case .failed(.notAuthenticated) = model.state { return true }
-        return false
-    }
+    private func signOut() { app.handleSessionExpired() }
 
-    @ViewBuilder
-    private func content(_ s: DashboardSummary) -> some View {
-        // One dominant hero, then supporting blocks revealed in a staggered cascade
-        // so the eye is led top-down in reading order (Ch. 6 direction, Ch. 7 hierarchy).
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            spendHero(s).hiveEntrance(0)
-            if s.unreviewedAnomalies.count > 0 {
-                anomalyCard(s.unreviewedAnomalies).hiveEntrance(1)
-            }
-            if !s.topCategories.isEmpty {
-                categoriesCard(s.topCategories).hiveEntrance(2)
-            }
-            if !s.accounts.isEmpty {
-                accountsSection(s.accounts).hiveEntrance(3)
-            }
-        }
-        .padding(.top, Theme.Spacing.sm)
-    }
-
-    // MARK: Hero — the one dominant number
-    //
-    // Deliberately NOT a generic card: extra white space, a hue-shifted lift off the
-    // OLED base, and the split-fraction MoneyHero make this the unmistakable anchor
-    // of the screen (composition: dominance; hierarchy: white space before weight).
-
-    private func spendHero(_ s: DashboardSummary) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Spent · \(monthLabel(s.month))").hiveLabelStyle()
-            MoneyHero(amount: s.totalSpend, size: 46)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.vertical, Theme.Spacing.xl)
-        .background(Theme.surface)
-        .background(Theme.heroLift)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                .stroke(Theme.borderDefault, lineWidth: 1)
-        )
-        .hiveCardShadow()
-    }
-
-    // MARK: Top categories (Swift Charts)
-
-    private func categoriesCard(_ categories: [CategorySpend]) -> some View {
-        Card {
-            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                Text("Top categories").hiveLabelStyle()
-                Chart(categories) { item in
-                    BarMark(
-                        x: .value("Amount", (item.total as NSDecimalNumber).doubleValue),
-                        y: .value("Category", item.category)
-                    )
-                    .foregroundStyle(Theme.blue)
-                    .cornerRadius(4)
-                }
-                .chartXAxis {
-                    AxisMarks(preset: .aligned) { value in
-                        AxisValueLabel {
-                            if let amount = value.as(Double.self) {
-                                Text(Decimal(amount).formatted(
-                                    .currency(code: "USD").precision(.fractionLength(0))
-                                ))
-                                .font(.hiveMono(10))
-                                .foregroundStyle(Theme.inkTertiary)
-                            }
-                        }
-                    }
-                }
-                .chartYAxis {
-                    AxisMarks(preset: .aligned, position: .leading) { _ in
-                        AxisValueLabel().font(.hiveBody(11)).foregroundStyle(Theme.inkSecondary)
-                    }
-                }
-                .frame(height: CGFloat(categories.count) * 32 + 24)
-                .accessibilityElement()
-                .accessibilityLabel("Top spending categories")
-                .accessibilityValue(categories.map { "\($0.category) \($0.total.formatted(.currency(code: "USD").precision(.fractionLength(0))))" }.joined(separator: ", "))
-            }
-        }
-    }
-
-    // MARK: Anomalies nudge
-
-    private func anomalyCard(_ a: AnomalySummary) -> some View {
-        Card {
-            HStack(spacing: Theme.Spacing.md) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(Theme.warning)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(a.count) flagged transaction\(a.count == 1 ? "" : "s")")
-                        .font(.hiveBody(15, weight: .semibold))
-                        .foregroundStyle(Theme.inkPrimary)
-                    if let reason = a.latestReason {
-                        Text(reason)
-                            .font(.hiveBody(13))
-                            .foregroundStyle(Theme.inkSecondary)
-                            .lineLimit(2)
-                    }
-                }
-                Spacer()
-            }
-            .accessibilityElement(children: .combine)
-        }
-    }
-
-    // MARK: Accounts
-
-    private func accountsSection(_ accounts: [AccountSummary]) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Accounts").hiveLabelStyle().padding(.leading, Theme.Spacing.xs)
-            GroupedCard(data: accounts) { account in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(account.name)
-                            .font(.hiveBody(15, weight: .medium))
-                            .foregroundStyle(Theme.inkPrimary)
-                        Text(account.type.capitalized)
-                            .font(.hiveBody(12))
-                            .foregroundStyle(Theme.inkSecondary)
-                    }
-                    Spacer()
-                    if let balance = account.currentBalance {
-                        MoneyText(amount: balance, size: 16)
-                    }
-                }
-                .accessibilityElement(children: .combine)
-            }
-        }
-    }
-
-    // MARK: Helpers
-
-    /// "2026-06" → "June".
-    private func monthLabel(_ month: String) -> String {
-        let parts = month.split(separator: "-")
-        guard parts.count == 2, let m = Int(parts[1]), (1...12).contains(m) else { return month }
-        var comps = DateComponents(); comps.month = m
-        let date = Calendar.current.date(from: comps) ?? Date()
-        return date.formatted(.dateTime.month(.wide))
+    /// Bump the token so every section's `.task(id:)` re-fires, then yield briefly so the
+    /// pull-to-refresh control reads as meaningful before dismissing.
+    private func refreshAll() async {
+        refreshToken &+= 1
+        try? await Task.sleep(for: .milliseconds(450))
     }
 }
