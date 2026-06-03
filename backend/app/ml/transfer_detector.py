@@ -52,7 +52,7 @@ def classify_transfer_subcategory(description: str) -> str:
     return "Payment"
 
 
-def is_transfer(description: str) -> tuple[bool, bool]:
+def is_transfer(description: str, plaid_category: list[str] | None = None) -> tuple[bool, bool]:
     """
     Check if a transaction is a transfer that should be excluded from analytics.
 
@@ -60,6 +60,7 @@ def is_transfer(description: str) -> tuple[bool, bool]:
     - P2P (Venmo/Zelle/Cash App/PayPal): (True, True) — Rule #2, ALWAYS excluded
     - Bank transfers / savings moves: (True, True)
     - Credit card autopayments: (True, True)
+    - Plaid-labelled "Internal Account Transfer" (e.g. checking↔savings): (True, True)
     - Normal transactions: (False, False)
     """
     if _P2P_PATTERNS.search(description):
@@ -70,5 +71,14 @@ def is_transfer(description: str) -> tuple[bool, bool]:
 
     if _AUTOPAY_PATTERNS.search(description):
         return True, True
+
+    # Plaid's own signal catches internal moves between the user's own accounts (notably
+    # checking ↔ savings) whose raw description doesn't say "transfer". "Internal Account
+    # Transfer" is a high-precision label — it never tags incoming payroll, so it won't
+    # suppress real income.
+    if plaid_category:
+        joined = " ".join(c for c in plaid_category if c).lower()
+        if "internal account transfer" in joined:
+            return True, True
 
     return False, False

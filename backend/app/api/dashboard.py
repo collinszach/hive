@@ -188,7 +188,13 @@ async def safe_to_spend(db: AsyncSession = Depends(get_db), user: User = Depends
               AND category = 'Income'
               AND is_excluded = FALSE
               AND pending = FALSE
-              AND account_id IN (SELECT id FROM accounts WHERE is_active = TRUE AND user_id = :uid)
+              AND account_id IN (
+                  SELECT id FROM accounts
+                  WHERE is_active = TRUE AND user_id = :uid
+                    -- Savings is balance-only: deposits sitting there (interest, transfers in)
+                    -- are not take-home income. Keep checking/NULL-subtype depository.
+                    AND (subtype IS NULL OR subtype NOT IN ('savings', 'cd', 'money market'))
+              )
             GROUP BY 1
             ORDER BY 1
         """),

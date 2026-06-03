@@ -268,14 +268,19 @@ def recategorize_uncategorized(self) -> dict:
 
         updated = 0
         for tx in rows:
-            tx_is_transfer, tx_is_excluded = is_transfer(tx.raw_description)
+            tx_is_transfer, tx_is_excluded = is_transfer(tx.raw_description, tx.plaid_category)
             if tx_is_transfer:
                 cat, sub, source = "Transfers", classify_transfer_subcategory(tx.raw_description), "rules"
             else:
                 try:
-                    cat, sub, source = categorize_transaction(tx.raw_description)
+                    cat, sub, source = categorize_transaction(tx.raw_description, plaid_category=tx.plaid_category)
                 except Exception:
                     continue
+
+            # A Transfers/Payment|P2P result (incl. via the Plaid map) is an internal move or
+            # bank/card payment — exclude it from analytics.
+            if cat == "Transfers" and sub in ("Payment", "P2P"):
+                tx_is_transfer, tx_is_excluded = True, True
 
             if cat != "Uncategorized":
                 tx.category = cat
@@ -319,7 +324,8 @@ def _plaid_tx_to_dict(account_map: dict, tx, custom_rules: list) -> Optional[dic
         or tx.get("name")
         or ""
     )
-    tx_is_transfer, tx_is_excluded = is_transfer(raw_desc)
+    plaid_cat = tx.get("category") or []
+    tx_is_transfer, tx_is_excluded = is_transfer(raw_desc, plaid_cat)
 
     tx_date = tx.get("date")
     if hasattr(tx_date, "isoformat"):
@@ -333,7 +339,6 @@ def _plaid_tx_to_dict(account_map: dict, tx, custom_rules: list) -> Optional[dic
         from datetime import date as date_type
         auth_date = date_type.fromisoformat(auth_date)
 
-    plaid_cat = tx.get("category") or []
     location = tx.get("location") or {}
 
     logo_url = None
@@ -353,6 +358,14 @@ def _plaid_tx_to_dict(account_map: dict, tx, custom_rules: list) -> Optional[dic
             categorization = _run_categorizer(raw_desc, tx_is_transfer, plaid_category=plaid_cat or None)
     else:
         categorization = _run_categorizer(raw_desc, tx_is_transfer, plaid_category=plaid_cat or None)
+
+    # Keep the flags consistent with the resolved category: anything the pipeline (incl. the
+    # Plaid map) lands in Transfers/Payment or Transfers/P2P is an internal move or a bank/card
+    # payment and must be excluded from spend & income analytics — even if the raw description
+    # didn't match a transfer pattern.
+    if categorization.get("category") == "Transfers" and categorization.get("subcategory") in ("Payment", "P2P"):
+        tx_is_transfer = True
+        tx_is_excluded = True
 
     return {
         "plaid_transaction_id": tx["transaction_id"],
