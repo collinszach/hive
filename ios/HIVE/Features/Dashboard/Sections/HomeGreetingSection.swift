@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// Home · Greeting. A time-of-day greeting above the hero. **Epic H7** extends this with a
-/// quick-action row (Add transaction · Optimize card · Search). Search is wired via the
-/// binding from `DashboardView`; Add/Optimize are the H7 follow-up.
+/// Home · Greeting + quick actions (Epic H7). A time-of-day greeting and a row of
+/// quick actions — Add transaction · Optimize card. (Search lives in the nav bar.)
+/// The actions are closures so this view stays free of sheet state, which `DashboardView`
+/// owns. See `docs/ios/HOME-SCREEN-SPEC.md`.
 struct HomeGreetingSection: View {
-    @Binding var showSearch: Bool
+    var onAdd: () -> Void
+    var onOptimize: () -> Void
 
     private var greeting: String {
         switch Calendar.current.component(.hour, from: Date()) {
@@ -16,13 +18,35 @@ struct HomeGreetingSection: View {
     }
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             Text(greeting)
                 .font(.hiveBody(22, weight: .semibold))
                 .foregroundStyle(Theme.inkPrimary)
-            Spacer()
+                .accessibilityAddTraits(.isHeader)
+            HStack(spacing: Theme.Spacing.sm) {
+                quickAction(icon: "plus", label: "Add", action: onAdd)
+                quickAction(icon: "creditcard", label: "Optimize", action: onOptimize)
+                Spacer(minLength: 0)
+            }
         }
         .padding(.leading, Theme.Spacing.xs)
-        .accessibilityAddTraits(.isHeader)
+    }
+
+    private func quickAction(icon: String, label: String, action: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.selection(); action()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon).font(.system(size: 12, weight: .semibold))
+                Text(label).font(.hiveBody(13, weight: .medium))
+            }
+            .foregroundStyle(Theme.inkPrimary)
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, Theme.Spacing.sm)
+            .background(Theme.surface, in: Capsule())
+            .overlay(Capsule().stroke(Theme.borderDefault, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }

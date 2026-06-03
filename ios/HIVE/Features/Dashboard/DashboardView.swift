@@ -20,11 +20,13 @@ struct DashboardView: View {
     @Environment(AppState.self) private var app
     @State private var refreshToken = 0
     @State private var showSearch = false
+    @State private var showAdd = false
+    @State private var showOptimize = false
 
     var body: some View {
         Screen(title: "Home", refresh: { await refreshAll() }) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                HomeGreetingSection(showSearch: $showSearch)
+                HomeGreetingSection(onAdd: { showAdd = true }, onOptimize: { showOptimize = true })
                 HomeSafeToSpendSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(0)
                 HomeAttentionSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(1)
                 HomeGlanceSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(2)
@@ -47,9 +49,26 @@ struct DashboardView: View {
             }
         }
         .sheet(isPresented: $showSearch) { GlobalSearchView() }
+        .sheet(isPresented: $showAdd) {
+            AddTransactionView { body in await addManual(body) }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showOptimize) { CardOptimizerView() }
     }
 
     private func signOut() { app.handleSessionExpired() }
+
+    /// Post a manually-added transaction, then refresh Home so the new spend shows up.
+    private func addManual(_ body: ManualTransactionRequest) async -> Bool {
+        do {
+            try await APIClient.shared.send(.post("/api/transactions"), body: body)
+            refreshToken &+= 1
+            return true
+        } catch {
+            return false
+        }
+    }
 
     /// Bump the token so every section's `.task(id:)` re-fires, then yield briefly so the
     /// pull-to-refresh control reads as meaningful before dismissing.
