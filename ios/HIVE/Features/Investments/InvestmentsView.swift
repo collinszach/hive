@@ -38,8 +38,105 @@ struct InvestmentsView: View {
             if !p.recentOrders.isEmpty {
                 tradesSection(p).hiveEntrance(3)
             }
+            if !p.positions.isEmpty {
+                advisorSection.hiveEntrance(4)
+            }
         }
         .padding(.top, Theme.Spacing.sm)
+    }
+
+    // MARK: AI advisor (Investing spec I7)
+
+    @ViewBuilder private var advisorSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text("AI analysis").hiveLabelStyle().padding(.leading, Theme.Spacing.xs)
+            switch model.advisorState {
+            case .none, .some(.empty):
+                Card {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        Text("Have AI review your portfolio for concentration risk, diversification, and ideas to consider. Educational analysis, not financial advice.")
+                            .font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button {
+                            Haptics.selection(); Task { await model.runAdvisor() }
+                        } label: {
+                            Text("Analyze portfolio")
+                                .font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.base)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, Theme.Spacing.sm + 2)
+                                .background(Theme.blue, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            case .some(.loading):
+                Card {
+                    HStack(spacing: Theme.Spacing.md) {
+                        ProgressView().tint(Theme.blue)
+                        Text("Analyzing your portfolio…").font(.hiveBody(14)).foregroundStyle(Theme.inkSecondary)
+                        Spacer(minLength: 0)
+                    }
+                }
+            case .some(.failed(let error)):
+                Card {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        Text(error == .paymentRequired ? "Pro feature" : "Couldn't analyze")
+                            .font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                        Text(error.userMessage).font(.hiveBody(13)).foregroundStyle(Theme.inkSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if error.isRetryable {
+                            Button { Haptics.selection(); Task { await model.runAdvisor() } } label: {
+                                Text("Try again").font(.hiveBody(14, weight: .medium)).foregroundStyle(Theme.blue)
+                            }
+                        }
+                    }
+                }
+            case .some(.loaded(let resp)):
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    if !resp.summary.isEmpty {
+                        Card {
+                            Text(resp.summary).font(.hiveBody(14)).foregroundStyle(Theme.inkPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    if !resp.risks.isEmpty {
+                        GroupedCard(data: resp.risks) { risk in
+                            HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                                Circle().fill(riskTint(risk.severity)).frame(width: 8, height: 8).padding(.top, 6)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(risk.title).font(.hiveBody(14, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                                    Text(risk.detail).font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .accessibilityElement(children: .combine)
+                        }
+                    }
+                    ForEach(resp.suggestions) { s in
+                        Card {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(s.label).font(.hiveBody(14, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                                Text(s.rationale).font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    Text("AI estimate · \(resp.modelUsed). Educational, not financial advice.")
+                        .font(.hiveBody(11)).foregroundStyle(Theme.inkTertiary).padding(.leading, Theme.Spacing.xs)
+                }
+            }
+        }
+    }
+
+    private func riskTint(_ severity: String) -> Color {
+        switch severity {
+        case "high": return Theme.expense
+        case "low": return Theme.income
+        default: return Theme.blue
+        }
     }
 
     // MARK: Hero
@@ -172,6 +269,9 @@ struct InvestmentsView: View {
 @MainActor @Observable
 final class InvestmentsViewModel {
     private(set) var state: LoadState<PortfolioDTO> = .loading
+    /// AI advisor result. `nil` = not yet requested (shows a call-to-action). Reuses the
+    /// planning `AdvisorResponse` shape (the backend returns the same JSON).
+    private(set) var advisorState: LoadState<AdvisorResponse>?
     private let api: APIClient
     init(api: APIClient = .shared) { self.api = api }
 
@@ -183,6 +283,25 @@ final class InvestmentsViewModel {
             state = .failed(error)
         } catch {
             state = .failed(.network)
+        }
+    }
+
+    /// Ask Claude to analyze the portfolio (Pro-gated, on-demand). Generous timeout — the
+    /// model call runs server-side and can take several seconds.
+    func runAdvisor() async {
+        advisorState = .loading
+        do {
+            var ep = Endpoint.post("/api/snaptrade/portfolio/advisor")
+            ep.timeout = 60
+            let resp = try await api.send(ep, as: AdvisorResponse.self)
+            Haptics.success()
+            advisorState = .loaded(resp)
+        } catch let error as APIError {
+            Haptics.error()
+            advisorState = .failed(error)
+        } catch {
+            Haptics.error()
+            advisorState = .failed(.network)
         }
     }
 }
