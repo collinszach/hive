@@ -44,10 +44,8 @@ struct HomeGlanceSection: View {
                     : geo.size.width
 
                 HStack(alignment: .top, spacing: Theme.Spacing.md) {
-                    if let pct = glance.budgetPct,
-                       let spent = glance.budgetSpent,
-                       let total = glance.budgetTotal {
-                        BudgetTile(pct: pct, spent: spent, total: total)
+                    if let spent = glance.spentThisMonth {
+                        MonthTile(spent: spent, budgetPct: glance.budgetPct)
                             .frame(width: tileWidth)
                     }
                     if let weekly = glance.weekly {
@@ -60,7 +58,7 @@ struct HomeGlanceSection: View {
                     }
                 }
             }
-            .frame(height: 140)
+            .frame(height: 124)
         }
     }
 
@@ -83,10 +81,9 @@ struct HomeGlanceSection: View {
                 return fmt.string(from: Date())
             }()
 
-            // Budgets — do/catch on auth expiry, then try? for everything else
+            // Budgets — do/catch on auth expiry, then try? for everything else. Budgets are
+            // optional context (a % overlay on the month tile), so nil when none are set.
             var budgetPct: Double? = nil
-            var budgetSpent: Decimal? = nil
-            var budgetTotal: Decimal? = nil
             do {
                 let budgets = try await api.send(
                     .get("/api/budgets", query: [URLQueryItem(name: "month", value: monthString)]),
@@ -94,8 +91,6 @@ struct HomeGlanceSection: View {
                 )
                 let total = budgets.map(\.effectiveBudget).reduce(0, +)
                 let spent = budgets.map(\.actualSpend).reduce(0, +)
-                budgetTotal = total
-                budgetSpent = spent
                 let totalDouble = (total as NSDecimalNumber).doubleValue
                 budgetPct = totalDouble > 0
                     ? (spent as NSDecimalNumber).doubleValue / totalDouble
@@ -105,7 +100,7 @@ struct HomeGlanceSection: View {
                 onAuthExpired()
                 return
             } catch {
-                // Non-auth failure — leave budget tiles nil, continue
+                // Non-auth failure — leave budget overlay nil, continue
             }
 
             // Weekly comparison — concurrent with income+spend
@@ -126,6 +121,10 @@ struct HomeGlanceSection: View {
 
             let (weekly, income, summary) = await (weeklyResult, incomeResult, summaryResult)
 
+            // Spent this month is always available from the summary — it anchors the section
+            // so "This month" is never blank, even with no budgets or known income.
+            let spentThisMonth: Decimal? = summary?.totalSpend
+
             // Net cash flow: only meaningful when income > 0
             var netCashFlow: Decimal? = nil
             if let inc = income, let sum = summary, inc.totalIncome > 0 {
@@ -133,9 +132,8 @@ struct HomeGlanceSection: View {
             }
 
             let glance = Glance(
+                spentThisMonth: spentThisMonth,
                 budgetPct: budgetPct,
-                budgetSpent: budgetSpent,
-                budgetTotal: budgetTotal,
                 weekly: weekly,
                 netCashFlow: netCashFlow
             )
@@ -148,66 +146,55 @@ struct HomeGlanceSection: View {
 // MARK: - Value type
 
 private struct Glance {
-    let budgetPct: Double?
-    let budgetSpent: Decimal?
-    let budgetTotal: Decimal?
+    let spentThisMonth: Decimal?
+    let budgetPct: Double?          // optional overlay on the month tile
     let weekly: WeeklyComparison?
     let netCashFlow: Decimal?
 
-    var hasBudget: Bool { budgetPct != nil && budgetSpent != nil && budgetTotal != nil }
+    var hasMonth: Bool { spentThisMonth != nil }
     var hasWeekly: Bool { weekly != nil }
     var hasNet: Bool { netCashFlow != nil }
 
-    var isEmpty: Bool { !hasBudget && !hasWeekly && !hasNet }
+    var isEmpty: Bool { !hasMonth && !hasWeekly && !hasNet }
 
     var activeTileCount: Int {
-        [hasBudget, hasWeekly, hasNet].filter { $0 }.count
+        [hasMonth, hasWeekly, hasNet].filter { $0 }.count
     }
 }
 
-// MARK: - Tile: Budget Used
+// MARK: - Tile: Spent this month
 
-private struct BudgetTile: View {
-    let pct: Double
+private struct MonthTile: View {
     let spent: Decimal
-    let total: Decimal
+    let budgetPct: Double?   // nil when no budgets are set
 
-    private var ringColor: Color { pct >= 0.9 ? Theme.warning : Theme.blue }
-    private var clampedPct: Double { min(pct, 1.0) }
+    private var captionColor: Color {
+        guard let p = budgetPct else { return Theme.inkTertiary }
+        return p >= 0.9 ? Theme.warning : Theme.inkTertiary
+    }
 
     var body: some View {
         Card(padding: Theme.Spacing.md) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("Budget used")
-                    .hiveLabelStyle()
-
-                // Ring
-                ZStack {
-                    Circle()
-                        .stroke(Theme.borderDefault, lineWidth: 6)
-                    Circle()
-                        .trim(from: 0, to: clampedPct)
-                        .stroke(ringColor, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeInOut(duration: 0.6), value: clampedPct)
-                    Text("\(Int(pct * 100))%")
-                        .font(.hiveMono(15, weight: .semibold))
-                        .foregroundStyle(ringColor)
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("Spent").hiveLabelStyle()
+                MoneyText(amount: spent, size: 18, weight: .semibold)
+                Group {
+                    if let pct = budgetPct {
+                        Text("\(Int((pct * 100).rounded()))% of budget")
+                    } else {
+                        Text("so far this month")
+                    }
                 }
-                .frame(width: 56, height: 56)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .accessibilityElement()
-                .accessibilityLabel("Budget used")
-                .accessibilityValue("\(Int(pct * 100)) percent")
-
-                Text("\(spent.formatted(.currency(code: "USD").precision(.fractionLength(0)))) / \(total.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
-                    .font(.hiveMono(10))
-                    .foregroundStyle(Theme.inkTertiary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                .font(.hiveBody(11))
+                .foregroundStyle(captionColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Spent this month")
+        .accessibilityValue(spent.formatted(.currency(code: "USD").precision(.fractionLength(0))))
     }
 }
 
@@ -216,51 +203,49 @@ private struct BudgetTile: View {
 private struct WeeklyTile: View {
     let weekly: WeeklyComparison
 
+    /// The backend now sends a same-elapsed-days delta; `deltaPct == 0` means there's no
+    /// comparable prior spend, so we hide the delta rather than show a misleading 0%/−100%.
+    private var showDelta: Bool { weekly.deltaPct != 0 }
+    private var hasSpark: Bool { weekly.thisWeekDays.contains { $0.total > 0 } }
     private var deltaUp: Bool { weekly.delta > 0 }
     private var deltaColor: Color { deltaUp ? Theme.expense : Theme.income }
-    private var deltaArrow: String { deltaUp ? "▲" : "▼" }
-    private var deltaPctFormatted: String {
-        let abs = Swift.abs(weekly.deltaPct)
-        return "\(deltaArrow) \(Int(abs.rounded()))% vs last"
+    private var deltaText: String {
+        "\(deltaUp ? "▲" : "▼") \(Int(Swift.abs(weekly.deltaPct).rounded()))% vs last week"
     }
 
     var body: some View {
         Card(padding: Theme.Spacing.md) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("This week")
-                    .hiveLabelStyle()
-
-                if weekly.thisWeekDays.isEmpty {
-                    // No day-level data — just show the total
-                    MoneyText(amount: weekly.thisWeekTotal, size: 15, weight: .semibold)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, Theme.Spacing.xs)
-                } else {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("This week").hiveLabelStyle()
+                MoneyText(amount: weekly.thisWeekTotal, size: 18, weight: .semibold)
+                if hasSpark {
                     Chart(weekly.thisWeekDays) { day in
                         BarMark(
                             x: .value("Day", day.date),
                             y: .value("Spend", (day.total as NSDecimalNumber).doubleValue)
                         )
                         .foregroundStyle(Theme.blue)
-                        .cornerRadius(3)
+                        .cornerRadius(2)
                     }
                     .chartXAxis(.hidden)
                     .chartYAxis(.hidden)
-                    .frame(height: 44)
-                    .accessibilityElement()
-                    .accessibilityLabel("Daily spend this week")
-                    .accessibilityValue(weekly.thisWeekDays.map {
-                        "\($0.date): \($0.total.formatted(.currency(code: "USD").precision(.fractionLength(0))))"
-                    }.joined(separator: ", "))
+                    .frame(height: 24)
+                    .accessibilityHidden(true)
                 }
-
-                Text(deltaPctFormatted)
-                    .font(.hiveBody(10))
-                    .foregroundStyle(deltaColor)
+                Text(showDelta ? deltaText : "so far this week")
+                    .font(.hiveBody(11))
+                    .foregroundStyle(showDelta ? deltaColor : Theme.inkTertiary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Spent this week")
+        .accessibilityValue(
+            weekly.thisWeekTotal.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+            + (showDelta ? ", \(deltaText)" : "")
+        )
     }
 }
 

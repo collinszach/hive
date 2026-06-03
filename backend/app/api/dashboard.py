@@ -1,6 +1,7 @@
 """Dashboard summary API — combined data for the main dashboard."""
 import logging
 from datetime import date, timedelta
+from statistics import median
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -166,20 +167,20 @@ async def safe_to_spend(db: AsyncSession = Depends(get_db), user: User = Depends
     # Include today; floor at 1 so daily allowance calculation never divides by zero
     days_remaining = max(1, (month_end - today).days)
 
-    # 1. Trailing 3-month income estimate — only transactions categorised as
-    #    "Income" (salary, payroll, etc). Refunds and credits on expense
-    #    categories (gas, medical, rent) are excluded intentionally.
-    #    Use exact month arithmetic (not timedelta) so the window is always
-    #    exactly 3 calendar months and the /3 divisor is correct.
-    cutoff_month = month_start.month - 3
+    # 1. Base monthly income — the user's *usual* pay, robust to bonuses.
+    #    We sum "Income" deposits per calendar month over the last 12 complete months,
+    #    then take the MEDIAN of those monthly totals. The median tracks recurring base
+    #    pay and ignores bonus spikes (a high bonus month is an outlier the median skips),
+    #    so safe-to-spend isn't inflated by a one-off bonus in the last month or two.
+    cutoff_month = month_start.month - 12
     cutoff_year = month_start.year
-    if cutoff_month <= 0:
+    while cutoff_month <= 0:
         cutoff_month += 12
         cutoff_year -= 1
-    three_months_ago = date(cutoff_year, cutoff_month, 1)
-    income_row = await db.execute(
+    twelve_months_ago = date(cutoff_year, cutoff_month, 1)
+    income_rows = await db.execute(
         text("""
-            SELECT COALESCE(SUM(ABS(amount)) / 3.0, 0) AS monthly_income
+            SELECT date_trunc('month', date) AS m, SUM(ABS(amount)) AS total
             FROM transactions
             WHERE date >= :cutoff
               AND date < :month_start
@@ -188,10 +189,13 @@ async def safe_to_spend(db: AsyncSession = Depends(get_db), user: User = Depends
               AND is_excluded = FALSE
               AND pending = FALSE
               AND account_id IN (SELECT id FROM accounts WHERE is_active = TRUE AND user_id = :uid)
+            GROUP BY 1
+            ORDER BY 1
         """),
-        {"cutoff": three_months_ago, "month_start": month_start, "uid": user.id},
+        {"cutoff": twelve_months_ago, "month_start": month_start, "uid": user.id},
     )
-    monthly_income = float(income_row.scalar_one() or 0)
+    monthly_totals = [float(r.total) for r in income_rows.all() if r.total]
+    monthly_income = float(median(monthly_totals)) if monthly_totals else 0.0
 
     # 2. Spent this month (expenses only, non-excluded, non-pending, credit cards only)
     spent_row = await db.execute(
@@ -704,12 +708,16 @@ async def weekly_comparison(db: AsyncSession = Depends(get_db), user: User = Dep
 
     this_days = week_days(this_week_start, this_week_end)
     last_days = week_days(last_week_start, last_week_end)
+    days_elapsed = today.weekday() + 1  # Mon=0 → 1 day elapsed
 
     this_total = sum(d.total for d in this_days)
     last_total = sum(d.total for d in last_days)
-    delta      = round(this_total - last_total, 2)
-    delta_pct  = round((delta / last_total * 100) if last_total > 0 else 0.0, 1)
-    days_elapsed = today.weekday() + 1  # Mon=0 → 1 day elapsed
+    # Apples-to-apples: the delta compares this week-to-date against the SAME number of
+    # elapsed days last week, not the full prior week — otherwise early in the week a
+    # partial total always looks like a huge drop (e.g. −100% on Monday morning).
+    last_comparable = sum(d.total for d in last_days[:days_elapsed])
+    delta      = round(this_total - last_comparable, 2)
+    delta_pct  = round((delta / last_comparable * 100) if last_comparable > 0 else 0.0, 1)
 
     return WeeklyComparison(
         this_week_total=round(this_total, 2),
