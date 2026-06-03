@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import UIKit
 
 /// Owns the app-lock lifecycle: whether the lock is enabled, the re-lock timeout, and
 /// the current locked/authenticating state. Injected at the root so `RootView` can gate
@@ -29,6 +30,10 @@ final class LockState {
 
     /// When the app entered the background, to measure elapsed time on return.
     private var backgroundedAt: Date?
+    /// True when the backgrounding was caused by the *device* locking (screen off), as
+    /// opposed to the user leaving the app. Set from `protectedDataWillBecomeUnavailable`.
+    private var deviceLocked = false
+    private var observers: [NSObjectProtocol] = []
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -45,6 +50,21 @@ final class LockState {
         // biometrics are actually enrolled, so a device without Face ID can't be bricked
         // (there's no passcode fallback in biometrics-only mode).
         self.isLocked = enabled && BiometricAuth.isAvailable
+        observeDeviceLock()
+    }
+
+    /// Watch for the *device* locking. iOS fires `protectedDataWillBecomeUnavailable` when
+    /// the screen locks (but NOT when the user merely switches apps), letting us tell the
+    /// two apart: a device unlock already re-checks the face at the OS level, so we don't
+    /// stack a second in-app prompt on top of it.
+    private func observeDeviceLock() {
+        let nc = NotificationCenter.default
+        observers.append(nc.addObserver(
+            forName: UIApplication.protectedDataWillBecomeUnavailableNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.deviceLocked = true }
+        })
     }
 
     var biometryLabel: String { BiometricAuth.biometryLabel() }
@@ -68,6 +88,11 @@ final class LockState {
         guard isEnabled, BiometricAuth.isAvailable else { backgroundedAt = nil; return }
         switch phase {
         case .background:
+            // If the device itself locked (screen off), the user re-authenticates with their
+            // face at the OS level on return — re-locking the app too would double-prompt.
+            // Skip it. We still re-lock when they actively LEFT the app (app switcher / home /
+            // another app), which is the case that needs guarding.
+            if deviceLocked { break }
             // Immediate mode (timeout 0): re-lock the moment we leave the foreground, so
             // returning from the app switcher / home screen always requires a fresh face
             // check. Otherwise start the clock and decide on return.
@@ -77,6 +102,7 @@ final class LockState {
                 backgroundedAt = Date()
             }
         case .active:
+            deviceLocked = false   // consumed; the next background starts fresh
             if let since = backgroundedAt {
                 let elapsed = Date().timeIntervalSince(since)
                 if elapsed >= Double(timeoutMinutes) * 60 { isLocked = true }
