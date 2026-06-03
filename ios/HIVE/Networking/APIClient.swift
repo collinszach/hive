@@ -39,6 +39,7 @@ actor APIClient {
         guard let url = components?.url else { throw APIError.network }
 
         var request = URLRequest(url: url)
+        if let timeout = endpoint.timeout { request.timeoutInterval = timeout }
         request.httpMethod = endpoint.method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let body = endpoint.body {
@@ -98,6 +99,11 @@ actor APIClient {
             (data, response) = try await session.data(for: request)
         } catch let urlError as URLError where urlError.code == .cancelled {
             throw APIError.cancelled
+        } catch let urlError as URLError where urlError.code == .timedOut {
+            // The request exceeded its deadline — distinct from being offline. On the chat
+            // endpoint this means the backend's Ollama model is still grinding; surface an
+            // honest "took too long" so it doesn't masquerade as a connectivity problem.
+            throw APIError.timedOut
         } catch {
             throw APIError.network
         }

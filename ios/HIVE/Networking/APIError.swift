@@ -12,6 +12,7 @@ enum APIError: Error, Equatable {
     case server(status: Int)       // 5xx
     case decoding                  // response didn't match the expected shape
     case network                   // transport failure / offline
+    case timedOut                  // request exceeded its deadline (slow backend, not offline)
     case cancelled
 
     var userMessage: String {
@@ -23,6 +24,7 @@ enum APIError: Error, Equatable {
         case .server: return "Something went wrong on our end. Try again."
         case .decoding: return "We couldn't read the response. Try again."
         case .network: return "You appear to be offline. Check your connection."
+        case .timedOut: return "The assistant took too long to respond. Try again, or switch to a faster model."
         case .cancelled: return "Request cancelled."
         }
     }
@@ -30,7 +32,7 @@ enum APIError: Error, Equatable {
     /// Whether a retry button makes sense for this failure.
     var isRetryable: Bool {
         switch self {
-        case .server, .decoding, .network: return true
+        case .server, .decoding, .network, .timedOut: return true
         case .notAuthenticated, .unauthorized, .forbidden, .paymentRequired, .notFound, .cancelled: return false
         }
     }

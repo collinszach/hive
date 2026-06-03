@@ -18,6 +18,10 @@ struct Endpoint {
     var body: Data? = nil
     /// When false, the request is sent without the Bearer header (e.g. native auth).
     var requiresAuth: Bool = true
+    /// Optional per-request timeout (seconds). `nil` → URLSession's 60s default. Set higher
+    /// for slow endpoints like AI chat, where the backend itself waits up to 120s on a
+    /// local (Ollama) model — a 60s client ceiling would abandon a valid in-flight answer.
+    var timeout: TimeInterval? = nil
 
     static func get(_ path: String, query: [URLQueryItem] = []) -> Endpoint {
         Endpoint(method: .get, path: path, query: query)

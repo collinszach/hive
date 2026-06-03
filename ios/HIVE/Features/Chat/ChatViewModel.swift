@@ -47,8 +47,13 @@ final class ChatViewModel {
         // History excludes the just-added message; the backend takes it separately.
         let history = Array(messages.dropLast())
         do {
+            // The backend waits up to 120s on a local Ollama model; give the client a
+            // ceiling above that so a slow-but-valid answer isn't abandoned at URLSession's
+            // 60s default (which surfaced as a forever-spinner).
+            var endpoint = Endpoint.post("/api/chat")
+            endpoint.timeout = 130
             let resp = try await api.send(
-                .post("/api/chat"),
+                endpoint,
                 body: ChatRequest(message: text, conversationHistory: history, useClaude: useClaude),
                 as: ChatResponse.self
             )
