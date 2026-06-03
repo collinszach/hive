@@ -106,11 +106,54 @@ struct AccountDetailView: View {
                     emptyIcon: "chart.pie",
                     onRetry: { Task { await model.loadHoldings(snaptradeAccountId: sid) } }
                 ) { holdings in
-                    positionsList(holdings.positions)
+                    VStack(spacing: Theme.Spacing.sm) {
+                        holdingsSummary(holdings)
+                        positionsList(holdings.positions)
+                    }
                 } skeleton: {
                     SkeletonList(count: 4)
                 }
             }
+        }
+    }
+
+    /// Portfolio rise/fall summary: total market value and total unrealized gain/loss
+    /// (sum of per-position open P&L) with the percent return on cost basis.
+    @ViewBuilder private func holdingsSummary(_ holdings: HoldingsDTO) -> some View {
+        let totalPnl = holdings.positions.reduce(Decimal(0)) { $0 + ($1.openPnl ?? 0) }
+        let marketValue = holdings.totalValue
+            ?? holdings.positions.reduce(Decimal(0)) { $0 + ($1.marketValue ?? 0) }
+        let costBasis = marketValue - totalPnl
+        let pct: Double? = {
+            let cb = (costBasis as NSDecimalNumber).doubleValue
+            guard cb > 0 else { return nil }
+            return (totalPnl as NSDecimalNumber).doubleValue / cb * 100
+        }()
+        let gain = totalPnl >= 0
+        let tint = gain ? Theme.income : Theme.expense
+        let code = holdings.currency ?? account.currency
+        Card {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Market value").hiveLabelStyle()
+                    MoneyText(amount: marketValue, size: 22, weight: .semibold, currencyCode: code)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Total return").hiveLabelStyle()
+                    HStack(spacing: 4) {
+                        Image(systemName: gain ? "arrow.up.right" : "arrow.down.right")
+                            .font(.hiveMono(11, weight: .bold)).foregroundStyle(tint)
+                        MoneyText(amount: totalPnl, size: 15, weight: .semibold, signed: true, currencyCode: code)
+                    }
+                    if let pct {
+                        Text("\(gain ? "+" : "")\(String(format: "%.1f", pct))%")
+                            .font(.hiveMono(12)).foregroundStyle(tint)
+                    }
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Portfolio value \(money(marketValue, code)), total return \(money(totalPnl, code))")
         }
     }
 
