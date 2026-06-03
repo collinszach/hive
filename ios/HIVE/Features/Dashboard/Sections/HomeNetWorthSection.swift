@@ -40,7 +40,8 @@ struct HomeNetWorthSection: View {
         }()
 
         return Button(action: {
-            // TODO: route to Insights net-worth detail
+            Haptics.selection()
+            NotificationRouter.shared.pending = .insights
         }) {
             Card {
                 HStack(alignment: .center, spacing: Theme.Spacing.lg) {

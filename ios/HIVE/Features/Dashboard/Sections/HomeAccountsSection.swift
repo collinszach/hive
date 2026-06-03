@@ -68,35 +68,49 @@ struct HomeAccountsSection: View {
             }
             .padding(.leading, Theme.Spacing.xs)
             GroupedCard(data: items) { account in
-                accountRow(account, isLiability: bucket.isLiability)
+                accountRow(account, isLiability: bucket.isLiability, isCard: bucket == .cards)
             }
         }
     }
 
-    private func accountRow(_ account: AccountSummary, isLiability: Bool) -> some View {
-        HStack {
-            if account.cardSlug != nil {
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(Theme.honey.opacity(0.9))
-                    .frame(width: 4, height: 26)
-                    .accessibilityHidden(true)
-                    .padding(.trailing, Theme.Spacing.xs)
+    private func accountRow(_ account: AccountSummary, isLiability: Bool, isCard: Bool) -> some View {
+        // Tapping an account jumps to the Money tab pre-filtered to it.
+        Button {
+            Haptics.selection()
+            NotificationRouter.shared.openTransactions(accountId: account.id)
+        } label: {
+            HStack {
+                // Honey accent on every card in the Cards group (not just ones with a
+                // matched card_slug — one card may not have a slug yet).
+                if isCard {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(Theme.honey.opacity(0.9))
+                        .frame(width: 4, height: 26)
+                        .accessibilityHidden(true)
+                        .padding(.trailing, Theme.Spacing.xs)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(account.name)
+                        .font(.hiveBody(15, weight: .medium))
+                        .foregroundStyle(Theme.inkPrimary)
+                    Text(account.type.capitalized)
+                        .font(.hiveBody(12))
+                        .foregroundStyle(Theme.inkSecondary)
+                }
+                Spacer()
+                if let balance = account.currentBalance {
+                    MoneyText(amount: balance, size: 16)
+                        .foregroundStyle(isLiability ? Theme.expense : Theme.inkPrimary)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.inkTertiary)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(account.name)
-                    .font(.hiveBody(15, weight: .medium))
-                    .foregroundStyle(Theme.inkPrimary)
-                Text(account.type.capitalized)
-                    .font(.hiveBody(12))
-                    .foregroundStyle(Theme.inkSecondary)
-            }
-            Spacer()
-            if let balance = account.currentBalance {
-                MoneyText(amount: balance, size: 16)
-                    .foregroundStyle(isLiability ? Theme.expense : Theme.inkPrimary)
-            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+        .accessibilityHint("View transactions for \(account.name)")
     }
 
     // MARK: Model

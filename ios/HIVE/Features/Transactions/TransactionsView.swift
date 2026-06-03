@@ -6,6 +6,7 @@ import SwiftUI
 struct TransactionsView: View {
     @Environment(AppState.self) private var app
     @State private var model = TransactionsViewModel()
+    @State private var router = NotificationRouter.shared
     @State private var selected: TransactionDTO?
     @State private var showFilters = false
     @State private var showOwed = false
@@ -42,6 +43,7 @@ struct TransactionsView: View {
         .onChange(of: model.searchText) { _, _ in model.reloadDebounced() }
         .onChange(of: model.selectedCategory) { _, _ in model.reloadDebounced() }
         .task { if model.state.value == nil { await model.load() } }
+        .task(id: router.accountFilter) { await applyPendingAccountFilter() }
         .onChange(of: isUnauthorized) { _, expired in if expired { app.handleSessionExpired() } }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -97,6 +99,17 @@ struct TransactionsView: View {
         if case .failed(.unauthorized) = model.state { return true }
         if case .failed(.notAuthenticated) = model.state { return true }
         return false
+    }
+
+    /// Apply an account filter handed over from another screen (e.g. tapping an account on
+    /// Home), then clear it so it fires once. Loads the filter's account list so the active
+    /// filter chip resolves to a name.
+    private func applyPendingAccountFilter() async {
+        guard let acct = router.accountFilter else { return }
+        router.accountFilter = nil
+        model.selectedAccountId = acct
+        await model.loadAccountsIfNeeded()
+        await model.load()
     }
 
     @ViewBuilder

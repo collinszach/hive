@@ -13,7 +13,17 @@ final class NotificationRouter {
     /// Set when a notification is tapped; consumed (set back to nil) by MainTabView.
     var pending: MainTabView.Tab?
 
+    /// Optional account id the Money tab should pre-filter to. Set alongside `pending = .money`
+    /// (e.g. tapping an account on Home); consumed and cleared by `TransactionsView`.
+    var accountFilter: String?
+
     private init() {}
+
+    /// Jump to the Money tab pre-filtered to one account (deep-link from Home cards).
+    func openTransactions(accountId: String) {
+        accountFilter = accountId
+        pending = .money
+    }
 
     /// Map a backend `route` payload string to a tab. Unknown routes are ignored.
     func handle(route: String?) {
