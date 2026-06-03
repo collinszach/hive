@@ -59,6 +59,23 @@ class HoldingsOut(BaseModel):
     orders: list[OrderOut]
 
 
+class PortfolioPositionOut(PositionOut):
+    """A position merged across all accounts, with its portfolio weight."""
+    weight_pct: float
+
+
+class PortfolioOut(BaseModel):
+    """Aggregated view across every connected investment account."""
+    total_value: float
+    total_cost_basis: float
+    total_unrealized_pnl: float
+    total_return_pct: Optional[float]
+    currency: str
+    account_count: int
+    positions: list[PortfolioPositionOut]
+    recent_orders: list[OrderOut]
+
+
 @router.post("/connect", response_model=ConnectResponse)
 async def snaptrade_connect(
     request: Request,
@@ -199,4 +216,93 @@ async def snaptrade_holdings(
         currency=holdings["currency"],
         positions=[PositionOut(**p) for p in holdings["positions"] if p],
         orders=[OrderOut(**o) for o in holdings["orders"] if o],
+    )
+
+
+@router.get("/portfolio", response_model=PortfolioOut)
+async def snaptrade_portfolio(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_snaptrade),
+) -> PortfolioOut:
+    """Aggregate holdings across ALL of the user's connected investment accounts.
+
+    Positions are merged by symbol (units, market value, and unrealized P&L summed); cost
+    basis is derived as market value − unrealized P&L. One call backs the Investments screen
+    and the Home pulse, so the client doesn't fan out per account.
+    """
+    connector = get_connector()
+    if connector is None:
+        raise HTTPException(status_code=503, detail="SnapTrade not configured")
+    if not user.snaptrade_user_id:
+        raise HTTPException(status_code=400, detail="SnapTrade not connected for this user")
+
+    accounts = (await db.execute(
+        select(Account).where(
+            Account.user_id == user.id,
+            Account.snaptrade_account_id.isnot(None),
+            Account.is_active == True,  # noqa: E712
+        )
+    )).scalars().all()
+
+    merged: dict[str, dict] = {}
+    orders_all: list[dict] = []
+    currency = "USD"
+
+    for acct in accounts:
+        try:
+            h = connector.get_holdings(
+                snaptrade_user_id=user.snaptrade_user_id,
+                user_secret=user.snaptrade_user_secret,
+                account_id=acct.snaptrade_account_id,
+            )
+        except Exception as exc:
+            logger.warning("Portfolio: holdings failed for %s: %s", acct.snaptrade_account_id, exc)
+            continue
+        currency = h.get("currency") or currency
+        for p in h.get("positions") or []:
+            if not p:
+                continue
+            key = p.get("symbol") or p.get("description") or "—"
+            m = merged.get(key)
+            if m is None:
+                m = {
+                    "symbol": p.get("symbol"), "description": p.get("description"),
+                    "units": 0.0, "price": p.get("price"), "market_value": 0.0,
+                    "open_pnl": 0.0, "avg_price": p.get("avg_price"),
+                    "currency": p.get("currency"), "type": p.get("type"),
+                }
+                merged[key] = m
+            m["units"] = (m["units"] or 0) + (p.get("units") or 0)
+            m["market_value"] = (m["market_value"] or 0) + (p.get("market_value") or 0)
+            m["open_pnl"] = (m["open_pnl"] or 0) + (p.get("open_pnl") or 0)
+        for o in h.get("orders") or []:
+            if o:
+                orders_all.append(o)
+
+    total_value = round(sum(m["market_value"] for m in merged.values()), 2)
+    total_pnl = round(sum(m["open_pnl"] for m in merged.values()), 2)
+    total_cost = round(total_value - total_pnl, 2)
+    total_return_pct = round(total_pnl / total_cost * 100, 2) if total_cost > 0 else None
+
+    positions = [
+        PortfolioPositionOut(
+            **m,
+            weight_pct=round(m["market_value"] / total_value * 100, 2) if total_value > 0 else 0.0,
+        )
+        for m in merged.values()
+    ]
+    positions.sort(key=lambda p: p.market_value or 0, reverse=True)
+
+    orders_all.sort(key=lambda o: o.get("placed_at") or "", reverse=True)
+    recent_orders = [OrderOut(**o) for o in orders_all[:10]]
+
+    return PortfolioOut(
+        total_value=total_value,
+        total_cost_basis=total_cost,
+        total_unrealized_pnl=total_pnl,
+        total_return_pct=total_return_pct,
+        currency=currency,
+        account_count=len(accounts),
+        positions=positions,
+        recent_orders=recent_orders,
     )

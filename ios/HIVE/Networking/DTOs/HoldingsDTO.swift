@@ -21,6 +21,36 @@ struct HoldingsDTO: Decodable {
     }
 }
 
+/// Aggregated holdings across every connected investment account.
+/// Mirrors `PortfolioOut` from `backend/app/api/snaptrade.py`.
+struct PortfolioDTO: Decodable {
+    let totalValue: Decimal
+    let totalCostBasis: Decimal
+    let totalUnrealizedPnl: Decimal
+    let totalReturnPct: Double?
+    let currency: String
+    let accountCount: Int
+    let positions: [PortfolioPositionDTO]
+    let recentOrders: [OrderDTO]
+}
+
+/// One position merged across accounts, with its portfolio weight. Mirrors `PortfolioPositionOut`.
+struct PortfolioPositionDTO: Decodable, Identifiable {
+    let symbol: String?
+    let description: String?
+    let units: Decimal?
+    let price: Decimal?
+    let marketValue: Decimal?
+    let openPnl: Decimal?
+    let avgPrice: Decimal?
+    let currency: String?
+    let type: String?
+    let weightPct: Double
+
+    var id: String { symbol ?? description ?? UUID().uuidString }
+    var displaySymbol: String { symbol ?? description ?? "—" }
+}
+
 /// One open position. Mirrors `PositionOut`.
 struct PositionDTO: Decodable, Identifiable {
     let symbol: String?

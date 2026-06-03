@@ -31,9 +31,10 @@ struct DashboardView: View {
                 HomeAttentionSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(1)
                 HomeGlanceSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(2)
                 HomeNetWorthSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(3)
-                HomeCategoriesSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(4)
-                HomeAccountsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(5)
-                HomeGoalsPointsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(6)
+                HomeInvestmentsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(4)
+                HomeCategoriesSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(5)
+                HomeAccountsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(6)
+                HomeGoalsPointsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(7)
             }
             .padding(.top, Theme.Spacing.sm)
         }
