@@ -549,6 +549,64 @@ export interface SafeToSpend {
   days_remaining: number;
 }
 
+export interface PortfolioPosition {
+  symbol: string | null;
+  description: string | null;
+  units: number | null;
+  price: number | null;
+  market_value: number | null;
+  open_pnl: number | null;
+  avg_price: number | null;
+  currency: string | null;
+  type: string | null;
+  weight_pct: number;
+}
+
+export interface PortfolioOrder {
+  action: string | null;
+  status: string | null;
+  symbol: string | null;
+  description: string | null;
+  quantity: number | null;
+  filled_quantity: number | null;
+  price: number | null;
+  order_type: string | null;
+  placed_at: string | null;
+  executed_at: string | null;
+  currency: string | null;
+}
+
+export interface Portfolio {
+  total_value: number;
+  total_cost_basis: number;
+  total_unrealized_pnl: number;
+  total_return_pct: number | null;
+  currency: string;
+  account_count: number;
+  positions: PortfolioPosition[];
+  recent_orders: PortfolioOrder[];
+}
+
+export interface InvestAdvisorRisk {
+  title: string;
+  detail: string;
+  severity: string;
+}
+
+export interface InvestAdvisorSuggestion {
+  assumption: string;
+  current?: string | null;
+  suggested?: string | null;
+  rationale: string;
+}
+
+export interface PortfolioAdvisor {
+  summary: string;
+  risks: InvestAdvisorRisk[];
+  suggestions: InvestAdvisorSuggestion[];
+  model_used: string;
+}
+
 export interface HealthFactor {
   name: string;
   score: number;
@@ -940,6 +998,8 @@ export const api = {
   snaptrade: {
     connect: () => post<{ redirect_url: string }>("/api/snaptrade/connect", {}),
     callback: () => get<{ accounts_added: number }>("/api/snaptrade/callback"),
+    portfolio: () => get<Portfolio>("/api/snaptrade/portfolio"),
+    portfolioAdvisor: () => post<PortfolioAdvisor>("/api/snaptrade/portfolio/advisor", {}),
   },
   forecast: {
     category: (category: string, periods = 30) =>
