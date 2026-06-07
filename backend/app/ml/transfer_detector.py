@@ -19,7 +19,11 @@ _BANK_TRANSFER_PATTERNS = re.compile(
     r"withdrawal to savings|deposit from (?:checking|savings|emergency)|"
     r"autopilot transfer|recurring transfer|"
     r"savings transfer|transfer to savings|transfer from savings|"
-    r"transfer to checking|transfer from checking",
+    r"transfer to checking|transfer from checking|"
+    # CD maturity / renewal — principal moving between the user's own accounts (both the
+    # purchase and the payout are internal transfers, not spend or income).
+    r"cd maturity|matured cd|cd redemption|cd renewal|cd rollover|"
+    r"certificate of deposit|share certificate|time deposit",
     re.IGNORECASE,
 )
 

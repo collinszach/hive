@@ -9,7 +9,12 @@ from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
+from app.models.account import Account
 from app.models.transaction import Transaction
+
+# Balance-only account types: deposits sitting here (interest, transfers in, a matured CD)
+# are not take-home income, so income analytics exclude them.
+_BALANCE_ONLY_SUBTYPES = ("savings", "cd", "money market")
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +54,13 @@ async def income_summary(
         Transaction.category == "Income",
         Transaction.is_excluded == False,  # noqa: E712
         Transaction.pending == False,  # noqa: E712
+        # Exclude deposits into balance-only accounts (savings/CD/money-market) — a matured
+        # CD or transfer landing there isn't take-home income. Mirrors safe-to-spend.
+        Transaction.account_id.in_(
+            select(Account.id).where(
+                Account.subtype.is_(None) | Account.subtype.notin_(_BALANCE_ONLY_SUBTYPES)
+            )
+        ),
     ]
 
     # Total income
