@@ -31,6 +31,7 @@ struct InvestmentsView: View {
     private func content(_ p: PortfolioDTO) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
             hero(p).hiveEntrance(0)
+            concentrationCallout(p)
             if !p.positions.isEmpty {
                 allocation(p).hiveEntrance(1)
                 positionsSection(p).hiveEntrance(2)
@@ -170,6 +171,35 @@ struct InvestmentsView: View {
             .stroke(Theme.borderDefault, lineWidth: 1))
         .hiveCardShadow()
         .accessibilityElement(children: .combine)
+    }
+
+    // MARK: Concentration insight (I5)
+
+    /// Always-on flag (no AI call) when a single holding dominates the portfolio — the most
+    /// common diversification risk. Threshold 30% of total value.
+    @ViewBuilder private func concentrationCallout(_ p: PortfolioDTO) -> some View {
+        if let top = p.positions.first, top.weightPct >= 30 {
+            Card {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 18, weight: .semibold)).foregroundStyle(Theme.warning)
+                        .frame(width: 40, height: 40)
+                        .background(Theme.warning.opacity(0.14),
+                                    in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Concentrated position")
+                            .font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                        Text("\(top.displaySymbol) is \(Int(top.weightPct.rounded()))% of your portfolio — a single holding this large drives most of your risk.")
+                            .font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+            }
+        }
     }
 
     // MARK: Allocation (top weights)
