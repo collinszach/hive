@@ -85,29 +85,29 @@ final class LockState {
     /// React to scene-phase changes. Records background time and, on return to active,
     /// re-locks if the timeout has elapsed. Auto-prompting is owned by `LockScreenView`.
     func handleScenePhase(_ phase: ScenePhase) {
-        guard isEnabled, BiometricAuth.isAvailable else { backgroundedAt = nil; return }
+        guard isEnabled, BiometricAuth.isAvailable else { backgroundedAt = nil; deviceLocked = false; return }
         switch phase {
         case .background:
-            // If the device itself locked (screen off), the user re-authenticates with their
-            // face at the OS level on return — re-locking the app too would double-prompt.
-            // Skip it. We still re-lock when they actively LEFT the app (app switcher / home /
-            // another app), which is the case that needs guarding.
-            if deviceLocked { break }
-            // Immediate mode (timeout 0): re-lock the moment we leave the foreground, so
-            // returning from the app switcher / home screen always requires a fresh face
-            // check. Otherwise start the clock and decide on return.
-            if timeoutMinutes == 0 {
-                isLocked = true
-            } else {
-                backgroundedAt = Date()
-            }
+            // Don't lock here. `PrivacyCover` (RootView) already hides content while the app is
+            // inactive, so the app-switcher snapshot is safe without flipping the lock — which
+            // is what used to fire a Face ID prompt the instant the user came back. We only
+            // record that we fully left the app; the lock decision happens on return.
+            if backgroundedAt == nil { backgroundedAt = Date() }
         case .active:
-            deviceLocked = false   // consumed; the next background starts fresh
-            if let since = backgroundedAt {
-                let elapsed = Date().timeIntervalSince(since)
-                if elapsed >= Double(timeoutMinutes) * 60 { isLocked = true }
+            defer { backgroundedAt = nil; deviceLocked = false }
+            // Returning from a DEVICE lock (screen off): the OS already re-checked the face to
+            // get back in — a second in-app prompt is redundant, so never lock in this case.
+            // `deviceLocked` is set by `protectedDataWillBecomeUnavailable` during the lock, so
+            // it's reliably true here regardless of scene-phase ordering.
+            if deviceLocked { return }
+            // Otherwise re-lock only if we actually backgrounded (left to the app switcher /
+            // home / another app) — a transient `.inactive` (notification pull, control center)
+            // never sets `backgroundedAt`, so it won't trigger a prompt.
+            guard let since = backgroundedAt else { return }
+            let elapsed = Date().timeIntervalSince(since)
+            if timeoutMinutes == 0 || elapsed >= Double(timeoutMinutes) * 60 {
+                isLocked = true
             }
-            backgroundedAt = nil
         default:
             break
         }
