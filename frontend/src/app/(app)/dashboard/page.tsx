@@ -748,7 +748,7 @@ export default function Dashboard() {
                       {group.items.map((a) => (
                         <Link
                           key={a.id}
-                          href={`/transactions?account_id=${a.id}&search_all=true`}
+                          href={`/transactions?account_id=${a.id}&search_all=true&include_excluded=true`}
                           title={`View ${a.name} transactions`}
                           className="flex items-center justify-between gap-2 no-underline rounded-md -mx-1 px-1 py-0.5 hover:bg-white/[0.03] transition-colors group"
                         >
