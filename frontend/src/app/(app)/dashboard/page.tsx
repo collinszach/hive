@@ -746,9 +746,14 @@ export default function Dashboard() {
                     <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-ink-ghost mb-1.5">{group.label}</p>
                     <div className="space-y-1.5">
                       {group.items.map((a) => (
-                        <div key={a.id} className="flex items-center justify-between gap-2">
+                        <Link
+                          key={a.id}
+                          href={`/transactions?account_id=${a.id}&search_all=true`}
+                          title={`View ${a.name} transactions`}
+                          className="flex items-center justify-between gap-2 no-underline rounded-md -mx-1 px-1 py-0.5 hover:bg-white/[0.03] transition-colors group"
+                        >
                           <div className="min-w-0 flex-1">
-                            <p className="text-[12px] text-ink-secondary truncate">{a.name}</p>
+                            <p className="text-[12px] text-ink-secondary truncate group-hover:text-honey transition-colors">{a.name}</p>
                             {a.institution && (
                               <p className="text-[10px] text-ink-ghost truncate">{a.institution}{a.subtype ? ` · ${a.subtype}` : ""}</p>
                             )}
@@ -756,7 +761,7 @@ export default function Dashboard() {
                           <span className="text-[12px] font-mono tabular-nums text-ink-primary shrink-0">
                             {fmt(a.current_balance ?? 0)}
                           </span>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   </div>
