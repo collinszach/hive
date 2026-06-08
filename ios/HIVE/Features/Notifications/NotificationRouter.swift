@@ -17,11 +17,27 @@ final class NotificationRouter {
     /// (e.g. tapping an account on Home); consumed and cleared by `TransactionsView`.
     var accountFilter: String?
 
+    /// Whether the pending account filter should also surface excluded transactions
+    /// (transfers, autopay, Venmo/Zelle, CD moves). Cash/savings/investment accounts are
+    /// mostly transfers — without this, "view account" lands on an empty list because the
+    /// transactions screen hides excluded rows by default. Credit cards don't need it: real
+    /// spend dominates there. Consumed and cleared alongside `accountFilter`.
+    var accountFilterIncludeExcluded: Bool = false
+
+    /// Optional category the Money tab should pre-filter to. Set alongside `pending = .money`
+    /// (e.g. tapping a category bar on Home); consumed and cleared by `TransactionsView`.
+    var categoryFilter: String?
+
     private init() {}
 
     /// Jump to the Money tab pre-filtered to one account (deep-link from Home cards).
-    func openTransactions(accountId: String) {
+    /// Pass `includeExcluded: true` for cash/savings/investment accounts so transfers and
+    /// autopay — the bulk of their activity — aren't hidden by the default exclusion filter.
+    /// Pass `category:` instead of `accountId:` to filter by spending category.
+    func openTransactions(accountId: String? = nil, includeExcluded: Bool = false, category: String? = nil) {
         accountFilter = accountId
+        accountFilterIncludeExcluded = includeExcluded
+        categoryFilter = category
         pending = .money
     }
 

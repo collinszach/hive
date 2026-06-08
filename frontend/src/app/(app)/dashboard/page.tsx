@@ -121,7 +121,7 @@ function SafeToSpendCard({ data }: { data: SafeToSpend }) {
           onClick={(e) => e.stopPropagation()}
         >
           {[
-            { label: "Est. monthly income (3-mo avg)", value: data.breakdown.monthly_income, sign: "+" },
+            { label: "Est. base monthly income",        value: data.breakdown.monthly_income, sign: "+" },
             { label: "Spent this month",               value: data.breakdown.spent_this_month, sign: "−" },
             { label: "Upcoming bills this month",      value: data.breakdown.upcoming_bills,  sign: "−" },
             { label: "Goal savings (monthly share)",   value: data.breakdown.goal_savings,    sign: "−" },
@@ -446,7 +446,7 @@ export default function Dashboard() {
             value: safeToSpend ? fmt(safeToSpend.breakdown.monthly_income) : "—",
             href:  "/income",
             color: safeToSpend && safeToSpend.breakdown.monthly_income > 0 ? "var(--color-income)" : undefined,
-            sub:   { text: "3-month avg", color: "var(--color-ink-tertiary)" },
+            sub:   { text: "base pay est.", color: "var(--color-ink-tertiary)" },
           },
           {
             label: "Saved",

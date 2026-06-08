@@ -77,7 +77,7 @@ struct HomeAccountsSection: View {
         // Tapping an account jumps to the Money tab pre-filtered to it.
         Button {
             Haptics.selection()
-            NotificationRouter.shared.openTransactions(accountId: account.id)
+            NotificationRouter.shared.openTransactions(accountId: account.id, includeExcluded: !isCard)
         } label: {
             HStack {
                 // Honey accent on every card in the Cards group (not just ones with a

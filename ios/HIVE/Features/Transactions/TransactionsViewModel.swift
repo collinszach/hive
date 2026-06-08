@@ -15,6 +15,9 @@ final class TransactionsViewModel {
     var selectedAccountId: String? = nil
     var includePending: Bool = false
     var includeExcluded: Bool = false
+    /// When true, bypasses the month filter and returns all-time results for the active filters.
+    /// Set when navigating from a category/account deep-link so the full history is visible.
+    var searchAllTime: Bool = false
 
     /// Accounts for the filter picker (loaded lazily the first time filters open).
     private(set) var accounts: [AccountDTO] = []
@@ -110,6 +113,8 @@ final class TransactionsViewModel {
         if !trimmed.isEmpty {
             // Searching spans all time, not just the selected month.
             query.append(.init(name: "search", value: trimmed))
+            query.append(.init(name: "search_all", value: "true"))
+        } else if searchAllTime {
             query.append(.init(name: "search_all", value: "true"))
         } else {
             query.append(.init(name: "month", value: month))

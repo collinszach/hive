@@ -44,6 +44,7 @@ struct TransactionsView: View {
         .onChange(of: model.selectedCategory) { _, _ in model.reloadDebounced() }
         .task { if model.state.value == nil { await model.load() } }
         .task(id: router.accountFilter) { await applyPendingAccountFilter() }
+        .task(id: router.categoryFilter) { await applyPendingCategoryFilter() }
         .onChange(of: isUnauthorized) { _, expired in if expired { app.handleSessionExpired() } }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -108,7 +109,21 @@ struct TransactionsView: View {
         guard let acct = router.accountFilter else { return }
         router.accountFilter = nil
         model.selectedAccountId = acct
+        if router.accountFilterIncludeExcluded {
+            model.includeExcluded = true
+            router.accountFilterIncludeExcluded = false
+        }
         await model.loadAccountsIfNeeded()
+        await model.load()
+    }
+
+    /// Apply a category filter handed over from another screen (e.g. tapping a category bar
+    /// on Home). Switches to all-time search so you see the full history, not just this month.
+    private func applyPendingCategoryFilter() async {
+        guard let cat = router.categoryFilter else { return }
+        router.categoryFilter = nil
+        model.selectedCategory = cat
+        model.searchAllTime = true   // show all time, not just current month
         await model.load()
     }
 

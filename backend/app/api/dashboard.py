@@ -167,11 +167,11 @@ async def safe_to_spend(db: AsyncSession = Depends(get_db), user: User = Depends
     # Include today; floor at 1 so daily allowance calculation never divides by zero
     days_remaining = max(1, (month_end - today).days)
 
-    # 1. Base monthly income — the user's *usual* pay, robust to bonuses.
-    #    We sum "Income" deposits per calendar month over the last 12 complete months,
-    #    then take the MEDIAN of those monthly totals. The median tracks recurring base
-    #    pay and ignores bonus spikes (a high bonus month is an outlier the median skips),
-    #    so safe-to-spend isn't inflated by a one-off bonus in the last month or two.
+    # 1. Base monthly income — the user's *usual* base pay, robust to bonuses.
+    #    Strategy: collect 12 complete months, sort ascending, drop the top 25%
+    #    (bonus/outlier months), then take the median of the remaining lower-75%.
+    #    Example: 12 months, top 3 dropped → median of 9 "normal" months.
+    #    This ensures a fat bonus month (or several) never inflates safe-to-spend.
     cutoff_month = month_start.month - 12
     cutoff_year = month_start.year
     while cutoff_month <= 0:
@@ -200,8 +200,14 @@ async def safe_to_spend(db: AsyncSession = Depends(get_db), user: User = Depends
         """),
         {"cutoff": twelve_months_ago, "month_start": month_start, "uid": user.id},
     )
-    monthly_totals = [float(r.total) for r in income_rows.all() if r.total]
-    monthly_income = float(median(monthly_totals)) if monthly_totals else 0.0
+    monthly_totals = sorted(float(r.total) for r in income_rows.all() if r.total)
+    if monthly_totals:
+        # Drop the top 25% of months (round up so even 1-3 month windows drop the top one)
+        n_drop = max(1, len(monthly_totals) // 4)
+        base_months = monthly_totals[:-n_drop]  # lower 75%
+        monthly_income = float(median(base_months)) if base_months else float(median(monthly_totals))
+    else:
+        monthly_income = 0.0
 
     # 2. Spent this month (expenses only, non-excluded, non-pending, credit cards only)
     spent_row = await db.execute(

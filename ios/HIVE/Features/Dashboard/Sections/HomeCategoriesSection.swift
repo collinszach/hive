@@ -28,41 +28,55 @@ struct HomeCategoriesSection: View {
     private func card(_ categories: [CategorySpend]) -> some View {
         Card {
             VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                Text("Top categories").hiveLabelStyle()
-                Chart(categories) { item in
-                    BarMark(
-                        x: .value("Amount", (item.total as NSDecimalNumber).doubleValue),
-                        y: .value("Category", item.category)
-                    )
-                    .foregroundStyle(Theme.blue)
-                    .cornerRadius(4)
+                HStack {
+                    Text("Top categories").hiveLabelStyle()
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Theme.inkGhost)
                 }
-                .chartXAxis {
-                    AxisMarks(preset: .aligned) { value in
-                        AxisValueLabel {
-                            if let amount = value.as(Double.self) {
-                                Text(Decimal(amount).formatted(
-                                    .currency(code: "USD").precision(.fractionLength(0))
-                                ))
-                                .font(.hiveMono(10))
-                                .foregroundStyle(Theme.inkTertiary)
-                            }
-                        }
+                VStack(spacing: 0) {
+                    ForEach(categories) { item in
+                        categoryRow(item, max: (categories.first?.total ?? 1) as Decimal)
                     }
                 }
-                .chartYAxis {
-                    AxisMarks(preset: .aligned, position: .leading) { _ in
-                        AxisValueLabel().font(.hiveBody(11)).foregroundStyle(Theme.inkSecondary)
-                    }
-                }
-                .frame(height: CGFloat(categories.count) * 32 + 24)
-                .accessibilityElement()
-                .accessibilityLabel("Top spending categories")
-                .accessibilityValue(categories.map {
-                    "\($0.category) \($0.total.formatted(.currency(code: "USD").precision(.fractionLength(0))))"
-                }.joined(separator: ", "))
             }
         }
+    }
+
+    private func categoryRow(_ item: CategorySpend, max: Decimal) -> some View {
+        let router = NotificationRouter.shared
+        return Button {
+            Haptics.selection()
+            router.openTransactions(accountId: nil, category: item.category)
+        } label: {
+            HStack(spacing: Theme.Spacing.sm) {
+                Text(item.category)
+                    .font(.hiveBody(12))
+                    .foregroundStyle(Theme.inkSecondary)
+                    .frame(width: 110, alignment: .leading)
+                    .lineLimit(1)
+                GeometryReader { geo in
+                    let pct = max > 0 ? CGFloat(truncating: (item.total / max) as NSDecimalNumber) : 0
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.05)).frame(height: 4)
+                        Capsule()
+                            .fill(Theme.blue.opacity(0.7))
+                            .frame(width: geo.size.width * pct, height: 4)
+                    }
+                }
+                .frame(height: 4)
+                MoneyText(amount: item.total, size: 11, weight: .regular)
+                    .foregroundStyle(Theme.inkTertiary)
+                    .frame(width: 64, alignment: .trailing)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Theme.inkGhost.opacity(0.5))
+            }
+            .padding(.vertical, 7)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(item.category), \(item.total.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
     }
 
     @MainActor @Observable
