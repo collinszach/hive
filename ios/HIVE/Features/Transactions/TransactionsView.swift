@@ -41,19 +41,12 @@ struct TransactionsView: View {
         }
         .searchable(text: $model.searchText, prompt: "Search merchants")
         .onChange(of: model.searchText) { _, _ in model.reloadDebounced() }
-        .onChange(of: model.selectedCategory) { _, _ in model.reloadDebounced() }
-        .task {
-            // Skip the initial unfiltered load if a deep-link filter is already waiting —
-            // applyPendingAccountFilter / applyPendingCategoryFilter will do the first load
-            // with the correct filters applied. Without this guard the two concurrent tasks
-            // race, and the unfiltered result overwrites the filtered one.
-            let hasPendingFilter = router.accountFilter != nil || router.categoryFilter != nil
-            if model.state.value == nil && !hasPendingFilter {
-                await model.load()
-            }
-        }
-        .task(id: router.accountFilter) { await applyPendingAccountFilter() }
-        .task(id: router.categoryFilter) { await applyPendingCategoryFilter() }
+        // Note: selectedCategory onChange is intentionally omitted here — category changes
+        // that come from the filter sheet go through reloadDebounced() directly; deep-link
+        // category changes are handled by applyDeepLinkFilters below.
+        .onAppear { applyDeepLinkFilters() }
+        .onChange(of: router.accountFilter)  { _, _ in applyDeepLinkFilters() }
+        .onChange(of: router.categoryFilter) { _, _ in applyDeepLinkFilters() }
         .onChange(of: isUnauthorized) { _, expired in if expired { app.handleSessionExpired() } }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -111,30 +104,46 @@ struct TransactionsView: View {
         return false
     }
 
-    /// Apply an account filter handed over from another screen (e.g. tapping an account on
-    /// Home), then clear it so it fires once. Loads the filter's account list so the active
-    /// filter chip resolves to a name.
-    private func applyPendingAccountFilter() async {
-        guard let acct = router.accountFilter else { return }
-        router.accountFilter = nil
-        model.selectedAccountId = acct
-        if router.accountFilterIncludeExcluded {
-            model.includeExcluded = true
-            router.accountFilterIncludeExcluded = false
+    /// Consume any pending deep-link filters from NotificationRouter and trigger a load.
+    ///
+    /// Called from `onAppear` (view just mounted with a filter already set) and from
+    /// `onChange(of: router.accountFilter/categoryFilter)` (filter set while view is live).
+    /// Using synchronous handlers + a spawned Task avoids the `.task(id:)` self-cancellation
+    /// bug: `.task(id:)` cancels and restarts whenever its id changes, so setting
+    /// `router.accountFilter = nil` inside the task body killed the load before it fired.
+    private func applyDeepLinkFilters() {
+        let hasAccount  = router.accountFilter  != nil
+        let hasCategory = router.categoryFilter != nil
+        guard hasAccount || hasCategory else {
+            // No pending filter — do the initial load if the view has never loaded.
+            if model.state.value == nil {
+                Task { await model.load() }
+            }
+            return
         }
-        await model.loadAccountsIfNeeded()
-        await model.load()
-    }
 
-    /// Apply a category filter handed over from another screen (e.g. tapping a category bar
-    /// on Home). Switches to all-time search so you see the full history, not just this month.
-    private func applyPendingCategoryFilter() async {
-        guard let cat = router.categoryFilter else { return }
-        router.categoryFilter = nil
-        model.searchAllTime = true   // show all time, not just current month
-        model.selectedCategory = cat // triggers onChange → reloadDebounced; we cancel it below
-        model.cancelPendingReload()  // our direct load supersedes the debounced one
-        await model.load()
+        // Consume filters synchronously so subsequent onChange/onAppear calls are no-ops.
+        if let acct = router.accountFilter {
+            router.accountFilter = nil
+            model.selectedAccountId = acct
+            if router.accountFilterIncludeExcluded {
+                model.includeExcluded = true
+                router.accountFilterIncludeExcluded = false
+            }
+        }
+        if let cat = router.categoryFilter {
+            router.categoryFilter = nil
+            model.searchAllTime = true
+            model.selectedCategory = cat
+        }
+
+        // Cancel any debounced reload triggered by the property changes above,
+        // then do one authoritative load with the correct filters.
+        model.cancelPendingReload()
+        Task {
+            await model.loadAccountsIfNeeded()
+            await model.load()
+        }
     }
 
     @ViewBuilder
