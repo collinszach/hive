@@ -64,6 +64,12 @@ final class TransactionsViewModel {
         }
     }
 
+    /// Cancel any pending debounced reload (e.g. before applying a deep-link filter directly).
+    func cancelPendingReload() {
+        loadTask?.cancel()
+        loadTask = nil
+    }
+
     func clearFilters() {
         selectedAccountId = nil
         includePending = false

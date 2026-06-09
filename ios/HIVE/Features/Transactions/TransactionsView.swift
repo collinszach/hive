@@ -42,7 +42,16 @@ struct TransactionsView: View {
         .searchable(text: $model.searchText, prompt: "Search merchants")
         .onChange(of: model.searchText) { _, _ in model.reloadDebounced() }
         .onChange(of: model.selectedCategory) { _, _ in model.reloadDebounced() }
-        .task { if model.state.value == nil { await model.load() } }
+        .task {
+            // Skip the initial unfiltered load if a deep-link filter is already waiting —
+            // applyPendingAccountFilter / applyPendingCategoryFilter will do the first load
+            // with the correct filters applied. Without this guard the two concurrent tasks
+            // race, and the unfiltered result overwrites the filtered one.
+            let hasPendingFilter = router.accountFilter != nil || router.categoryFilter != nil
+            if model.state.value == nil && !hasPendingFilter {
+                await model.load()
+            }
+        }
         .task(id: router.accountFilter) { await applyPendingAccountFilter() }
         .task(id: router.categoryFilter) { await applyPendingCategoryFilter() }
         .onChange(of: isUnauthorized) { _, expired in if expired { app.handleSessionExpired() } }
@@ -122,8 +131,9 @@ struct TransactionsView: View {
     private func applyPendingCategoryFilter() async {
         guard let cat = router.categoryFilter else { return }
         router.categoryFilter = nil
-        model.selectedCategory = cat
         model.searchAllTime = true   // show all time, not just current month
+        model.selectedCategory = cat // triggers onChange → reloadDebounced; we cancel it below
+        model.cancelPendingReload()  // our direct load supersedes the debounced one
         await model.load()
     }
 
