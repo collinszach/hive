@@ -69,7 +69,7 @@ services:
   celery_worker:
     build: ./backend
     network_mode: host
-    command: celery -A app.celery_app worker --loglevel=info --concurrency=4
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=4 -Q celery,default
     env_file: .env
     environment:
       POSTGRES_HOST: "127.0.0.1"

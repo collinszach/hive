@@ -23,7 +23,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./backend:/app
-    command: celery -A app.celery_app worker --loglevel=debug --concurrency=1
+    command: celery -A app.celery_app worker --loglevel=debug --concurrency=1 -Q celery,default
     environment:
       LOG_LEVEL: DEBUG
 
