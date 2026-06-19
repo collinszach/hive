@@ -287,7 +287,11 @@ def _categorize_with_plaid(plaid_category: Optional[list[str]]) -> Optional[tupl
     for raw in reversed(plaid_category):
         key = raw.lower()
         for match_key, cat, sub in _PLAID_MAP_LOWER:
-            if match_key in key or key in match_key:
+            # Forward containment only: the rule key must appear within Plaid's value
+            # (Plaid sends the longer specific string, e.g. "Gas Stations" ⊇ "gas stations").
+            # The reverse direction was removed — it let a short Plaid token like "Tax"
+            # match the longer rule key "tax refund" and book a tax payment as income.
+            if match_key in key:
                 return cat, sub
     return None
 
@@ -316,6 +320,36 @@ Business → Office, Software, Advertising
 Income → Salary, Freelance, Interest, Dividend, Tax Refund, Bonus, Reimbursement, Rental
 Uncategorized → (fallback only)
 """.strip()
+
+# Valid (category → allowed subcategories) pairs. LLM output (Ollama/Claude) is
+# validated against this — a hallucinated pair is rejected and falls through to the
+# next stage / Uncategorized, so it never reaches points matching or budget grouping.
+TAXONOMY: dict[str, set[str]] = {
+    "Food & Drink":   {"Restaurant", "Fast Food", "Coffee", "Delivery", "Bar"},
+    "Groceries":      {"In-Store", "Online"},
+    "Travel":         {"Flights", "SW Flights", "Hotel", "Car Rental", "Rideshare", "Cruise"},
+    "Transportation": {"Gas", "EV Charging", "Parking", "Tolls", "Transit", "Auto Service"},
+    "Entertainment":  {"Streaming", "Movies", "Events", "Gaming", "Sports"},
+    "Shopping":       {"General", "Clothing", "Electronics", "Amazon", "Home Goods"},
+    "Health":         {"Medical", "Pharmacy", "Gym", "Dental", "Vision"},
+    "Utilities":      {"Electric", "Internet", "Phone", "Water", "Insurance"},
+    "Home":           {"Rent", "Mortgage", "Furniture", "Repairs", "Garden"},
+    "Education":      {"Tuition", "Books", "Courses"},
+    "Personal Care":  {"Haircut", "Spa", "Clothing"},
+    "Transfers":      {"P2P", "Payment", "Refund"},
+    "Business":       {"Office", "Software", "Advertising"},
+    "Income":         {"Salary", "Freelance", "Interest", "Dividend", "Tax Refund",
+                       "Bonus", "Reimbursement", "Rental", "Other"},
+    "Uncategorized":  {"Uncategorized"},
+}
+
+
+def _validate_pair(category: str, subcategory: str) -> Optional[tuple[str, str]]:
+    """Return the (category, subcategory) only if it's a valid taxonomy pair, else None."""
+    if category in TAXONOMY and subcategory in TAXONOMY[category]:
+        return category, subcategory
+    return None
+
 
 _OLLAMA_PROMPT_TEMPLATE = """You are a financial transaction categorizer for a personal finance app. Assign EXACTLY one category and subcategory from the list below.
 
@@ -372,7 +406,10 @@ def _ollama_request(prompt: str) -> Optional[tuple[str, str]]:
         category = data.get("category", "").strip()
         subcategory = data.get("subcategory", "").strip()
         if category and subcategory:
-            return category, subcategory
+            valid = _validate_pair(category, subcategory)
+            if valid is None:
+                logger.warning("Ollama returned out-of-taxonomy pair: %s / %s", category, subcategory)
+            return valid
     return None
 
 
@@ -430,7 +467,10 @@ def _categorize_with_claude(description: str) -> Optional[tuple[str, str]]:
         category = data.get("category", "").strip()
         subcategory = data.get("subcategory", "").strip()
         if category and subcategory:
-            return category, subcategory
+            valid = _validate_pair(category, subcategory)
+            if valid is None:
+                logger.warning("Claude returned out-of-taxonomy pair: %s / %s", category, subcategory)
+            return valid
     except Exception as exc:
         logger.error("Claude Haiku categorization failed: %s", exc)
     return None

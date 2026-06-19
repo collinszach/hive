@@ -3,20 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LeakageEntry, LeakageResponse } from "@/lib/api";
-import { fmt } from "@/lib/utils";
+import { fmt, cardName as slugToLabel } from "@/lib/utils";
 import { AlertTriangle, ChevronDown, ChevronUp, TrendingDown } from "lucide-react";
 import { GlassCard } from "@/components/GlassCard";
-
-function slugToLabel(slug: string): string {
-  const map: Record<string, string> = {
-    amex_gold: "Amex Gold",
-    chase_sapphire: "Chase Sapphire",
-    chase_southwest: "Chase SW",
-    bilt_blue: "Bilt",
-    venture_x: "Venture X",
-  };
-  return map[slug] ?? slug;
-}
 
 export function LeakageSummary({
   data,

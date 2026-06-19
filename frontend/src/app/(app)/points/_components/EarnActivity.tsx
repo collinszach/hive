@@ -3,17 +3,9 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, ExternalLink } from "lucide-react";
-import { cn, fmt } from "@/lib/utils";
+import { cn, fmt, cardName } from "@/lib/utils";
 import { LedgerEntry } from "@/lib/api";
 import { POINT_VALUES_CPP } from "@/lib/pointsConstants";
-
-const CARD_LABELS: Record<string, string> = {
-  amex_gold:       "Amex Gold",
-  chase_sapphire:  "Chase Sapphire",
-  chase_southwest: "Chase Southwest",
-  bilt_blue:       "Bilt Blue",
-  venture_x:       "Venture X",
-};
 
 interface EarnActivityProps {
   ledger: LedgerEntry[];
@@ -131,7 +123,7 @@ export function EarnActivity({ ledger, loading, error, filterPrograms: externalF
                   : "border-white/[0.08] text-ink-tertiary hover:text-ink-secondary"
               )}
             >
-              {CARD_LABELS[slug] ?? slug}
+              {cardName(slug)}
             </button>
           ))}
         </div>
@@ -198,7 +190,7 @@ export function EarnActivity({ ledger, loading, error, filterPrograms: externalF
                       {[entry.category, entry.subcategory].filter(Boolean).join(" / ") || "—"}
                     </td>
                     <td className="px-4 py-2.5 text-ink-tertiary">
-                      {CARD_LABELS[entry.card_slug] ?? entry.card_slug}
+                      {cardName(entry.card_slug)}
                     </td>
                     <td className="px-4 py-2.5 font-mono text-ink-secondary tabular-nums">
                       {entry.earn_rate}x

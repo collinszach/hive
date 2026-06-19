@@ -98,3 +98,19 @@ export const SUBCATEGORIES: Record<string, string[]> = {
   "Uncategorized": ["Uncategorized"],
 };
 
+// Canonical card-slug → display name. Single source of truth for every component
+// that renders a card name (previously duplicated inline in several places).
+export const CARD_NAMES: Record<string, string> = {
+  amex_gold: "Amex Gold",
+  chase_sapphire: "Chase Sapphire",
+  chase_southwest: "Chase Southwest",
+  bilt_blue: "Bilt Blue",
+  venture_x: "Venture X",
+};
+
+/** Display name for a card slug, falling back to a humanized slug. */
+export function cardName(slug: string | null | undefined): string {
+  if (!slug) return "";
+  return CARD_NAMES[slug] ?? slug.replace(/_/g, " ");
+}
+

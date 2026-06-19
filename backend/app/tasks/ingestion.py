@@ -496,6 +496,9 @@ def apply_custom_rules_to_all(self) -> dict:
 
         updated = 0
         for tx in txns:
+            # Never overwrite a user's manual categorization with an automated rule.
+            if tx.category_source == "manual":
+                continue
             result = _apply_custom_rules(tx.raw_description, rules)
             if result:
                 cat, sub, source = result
