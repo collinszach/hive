@@ -12,10 +12,15 @@ export default function CapacitorAuthBridge() {
   useEffect(() => {
     if (!isNative()) return;
     let cleanup: (() => void) | undefined;
+    let cancelled = false;
     registerAuthDeepLink().then((fn) => {
-      cleanup = fn;
+      // If we unmounted before registration resolved, tear the listener
+      // down immediately so it never leaks or double-registers.
+      if (cancelled) fn();
+      else cleanup = fn;
     });
     return () => {
+      cancelled = true;
       cleanup?.();
     };
   }, []);
