@@ -1082,6 +1082,33 @@ function TransactionsPageInner() {
         </div>
       </div>
 
+      {/* ── Active category chips ─────────────────────────────────────── */}
+      {/* Always-visible, removable chips for every active category. The pills
+          above can be scrolled off-screen on mobile, and categories that aren't
+          in FILTER_OPTIONS (e.g. "Uncategorized" arriving via a home deep-link)
+          have no pill at all — without this row the filter can't be cleared. */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 px-1 -mt-1">
+          <span className="text-[11px] text-ink-tertiary">Category:</span>
+          {categories.map((c) => (
+            <span
+              key={c}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-honey/[0.08] border border-honey/20 text-honey"
+            >
+              {c}
+              <button
+                type="button"
+                onClick={() => { setCategories(categories.filter((x) => x !== c)); setPage(1); }}
+                className="ml-0.5 hover:text-honey/60 transition-colors"
+                aria-label={`Clear ${c} filter`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* ── Subcategory filter chip (shown when arriving via deep-link) ─ */}
       {subcategory && (
         <div className="flex items-center gap-1.5 px-1 -mt-1">
