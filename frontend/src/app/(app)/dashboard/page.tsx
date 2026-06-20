@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, Account, Anomaly, Budget, Goal, HealthScore, Insight, MerchantSummary, MonthlyPosition, PaceAlert, PointsSummary, SafeToSpend, Transaction, WeeklyComparison } from "@/lib/api";
 import { fmt, currentMonth, monthLabel, cn } from "@/lib/utils";
@@ -337,7 +337,7 @@ export default function Dashboard() {
   const [loading, setLoading]   = useState(true);
   const [criticalError, setCriticalError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadAll = useCallback(() => {
     Promise.allSettled([
       api.accounts.list(),
       api.budgets.list(month),
@@ -372,6 +372,27 @@ export default function Dashboard() {
       setLoading(false);
     });
   }, [month]);
+
+  // Initial load + reload whenever the month changes.
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  // The App Router can keep this page mounted across navigation, so its one-time
+  // mount fetch goes stale after edits made elsewhere (e.g. re-categorizing a
+  // transaction). Refetch when the dashboard regains focus / visibility so the
+  // category breakdown and totals always reflect the latest data.
+  useEffect(() => {
+    function refresh() {
+      if (document.visibilityState === "visible") loadAll();
+    }
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("pageshow", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("pageshow", refresh);
+    };
+  }, [loadAll]);
 
   function handleDismissInsight(id: string) {
     api.insights.dismiss(id).catch(() => {});
