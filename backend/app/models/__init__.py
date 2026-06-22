@@ -10,6 +10,14 @@ from app.models.earn_rule import EarnRule  # noqa: F401
 from app.models.goal import Goal, GoalType  # noqa: F401
 from app.models.insight import Insight  # noqa: F401
 from app.models.net_worth import NetWorthSnapshot  # noqa: F401
+from app.models.paper_backtest_run import PaperBacktestRun  # noqa: F401
+from app.models.paper_candle import PaperCandle  # noqa: F401
+from app.models.paper_performance_snapshot import PaperPerformanceSnapshot  # noqa: F401
+from app.models.paper_portfolio import PaperPortfolio  # noqa: F401
+from app.models.paper_position import PaperPosition  # noqa: F401
+from app.models.paper_signal import PaperSignal  # noqa: F401
+from app.models.paper_trade import PaperTrade  # noqa: F401
+from app.models.paper_watchlist_symbol import PaperWatchlistSymbol  # noqa: F401
 from app.models.plaid_link import PlaidLink  # noqa: F401
 from app.models.points_balance import PointsBalance  # noqa: F401
 from app.models.points_ledger import PointsLedger  # noqa: F401
@@ -34,6 +42,14 @@ __all__ = [
     "IncomeStream",
     "Insight",
     "NetWorthSnapshot",
+    "PaperBacktestRun",
+    "PaperCandle",
+    "PaperPerformanceSnapshot",
+    "PaperPortfolio",
+    "PaperPosition",
+    "PaperSignal",
+    "PaperTrade",
+    "PaperWatchlistSymbol",
     "PlaidLink",
     "PlanAssumption",
     "PlanEvent",

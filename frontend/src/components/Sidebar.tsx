@@ -13,6 +13,7 @@ import {
   Zap,
   TrendingUp,
   ArrowDownLeft,
+  FlaskConical,
   RefreshCw,
   Settings2,
   BarChart2,
@@ -50,6 +51,7 @@ const NAV_SECTIONS = [
       { href: "/income",    label: "Income",    icon: ArrowDownLeft },
       { href: "/bills",     label: "Bills",     icon: CalendarClock },
       { href: "/reports",   label: "Reports",   icon: BarChart2 },
+      { href: "/paper-trading", label: "Paper Trading", icon: FlaskConical },
     ],
   },
   {

@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     snaptrade_consumer_key: str = ""
     app_base_url: str = "https://hive.zacharyjcollins.com"
 
+    # Market data (paper-trading signal engine). Tiingo free tier serves
+    # multi-year daily OHLCV history; the connector is provider-agnostic
+    # (app/marketdata/connector.py) so the source stays swappable. Empty key =
+    # paper-trading data layer skips gracefully, like SnapTrade/Plaid.
+    tiingo_api_key: str = ""
+
     # Encryption (Fernet key for access tokens at rest) — REQUIRED (no default)
     # Generate: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     fernet_key: str

@@ -18,6 +18,7 @@ app = Celery(
         "app.tasks.maintenance",
         "app.tasks.intelligence",
         "app.tasks.snaptrade_sync",
+        "app.tasks.paper_trading",
     ],
 )
 
@@ -89,4 +90,22 @@ app.conf.beat_schedule = {
         "schedule": crontab(hour=1, minute=0),  # 1 AM, before sync tasks
         "options": {"queue": "default"},
     },
+    # Paper-trading "trading day" — weekdays after the US close (times in America/Chicago).
+    # market close 15:00 CT → fetch the day's candle, generate live signals, then trade.
+    "paper-fetch-market-data": {
+        "task": "app.tasks.paper_trading.fetch_market_data",
+        "schedule": crontab(hour=16, minute=30, day_of_week="mon-fri"),
+        "options": {"queue": "default"},
+    },
+    "paper-generate-signals": {
+        "task": "app.tasks.paper_trading.generate_signals",
+        "schedule": crontab(hour=16, minute=45, day_of_week="mon-fri"),
+        "options": {"queue": "default"},
+    },
+    "paper-run-simulation-cycle": {
+        "task": "app.tasks.paper_trading.run_simulation_cycle",
+        "schedule": crontab(hour=17, minute=0, day_of_week="mon-fri"),
+        "options": {"queue": "default"},
+    },
+    # run_backtest stays on-demand (API-triggered), not scheduled.
 }
