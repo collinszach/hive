@@ -881,10 +881,10 @@ export const api = {
       page?: number;
       page_size?: number;
     }) => get<TransactionListResponse>("/api/transactions", params as Record<string, string | number | boolean | undefined>),
-    updateCategory: (id: string, category: string, subcategory: string) =>
-      put<{ id: string; category: string; subcategory: string }>(
+    updateCategory: (id: string, category: string, subcategory: string | null) =>
+      put<{ id: string; category: string; subcategory: string | null }>(
         `/api/transactions/${id}/category`,
-        { category, subcategory }
+        { category, subcategory: subcategory || null }
       ),
     patch: (id: string, body: { merchant?: string; category?: string; subcategory?: string; notes?: string | null }) =>
       patch<Transaction>(`/api/transactions/${id}`, body),

@@ -332,7 +332,10 @@ struct TransactionDetailView: View {
             // could make a successful save look like an error.
             try await api.send(
                 Endpoint(method: .put, path: "/api/transactions/\(transaction.id)/category"),
-                body: CategoryUpdate(category: category, subcategory: subcategory)
+                body: CategoryUpdate(
+                    category: category,
+                    subcategory: subcategory.trimmingCharacters(in: .whitespaces).isEmpty ? nil : subcategory
+                )
             )
             Haptics.success()
             await onChange()

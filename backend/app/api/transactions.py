@@ -8,7 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -107,6 +107,14 @@ class CategoryUpdateRequest(BaseModel):
     # Requiring a string here 422'd those overrides, which surfaced to users as
     # "recategorize doesn't save" (the client silently reverts on error).
     subcategory: Optional[str] = None
+
+    @field_validator("subcategory")
+    @classmethod
+    def _empty_to_none(cls, v: Optional[str]) -> Optional[str]:
+        # Normalize so clients sending "" and clients sending null both store NULL,
+        # rather than a mix of "" and NULL in the column.
+        v = (v or "").strip()
+        return v or None
 
 
 class TransactionPatchRequest(BaseModel):
