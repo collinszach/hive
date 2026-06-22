@@ -32,6 +32,27 @@ struct DashboardView: View {
                 HomeGlanceSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(2)
                 HomeNetWorthSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(3)
                 HomeInvestmentsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(4)
+                // Always-visible entry to the paper-trading signal engine (doesn't depend
+                // on SnapTrade holdings, unlike the Investments card above).
+                NavigationLink { PaperTradingView() } label: {
+                    Card {
+                        HStack(spacing: Theme.Spacing.md) {
+                            Image(systemName: "flask")
+                                .font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.blue)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Paper Trading")
+                                    .font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                                Text("AI signal engine · simulated portfolio")
+                                    .font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.inkTertiary)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .hiveEntrance(4)
                 HomeCategoriesSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(5)
                 HomeAccountsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(6)
                 HomeGoalsPointsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(7)
