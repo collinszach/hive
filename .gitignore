@@ -96,3 +96,6 @@ frontend/www/
 frontend/ios/App/Pods/
 frontend/ios/App/build/
 backups/
+
+# APNs .p8 key and other host-mounted secrets
+secrets/
