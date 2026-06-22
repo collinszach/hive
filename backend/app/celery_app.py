@@ -107,5 +107,11 @@ app.conf.beat_schedule = {
         "schedule": crontab(hour=17, minute=0, day_of_week="mon-fri"),
         "options": {"queue": "default"},
     },
+    "weekly-paper-trading-digest": {
+        # Monday 8:30 AM CT — a weekly push summary of the live paper portfolio.
+        "task": "app.tasks.paper_trading.weekly_paper_trading_digest",
+        "schedule": crontab(hour=8, minute=30, day_of_week=1),
+        "options": {"queue": "default"},
+    },
     # run_backtest stays on-demand (API-triggered), not scheduled.
 }

@@ -231,6 +231,111 @@ def generate_signals(self) -> dict:
 
 
 @app.task(
+    name="app.tasks.paper_trading.weekly_paper_trading_digest",
+    bind=True,
+    max_retries=2,
+    default_retry_delay=120,
+)
+def weekly_paper_trading_digest(self) -> dict:
+    """Push a weekly summary of the live paper portfolio to registered devices.
+
+    Plain numbers only (value, return, vs-SPY, positions, day-of-180) — keeps the
+    "not advice" boundary. No-ops if there's no live portfolio or no devices.
+    """
+    from app.models.paper_performance_snapshot import PaperPerformanceSnapshot
+    from app.models.paper_portfolio import PaperPortfolio
+    from app.models.paper_position import PaperPosition
+    from app.models.paper_trade import PaperTrade
+    from app.notifications.push import send_to_all
+    from app.paper_trading.report import compute_evaluation_report
+
+    db = get_sync_db()
+    try:
+        pf = db.execute(
+            select(PaperPortfolio)
+            .where(PaperPortfolio.status == "live")
+            .order_by(PaperPortfolio.created_at)
+        ).scalars().first()
+        if pf is None:
+            logger.info("weekly_paper_trading_digest: no live portfolio, skipping")
+            return {"skipped": "no live portfolio"}
+
+        snaps = db.execute(
+            select(PaperPerformanceSnapshot)
+            .where(PaperPerformanceSnapshot.portfolio_id == pf.id)
+            .order_by(PaperPerformanceSnapshot.as_of)
+        ).scalars().all()
+        trades = db.execute(
+            select(PaperTrade).where(PaperTrade.portfolio_id == pf.id)
+        ).scalars().all()
+        pos_count = db.scalar(
+            select(func.count()).select_from(PaperPosition).where(PaperPosition.portfolio_id == pf.id)
+        ) or 0
+
+        report = compute_evaluation_report(
+            starting_cash=float(pf.starting_cash),
+            snapshots=[
+                {"as_of": s.as_of, "portfolio_value": float(s.portfolio_value),
+                 "benchmark_value": float(s.benchmark_value) if s.benchmark_value is not None else None}
+                for s in snaps
+            ],
+            trades=[{"symbol": t.symbol, "side": t.side, "quantity": float(t.quantity), "price": float(t.price)}
+                    for t in trades],
+        )
+
+        def pct(x):
+            return "n/a" if x is None else f"{x * 100:+.1f}%"
+
+        body = (
+            f"${report['final_value']:,.0f} ({pct(report['total_return'])}) · "
+            f"vs SPY {pct(report['alpha'])} · {pos_count} position(s) · "
+            f"day {report['days_elapsed']}/{report['days_target']}"
+        )
+
+        # Primary, zero-setup channel: the in-app Insights feed (always visible).
+        from datetime import datetime, timedelta, timezone
+
+        from app.models.insight import Insight
+
+        iso = date.today().isocalendar()
+        dedup = f"paper-digest-{iso[0]}-W{iso[1]:02d}"
+        ins = pg_insert(Insight).values(
+            insight_type="paper_trading_digest",
+            title="Paper Trading — weekly",
+            body=body,
+            amount=round(report["final_value"], 2),
+            delta_pct=round((report["total_return"] or 0) * 100, 2),
+            priority="low",
+            dedup_key=dedup,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=14),
+        )
+        ins = ins.on_conflict_do_update(
+            index_elements=["dedup_key"],
+            set_={"title": ins.excluded.title, "body": ins.excluded.body,
+                  "amount": ins.excluded.amount, "delta_pct": ins.excluded.delta_pct,
+                  "is_dismissed": False, "created_at": func.now()},
+        )
+        db.execute(ins)
+        db.commit()
+
+        # Best-effort push (no-op until a device/APNs is configured).
+        try:
+            sent = send_to_all(db, title="Paper Trading — weekly", body=body,
+                               data={"route": "paper-trading"}, thread_id="paper-trading-digest")
+        except Exception:
+            logger.warning("weekly_paper_trading_digest: push channel unavailable")
+            sent = 0
+        logger.info("weekly_paper_trading_digest: insight written, pushed to %d devices: %s", sent, body)
+        return {"sent": sent, "insight": dedup, "value": report["final_value"], "body": body}
+    except Exception as exc:
+        logger.exception("weekly_paper_trading_digest failed")
+        db.rollback()
+        raise self.retry(exc=exc)
+    finally:
+        db.close()
+
+
+@app.task(
     name="app.tasks.paper_trading.run_simulation_cycle",
     bind=True,
     max_retries=3,
