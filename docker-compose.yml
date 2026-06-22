@@ -48,6 +48,7 @@ services:
       CELERY_RESULT_BACKEND: "redis://:${REDIS_PASSWORD}@127.0.0.1:6380/1"
     volumes:
       - tax-docs:/data/tax-docs
+      - ./secrets:/app/secrets:ro   # APNs .p8 key (gitignored host dir)
     depends_on:
       postgres:
         condition: service_healthy
@@ -78,6 +79,7 @@ services:
       CELERY_RESULT_BACKEND: "redis://:${REDIS_PASSWORD}@127.0.0.1:6380/1"
     volumes:
       - ./backups:/var/backups/hive
+      - ./secrets:/app/secrets:ro   # APNs .p8 key — worker sends the digest push
     depends_on:
       postgres:
         condition: service_healthy
