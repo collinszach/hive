@@ -318,15 +318,24 @@ def weekly_paper_trading_digest(self) -> dict:
         db.execute(ins)
         db.commit()
 
-        # Best-effort push (no-op until a device/APNs is configured).
+        # Best-effort phone push via ntfy (no-op until NTFY_URL/NTFY_TOPIC are set).
+        from app.notifications.ntfy import send_ntfy
+
+        ntfy_ok = send_ntfy("Paper Trading — weekly", body, tags=["chart_with_upwards_trend"])
+
+        # Best-effort APNs push (no-op until a device/APNs is configured).
         try:
             sent = send_to_all(db, title="Paper Trading — weekly", body=body,
                                data={"route": "paper-trading"}, thread_id="paper-trading-digest")
         except Exception:
-            logger.warning("weekly_paper_trading_digest: push channel unavailable")
+            logger.warning("weekly_paper_trading_digest: APNs channel unavailable")
             sent = 0
-        logger.info("weekly_paper_trading_digest: insight written, pushed to %d devices: %s", sent, body)
-        return {"sent": sent, "insight": dedup, "value": report["final_value"], "body": body}
+        logger.info(
+            "weekly_paper_trading_digest: insight written, ntfy=%s, apns=%d: %s",
+            ntfy_ok, sent, body,
+        )
+        return {"apns": sent, "ntfy": ntfy_ok, "insight": dedup,
+                "value": report["final_value"], "body": body}
     except Exception as exc:
         logger.exception("weekly_paper_trading_digest failed")
         db.rollback()
