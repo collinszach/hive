@@ -103,7 +103,10 @@ class TransactionListResponse(BaseModel):
 
 class CategoryUpdateRequest(BaseModel):
     category: str
-    subcategory: str
+    # Nullable: many categories have no subcategory, and the column itself is nullable.
+    # Requiring a string here 422'd those overrides, which surfaced to users as
+    # "recategorize doesn't save" (the client silently reverts on error).
+    subcategory: Optional[str] = None
 
 
 class TransactionPatchRequest(BaseModel):
