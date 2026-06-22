@@ -62,7 +62,9 @@ struct CategoryCount: Decodable, Identifiable {
 /// decode the echo response (`{id, category, subcategory}`; extra keys are ignored).
 struct CategoryUpdate: Codable {
     let category: String
-    let subcategory: String
+    // Optional: a category may have no subcategory. Encoded as omitted when nil
+    // (synthesized `encodeIfPresent`), so the backend stores NULL rather than "".
+    let subcategory: String?
 }
 
 /// Partial update body for `PATCH /api/transactions/{id}`. Only non-nil fields are

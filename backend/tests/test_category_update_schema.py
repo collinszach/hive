@@ -20,3 +20,8 @@ def test_subcategory_accepts_explicit_null():
 def test_subcategory_still_accepts_a_value():
     m = CategoryUpdateRequest(category="Food & Drink", subcategory="Restaurant")
     assert m.subcategory == "Restaurant"
+
+
+def test_empty_or_whitespace_subcategory_normalizes_to_none():
+    assert CategoryUpdateRequest(category="Shopping", subcategory="").subcategory is None
+    assert CategoryUpdateRequest(category="Shopping", subcategory="   ").subcategory is None
