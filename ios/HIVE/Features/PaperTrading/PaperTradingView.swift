@@ -24,7 +24,17 @@ struct PaperTradingView: View {
                 }
             }
         }
-        .task { if model.state.value == nil { await model.load() } }
+        .task {
+            if model.state.value == nil { await model.load() }
+            // Near-real-time: poll every 30s while the screen is visible. `load()` only
+            // shows the skeleton on first load, so refreshes update in place (no flicker).
+            // The task is cancelled automatically when the view disappears.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                if Task.isCancelled { break }
+                await model.load()
+            }
+        }
     }
 
     @ViewBuilder
