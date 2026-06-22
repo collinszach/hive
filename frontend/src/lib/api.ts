@@ -753,6 +753,107 @@ export interface MonthlyPosition {
   available_to_save: number;
 }
 
+// ── Paper Trading (AI/ML signal engine — sandboxed virtual portfolio) ──────────
+
+export interface PaperPortfolio {
+  id: string;
+  name: string;
+  status: string;
+  starting_cash: number;
+  current_cash: number;
+  strategy_params: Record<string, unknown> | null;
+  benchmark_symbol: string;
+  started_at: string | null;
+  evaluation_ends_at: string | null;
+}
+
+export interface PaperSignal {
+  symbol: string;
+  as_of: string;
+  signal_score: number;
+  signal_label: string;
+  confidence: number;
+  regime_label: string | null;
+  indicators: Record<string, number | string | null> | null;
+  source: string;
+}
+
+export interface PaperTrade {
+  id: string;
+  symbol: string;
+  side: string;
+  quantity: number;
+  price: number;
+  executor_type: string;
+  signal_score: number | null;
+  as_of: string;
+  executed_at: string | null;
+}
+
+export interface PaperPerformancePoint {
+  as_of: string;
+  cash: number;
+  positions_value: number;
+  portfolio_value: number;
+  benchmark_value: number | null;
+}
+
+export interface PaperWatchlistSymbol {
+  symbol: string;
+  is_active: boolean;
+}
+
+export interface PaperBacktestRun {
+  id: string;
+  portfolio_id: string | null;
+  train_start: string;
+  train_end: string;
+  validation_start: string;
+  validation_end: string;
+  selected_params: Record<string, unknown> | null;
+  train_sharpe: number | null;
+  validation_sharpe: number | null;
+  validation_total_return: number | null;
+  validation_vs_benchmark: number | null;
+  created_at: string | null;
+}
+
+export interface PaperEvaluationReport {
+  portfolio_id: string;
+  starting_cash: number;
+  final_value: number;
+  total_return: number | null;
+  cagr: number | null;
+  benchmark_return: number | null;
+  alpha: number | null;
+  sharpe: number | null;
+  max_drawdown: number | null;
+  win_rate: number | null;
+  avg_win: number | null;
+  avg_loss: number | null;
+  trades_closed: number;
+  days_elapsed: number;
+  days_target: number;
+  status: string;
+}
+
+export interface CreatePaperPortfolioBody {
+  name?: string;
+  starting_cash?: number;
+  strategy_params?: Record<string, unknown> | null;
+  benchmark_symbol?: string;
+}
+
+export interface StartBacktestBody {
+  symbols: string[];
+  train_start: string;
+  train_end: string;
+  validation_start: string;
+  validation_end: string;
+  param_grid?: Record<string, unknown> | null;
+  starting_cash?: number;
+}
+
 // ---- API functions ----
 
 export const api = {
@@ -1000,6 +1101,28 @@ export const api = {
     callback: () => get<{ accounts_added: number }>("/api/snaptrade/callback"),
     portfolio: () => get<Portfolio>("/api/snaptrade/portfolio"),
     portfolioAdvisor: () => post<PortfolioAdvisor>("/api/snaptrade/portfolio/advisor", {}),
+  },
+  paperTrading: {
+    getPortfolio: () => get<PaperPortfolio>("/api/paper-trading/portfolio"),
+    createPortfolio: (body: CreatePaperPortfolioBody) =>
+      post<PaperPortfolio>("/api/paper-trading/portfolio", body),
+    signals: (limit?: number) =>
+      get<PaperSignal[]>("/api/paper-trading/signals", limit ? { limit } : undefined),
+    trades: (limit?: number) =>
+      get<PaperTrade[]>("/api/paper-trading/trades", limit ? { limit } : undefined),
+    performance: () => get<PaperPerformancePoint[]>("/api/paper-trading/performance"),
+    report: () => get<PaperEvaluationReport>("/api/paper-trading/report"),
+    watchlist: () => get<PaperWatchlistSymbol[]>("/api/paper-trading/watchlist"),
+    addSymbol: (symbol: string) =>
+      post<PaperWatchlistSymbol>("/api/paper-trading/watchlist", { symbol }),
+    removeSymbol: (symbol: string) =>
+      del<{ removed: string }>(`/api/paper-trading/watchlist/${encodeURIComponent(symbol)}`),
+    startBacktest: (body: StartBacktestBody) =>
+      post<{ status: string; task_id: string }>("/api/paper-trading/backtest", body),
+    listBacktests: (limit?: number) =>
+      get<PaperBacktestRun[]>("/api/paper-trading/backtest", limit ? { limit } : undefined),
+    getBacktest: (id: string) =>
+      get<PaperBacktestRun>(`/api/paper-trading/backtest/${encodeURIComponent(id)}`),
   },
   forecast: {
     category: (category: string, periods = 30) =>

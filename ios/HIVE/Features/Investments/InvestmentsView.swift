@@ -42,8 +42,35 @@ struct InvestmentsView: View {
             if !p.positions.isEmpty {
                 advisorSection.hiveEntrance(4)
             }
+            paperTradingLink.hiveEntrance(5)
         }
         .padding(.top, Theme.Spacing.sm)
+    }
+
+    // MARK: Paper Trading entry (sandboxed signal engine — separate from real holdings)
+
+    @ViewBuilder
+    private var paperTradingLink: some View {
+        NavigationLink {
+            PaperTradingView()
+        } label: {
+            Card {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "flask")
+                        .font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.blue)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Paper Trading").font(.hiveBody(15, weight: .semibold)).foregroundStyle(Theme.inkPrimary)
+                        Text("AI signal engine in a sandboxed virtual portfolio — simulated, no real money.")
+                            .font(.hiveBody(12)).foregroundStyle(Theme.inkTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.inkTertiary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: AI advisor (Investing spec I7)
