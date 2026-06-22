@@ -35,8 +35,12 @@ class MarketDataConnector:
 
     # -- internal HTTP with simple rate-limit backoff -------------------------
 
+    _IEX_URL = "https://api.tiingo.com/iex"
+
     def _get(self, path: str, params: dict) -> httpx.Response:
-        url = f"{self._BASE_URL}{path}"
+        return self._request(f"{self._BASE_URL}{path}", params)
+
+    def _request(self, url: str, params: dict) -> httpx.Response:
         merged = {**params, "token": self._api_key}
         headers = {"Content-Type": "application/json"}
         last_exc: Optional[Exception] = None
@@ -101,6 +105,38 @@ class MarketDataConnector:
         start = date.today() - timedelta(days=10)
         candles = self.get_candles(symbol, start=start)
         return candles[-1] if candles else None
+
+    def get_live_quote(self, symbol: str) -> Optional[dict]:
+        """Return the latest intraday IEX quote for ``symbol`` (near-real-time).
+
+        Shape: ``{symbol, price, open, high, low, timestamp}`` or ``None``. ``price`` is
+        Tiingo's ``tngoLast`` (falls back to last/mid). Used by the intraday cycle to
+        update today's forming bar and mark-to-market between EOD candles.
+        """
+        resp = self._request(f"{self._IEX_URL}/{symbol.lower()}", {})
+        body = resp.json()
+        if not isinstance(body, list) or not body:
+            return None
+        row = body[0]
+
+        def f(key):
+            v = row.get(key)
+            try:
+                return float(v) if v is not None else None
+            except (TypeError, ValueError):
+                return None
+
+        price = f("tngoLast") or f("last") or f("mid")
+        if price is None:
+            return None
+        return {
+            "symbol": symbol.upper(),
+            "price": price,
+            "open": f("open"),
+            "high": f("high"),
+            "low": f("low"),
+            "timestamp": row.get("timestamp"),
+        }
 
     @staticmethod
     def _normalize_candle(row: dict) -> Optional[dict]:
