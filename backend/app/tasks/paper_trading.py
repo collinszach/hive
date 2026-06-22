@@ -344,15 +344,29 @@ def weekly_paper_trading_digest(self) -> dict:
         db.close()
 
 
-@app.task(
-    name="app.tasks.paper_trading.run_simulation_cycle",
-    bind=True,
-    max_retries=3,
-    default_retry_delay=60,
-)
-def run_simulation_cycle(self) -> dict:
-    """The daily 'trading day' for live paper portfolios: apply today's signals via the
-    simulated executor, then mark-to-market. Skips portfolios past their evaluation window.
+def _notify_trades(db, portfolio, trades) -> None:
+    """Push a notification the moment paper trades execute (APNs + ntfy, best-effort)."""
+    if not trades:
+        return
+    from app.notifications.ntfy import send_ntfy
+    from app.notifications.push import send_to_all
+
+    parts = [
+        f"{t.side.upper()} {float(t.quantity):.2f} {t.symbol} @ ${float(t.price):,.2f}"
+        for t in trades
+    ]
+    body = " · ".join(parts)
+    title = f"Paper trade{'s' if len(trades) > 1 else ''} ({portfolio.name})"
+    try:
+        send_to_all(db, title=title, body=body, data={"route": "paper-trading"}, thread_id="paper-trade")
+    except Exception:
+        logger.warning("trade push (APNs) unavailable")
+    send_ntfy(title, body, tags=["money_with_wings"])
+
+
+def _process_live_portfolios(db, as_of, *, notify: bool = True) -> dict:
+    """Apply today's live signals to every live portfolio, mark-to-market, and (optionally)
+    notify on each executed trade. Shared by the daily and intraday cycles.
     """
     from datetime import datetime, timezone
 
@@ -362,38 +376,106 @@ def run_simulation_cycle(self) -> dict:
     from app.paper_trading.strategy import apply_signals_to_portfolio
     from app.paper_trading.valuation import get_reference_prices, mark_to_market
 
+    now = datetime.now(timezone.utc)
+    portfolios = db.execute(
+        select(PaperPortfolio).where(PaperPortfolio.status == "live")
+    ).scalars().all()
+    executor = get_executor()
+    processed = 0
+    total_trades = 0
+    for pf in portfolios:
+        if pf.evaluation_ends_at is not None and now > pf.evaluation_ends_at:
+            continue  # evaluation window closed — stop trading this portfolio
+        signal_rows = db.execute(
+            select(PaperSignal.symbol, PaperSignal.signal_label, PaperSignal.signal_score)
+            .where(PaperSignal.source == "live", PaperSignal.as_of == as_of)
+        ).all()
+        signals = [
+            {"symbol": s, "signal_label": lbl, "signal_score": score}
+            for (s, lbl, score) in signal_rows
+        ]
+        symbols = sorted({s["symbol"] for s in signals} | {pf.benchmark_symbol or BENCHMARK_SYMBOL})
+        prices = get_reference_prices(db, symbols, as_of)
+        trades = apply_signals_to_portfolio(db, pf, signals, prices, executor, pf.strategy_params, as_of)
+        mark_to_market(db, pf, prices, as_of)
+        processed += 1
+        total_trades += len(trades)
+        if notify and trades:
+            db.flush()
+            _notify_trades(db, pf, trades)
+    return {"portfolios": processed, "trades": total_trades}
+
+
+@app.task(
+    name="app.tasks.paper_trading.run_simulation_cycle",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=60,
+)
+def run_simulation_cycle(self) -> dict:
+    """The daily 'trading day': apply the day's signals, mark-to-market, notify on trades."""
     db = get_sync_db()
     try:
         as_of = date.today()
-        now = datetime.now(timezone.utc)
-        portfolios = db.execute(
-            select(PaperPortfolio).where(PaperPortfolio.status == "live")
-        ).scalars().all()
-
-        executor = get_executor()
-        processed = 0
-        for pf in portfolios:
-            if pf.evaluation_ends_at is not None and now > pf.evaluation_ends_at:
-                continue  # evaluation window closed — stop trading this portfolio
-            signal_rows = db.execute(
-                select(PaperSignal.symbol, PaperSignal.signal_label, PaperSignal.signal_score)
-                .where(PaperSignal.source == "live", PaperSignal.as_of == as_of)
-            ).all()
-            signals = [
-                {"symbol": s, "signal_label": lbl, "signal_score": score}
-                for (s, lbl, score) in signal_rows
-            ]
-            symbols = sorted({s["symbol"] for s in signals} | {pf.benchmark_symbol or BENCHMARK_SYMBOL})
-            prices = get_reference_prices(db, symbols, as_of)
-            apply_signals_to_portfolio(db, pf, signals, prices, executor, pf.strategy_params, as_of)
-            mark_to_market(db, pf, prices, as_of)
-            processed += 1
-
+        result = _process_live_portfolios(db, as_of, notify=True)
         db.commit()
-        logger.info("run_simulation_cycle: portfolios=%d as_of=%s", processed, as_of)
-        return {"portfolios": processed, "as_of": as_of.isoformat()}
+        logger.info("run_simulation_cycle: %s as_of=%s", result, as_of)
+        return {**result, "as_of": as_of.isoformat()}
     except Exception as exc:
         logger.exception("run_simulation_cycle failed")
+        db.rollback()
+        raise self.retry(exc=exc)
+    finally:
+        db.close()
+
+
+@app.task(
+    name="app.tasks.paper_trading.run_live_cycle",
+    bind=True,
+    max_retries=2,
+    default_retry_delay=30,
+)
+def run_live_cycle(self) -> dict:
+    """Intraday near-real-time cycle: refresh today's forming bar from live IEX quotes,
+    regenerate signals, trade, mark-to-market, and push on each trade. Scheduled every
+    ~15 min during US market hours. No-ops if market data isn't configured.
+    """
+    from app.ml.signal_engine import run_signal_generation
+
+    connector = get_connector()
+    if connector is None:
+        logger.info("run_live_cycle: market data not configured, skipping")
+        return {"skipped": "not configured"}
+
+    db = get_sync_db()
+    try:
+        as_of = date.today()
+        symbols = _active_symbols(db)
+        quotes = 0
+        for symbol in symbols:
+            try:
+                q = connector.get_live_quote(symbol)
+            except Exception:
+                logger.exception("run_live_cycle: live quote failed for %s", symbol)
+                continue
+            if q and q.get("price"):
+                _upsert_candles(db, symbol, [{
+                    "date": as_of, "open": q.get("open"), "high": q.get("high"),
+                    "low": q.get("low"), "close": q["price"], "volume": None,
+                    "adj_close": q["price"],
+                }])
+                quotes += 1
+        db.commit()
+
+        # Regenerate signals on the updated (forming) bar, then trade + mark-to-market.
+        run_signal_generation(db, as_of=as_of, source="live")
+        db.commit()
+        result = _process_live_portfolios(db, as_of, notify=True)
+        db.commit()
+        logger.info("run_live_cycle: quotes=%d %s", quotes, result)
+        return {"quotes": quotes, **result, "as_of": as_of.isoformat()}
+    except Exception as exc:
+        logger.exception("run_live_cycle failed")
         db.rollback()
         raise self.retry(exc=exc)
     finally:

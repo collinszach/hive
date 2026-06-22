@@ -98,6 +98,25 @@ def test_network_error_retries_then_raises(connector):
             connector.get_candles("AAPL", start=date(2023, 1, 1))
 
 
+_IEX_ROW = [{
+    "ticker": "AAPL", "timestamp": "2026-06-22T20:00:00+00:00",
+    "open": 297.31, "high": 302.42, "low": 296.76, "tngoLast": 297.01, "last": None, "mid": None,
+}]
+
+
+def test_get_live_quote_parses_tngo_last(connector):
+    with patch("app.marketdata.connector.httpx.get", return_value=_resp(json_body=_IEX_ROW)):
+        q = connector.get_live_quote("aapl")
+    assert q["symbol"] == "AAPL"
+    assert q["price"] == pytest.approx(297.01)
+    assert q["high"] == pytest.approx(302.42)
+
+
+def test_get_live_quote_none_on_empty(connector):
+    with patch("app.marketdata.connector.httpx.get", return_value=_resp(json_body=[])):
+        assert connector.get_live_quote("AAPL") is None
+
+
 def test_get_connector_none_when_key_unset():
     # Patch the settings object the factory reads.
     import app.config as config_mod

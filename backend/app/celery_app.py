@@ -107,6 +107,12 @@ app.conf.beat_schedule = {
         "schedule": crontab(hour=17, minute=0, day_of_week="mon-fri"),
         "options": {"queue": "default"},
     },
+    "paper-run-live-cycle": {
+        # Intraday near-real-time: every 15 min during US market hours (8:30-15:00 CT).
+        "task": "app.tasks.paper_trading.run_live_cycle",
+        "schedule": crontab(minute="*/15", hour="8-15", day_of_week="mon-fri"),
+        "options": {"queue": "default"},
+    },
     "weekly-paper-trading-digest": {
         # Monday 8:30 AM CT — a weekly push summary of the live paper portfolio.
         "task": "app.tasks.paper_trading.weekly_paper_trading_digest",
