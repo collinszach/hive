@@ -28,6 +28,9 @@ def engine():
             conn.execute(text("SELECT 1"))
     except Exception as exc:
         pytest.skip(f"no database reachable: {exc}")
+    from tests.conftest import require_disposable_db
+
+    require_disposable_db(eng)  # never TRUNCATE a production database
     Base.metadata.create_all(eng)
     return eng
 
