@@ -26,7 +26,7 @@ from sqlalchemy import select
 from app.models.paper_candle import PaperCandle
 from app.models.paper_portfolio import PaperPortfolio
 from app.models.paper_signal import PaperSignal
-from app.ml.signal_engine import run_signal_generation
+from app.ml.factor_signal import run_factor_signal_generation as run_signal_generation
 from app.paper_trading.executor import get_executor
 from app.paper_trading.strategy import apply_signals_to_portfolio
 from app.paper_trading.valuation import get_reference_prices, mark_to_market
@@ -131,6 +131,10 @@ def run_walk_forward_backtest(
 
     portfolio_values: list[float] = []
     benchmark_values: list[float] = []
+    # No-lookahead execution: signals generated from day t's close are executed at the
+    # NEXT day's price, never at the same close that produced them. We carry the prior
+    # day's signals forward and fill them at today's reference price.
+    prev_signals: Optional[list[dict]] = None
     for t in dates:
         run_signal_generation(db, as_of=t, source="backtest", symbols=syms, **signal_kwargs)
         signal_rows = db.execute(
@@ -142,11 +146,13 @@ def run_walk_forward_backtest(
             for (s, lbl, score) in signal_rows
         ]
         prices = get_reference_prices(db, price_syms, t)
-        apply_signals_to_portfolio(db, portfolio, signals, prices, executor, strategy_params, t)
+        if prev_signals is not None:
+            apply_signals_to_portfolio(db, portfolio, prev_signals, prices, executor, strategy_params, t)
         snap = mark_to_market(db, portfolio, prices, t)
         portfolio_values.append(snap["portfolio_value"])
         if snap["benchmark_value"] is not None:
             benchmark_values.append(snap["benchmark_value"])
+        prev_signals = signals
 
     db.flush()
 
