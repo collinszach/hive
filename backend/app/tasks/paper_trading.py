@@ -214,7 +214,7 @@ def generate_signals(self) -> dict:
     Calls the same point-in-time signal engine the backtester uses, with
     ``as_of=today`` and ``source="live"``.
     """
-    from app.ml.signal_engine import run_signal_generation
+    from app.ml.factor_signal import run_factor_signal_generation as run_signal_generation
 
     db = get_sync_db()
     try:
@@ -448,7 +448,7 @@ def run_live_cycle(self) -> dict:
     regenerate signals, trade, mark-to-market, and push on each trade. Scheduled every
     ~15 min during US market hours. No-ops if market data isn't configured.
     """
-    from app.ml.signal_engine import run_signal_generation
+    from app.ml.factor_signal import run_factor_signal_generation as run_signal_generation
 
     connector = get_connector()
     if connector is None:
