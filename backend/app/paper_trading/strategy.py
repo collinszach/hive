@@ -49,11 +49,18 @@ DEFAULT_MAX_POSITION_PCT = 0.20      # per-name concentration cap (diversificati
 DEFAULT_MIN_CONVICTION = 0.0         # drop/exit names whose score has decayed to ≤ this
 DEFAULT_REBALANCE_BAND_PCT = 0.05    # skip rebalance trades smaller than 5% of equity
 
-# --- Risk overlay (panel-mandated) -------------------------------------------------
+# --- Risk overlay -------------------------------------------------------------------
+# An attribution backtest isolated each control on the momentum strategy (2025-26, 54
+# names): the per-position stop-loss was free-to-helpful (Sharpe 1.52 -> 1.57), the
+# per-name and sector caps cost some upside but kept a diversified book that still beat
+# SPY (Sharpe 1.38 / 1.16). The mechanical drawdown brake was *catastrophic* — alone it
+# turned +70% into -12% (Sharpe -0.38) by flattening to cash at local bottoms and missing
+# the recovery (momentum's edge requires sitting through volatility). So the brake is
+# DISABLED by default (thresholds 1.0 = never triggers) but remains configurable.
 DEFAULT_SECTOR_CAP_PCT = 0.30        # max book weight in any one GICS sector
 DEFAULT_STOP_LOSS_PCT = 0.20         # force-exit a holding down this much from its avg cost
-DEFAULT_DD_HALVE_PCT = 0.15          # at this portfolio drawdown, halve gross exposure
-DEFAULT_DD_FLATTEN_PCT = 0.20        # at this portfolio drawdown, flatten to cash
+DEFAULT_DD_HALVE_PCT = 1.0           # drawdown brake disabled by default (toxic to momentum)
+DEFAULT_DD_FLATTEN_PCT = 1.0         # disabled by default; set <1 to re-enable
 
 _QTY_EPSILON = 1e-9
 
