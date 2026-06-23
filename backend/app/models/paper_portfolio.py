@@ -31,6 +31,8 @@ class PaperPortfolio(Base):
     strategy_params: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     benchmark_symbol: Mapped[str] = mapped_column(Text, server_default="SPY")
     benchmark_start_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(16, 4), nullable=True)
+    # High-water mark of portfolio value — drives the drawdown brake in the strategy.
+    peak_value: Mapped[Optional[Decimal]] = mapped_column(Numeric(16, 2), nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     evaluation_ends_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

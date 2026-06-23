@@ -17,7 +17,12 @@ an independent stock picker. On each cycle it:
      breadth of conviction (``base_exposure_pct`` + mean conviction, capped at
      ``max_invested_pct``). Weak/few signals ⇒ raise cash and de-risk; strong broad signals
      ⇒ lean in. This is the risk-off lever a manager uses in poor regimes.
-  5. **Rebalances toward those weights** — trimming overweight winners, topping up underweight
+  5. **Applies a risk overlay** — per-position stop-loss (force-exit a holding down
+     ``stop_loss_pct`` from its average cost), sector caps (``sector_cap_pct`` max in any
+     one GICS sector, so a momentum signal can't pile into a single hot sector), and a
+     portfolio drawdown brake (halve gross at ``dd_halve_pct`` off the high-water mark,
+     flatten to cash at ``dd_flatten_pct``).
+  6. **Rebalances toward those weights** — trimming overweight winners, topping up underweight
      names, exiting dropped/``sell`` names entirely — skipping drift smaller than
      ``rebalance_band_pct`` of equity to avoid churn/slippage.
 
@@ -30,6 +35,7 @@ from typing import Optional
 
 from sqlalchemy import select
 
+from app.ml.sectors import sector_of
 from app.models.paper_position import PaperPosition
 from app.models.paper_trade import PaperTrade
 from app.paper_trading.executor import ExecutionResult, TradeExecutor
@@ -39,9 +45,15 @@ logger = logging.getLogger(__name__)
 DEFAULT_MAX_POSITIONS = 5
 DEFAULT_MAX_INVESTED_PCT = 0.95      # hard ceiling on gross exposure; always keep some cash
 DEFAULT_BASE_EXPOSURE_PCT = 0.45     # floor exposure; mean conviction is added on top
-DEFAULT_MAX_POSITION_PCT = 0.35      # per-name concentration cap (diversification)
+DEFAULT_MAX_POSITION_PCT = 0.20      # per-name concentration cap (diversification)
 DEFAULT_MIN_CONVICTION = 0.0         # drop/exit names whose score has decayed to ≤ this
 DEFAULT_REBALANCE_BAND_PCT = 0.05    # skip rebalance trades smaller than 5% of equity
+
+# --- Risk overlay (panel-mandated) -------------------------------------------------
+DEFAULT_SECTOR_CAP_PCT = 0.30        # max book weight in any one GICS sector
+DEFAULT_STOP_LOSS_PCT = 0.20         # force-exit a holding down this much from its avg cost
+DEFAULT_DD_HALVE_PCT = 0.15          # at this portfolio drawdown, halve gross exposure
+DEFAULT_DD_FLATTEN_PCT = 0.20        # at this portfolio drawdown, flatten to cash
 
 _QTY_EPSILON = 1e-9
 
@@ -110,6 +122,10 @@ def apply_signals_to_portfolio(
         params.get("max_position_pct", params.get("position_size_pct", DEFAULT_MAX_POSITION_PCT))
     )
     band = float(params.get("rebalance_band_pct", DEFAULT_REBALANCE_BAND_PCT))
+    sector_cap = float(params.get("sector_cap_pct", DEFAULT_SECTOR_CAP_PCT))
+    stop_loss = float(params.get("stop_loss_pct", DEFAULT_STOP_LOSS_PCT))
+    dd_halve = float(params.get("dd_halve_pct", DEFAULT_DD_HALVE_PCT))
+    dd_flatten = float(params.get("dd_flatten_pct", DEFAULT_DD_FLATTEN_PCT))
 
     positions = {
         p.symbol: p
@@ -168,6 +184,36 @@ def apply_signals_to_portfolio(
         abs_weights = _cap_and_redistribute({sym: w * gross for sym, w in rel.items()}, max_pos_pct)
         for sym, w in abs_weights.items():
             target_dollars[sym] = w * equity
+
+    # --- Risk overlay: stop-loss, sector caps, drawdown brake -----------------
+    # 1) Stop-loss: force-exit any holding down more than stop_loss from its average
+    #    cost, and bar it from this cycle's targets (don't immediately re-buy a stop-out).
+    if stop_loss > 0:
+        for sym, pos in list(positions.items()):
+            px = price_of(sym)
+            if px is not None and px < float(pos.avg_cost) * (1.0 - stop_loss):
+                target_dollars[sym] = 0.0
+                targets.discard(sym)
+
+    # 2) Sector cap: scale every name in an over-cap sector down pro-rata (excess → cash).
+    if sector_cap > 0 and target_dollars:
+        by_sector: dict[str, float] = {}
+        for sym, dollars in target_dollars.items():
+            by_sector[sector_of(sym)] = by_sector.get(sector_of(sym), 0.0) + dollars
+        cap_dollars = sector_cap * equity
+        for sym in list(target_dollars):
+            sec_total = by_sector[sector_of(sym)]
+            if sec_total > cap_dollars > 0:
+                target_dollars[sym] *= cap_dollars / sec_total
+
+    # 3) Drawdown brake: de-risk as the book draws down from its high-water mark.
+    peak = float(portfolio.peak_value) if getattr(portfolio, "peak_value", None) else 0.0
+    if peak > 0:
+        drawdown = 1.0 - equity / peak
+        if drawdown >= dd_flatten:
+            target_dollars = {sym: 0.0 for sym in target_dollars}
+        elif drawdown >= dd_halve:
+            target_dollars = {sym: d * 0.5 for sym, d in target_dollars.items()}
 
     # --- Compute rebalance deltas (skip small drift on existing holdings) ---
     deltas: dict[str, tuple[float, float]] = {}

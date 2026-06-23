@@ -65,6 +65,12 @@ def mark_to_market(
     cash = float(portfolio.current_cash)
     portfolio_value = cash + positions_value
 
+    # Maintain the high-water mark that drives the strategy's drawdown brake.
+    prior_peak = float(portfolio.peak_value) if portfolio.peak_value is not None else 0.0
+    if portfolio_value > prior_peak:
+        portfolio.peak_value = round(portfolio_value, 2)
+        db.add(portfolio)
+
     # Parallel benchmark: starting cash invested in the benchmark on day one.
     benchmark_value: Optional[float] = None
     bench_symbol = portfolio.benchmark_symbol or "SPY"
