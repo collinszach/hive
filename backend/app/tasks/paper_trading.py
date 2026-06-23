@@ -371,6 +371,7 @@ def _process_live_portfolios(db, as_of, *, notify: bool = True) -> dict:
     from datetime import datetime, timezone
 
     from app.models.paper_portfolio import PaperPortfolio
+    from app.models.paper_position import PaperPosition
     from app.models.paper_signal import PaperSignal
     from app.paper_trading.executor import get_executor
     from app.paper_trading.strategy import apply_signals_to_portfolio
@@ -394,7 +395,14 @@ def _process_live_portfolios(db, as_of, *, notify: bool = True) -> dict:
             {"symbol": s, "signal_label": lbl, "signal_score": score}
             for (s, lbl, score) in signal_rows
         ]
-        symbols = sorted({s["symbol"] for s in signals} | {pf.benchmark_symbol or BENCHMARK_SYMBOL})
+        # Price every signaled name, the benchmark, AND every currently-held name — the
+        # rebalancer must be able to mark/trim holdings even if dropped from the watchlist.
+        held = db.execute(
+            select(PaperPosition.symbol).where(PaperPosition.portfolio_id == pf.id)
+        ).scalars().all()
+        symbols = sorted(
+            {s["symbol"] for s in signals} | set(held) | {pf.benchmark_symbol or BENCHMARK_SYMBOL}
+        )
         prices = get_reference_prices(db, symbols, as_of)
         trades = apply_signals_to_portfolio(db, pf, signals, prices, executor, pf.strategy_params, as_of)
         mark_to_market(db, pf, prices, as_of)

@@ -71,21 +71,66 @@ _NO_SLIP = SimulatedExecutor(slippage_bps=0)
 _AS_OF = date(2024, 6, 3)
 
 
-# --- strategy -----------------------------------------------------------------
+# --- strategy (target-weight portfolio rebalancer) ----------------------------
 
-def test_buy_opens_position_and_debits_cash():
+def _qty_added(db, symbol):
+    """Quantity bought for ``symbol`` across *positions* added this cycle.
+
+    Both ``PaperPosition`` and ``PaperTrade`` carry ``symbol``/``quantity``; positions are
+    distinguished by ``avg_cost`` so trades aren't double-counted.
+    """
+    return sum(
+        float(a.quantity)
+        for a in db.added
+        if getattr(a, "symbol", None) == symbol and hasattr(a, "avg_cost")
+    )
+
+
+def test_conviction_weighting_sizes_best_idea_larger():
+    """Higher-scored ideas get a larger target weight (not naive equal-weight)."""
     db = FakeSession()
     pf = _portfolio(cash=10_000.0)
-    signals = [{"symbol": "AAPL", "signal_label": "buy", "signal_score": 0.6}]
-    trades = apply_signals_to_portfolio(db, pf, signals, {"AAPL": 100.0}, _NO_SLIP,
-                                        {"position_size_pct": 0.2, "max_positions": 5}, _AS_OF)
-    assert pf.current_cash == pytest.approx(8_000.0)  # spent 20% = 2000
-    assert len(trades) == 1
-    new_pos = [a for a in db.added if getattr(a, "symbol", None) == "AAPL" and hasattr(a, "quantity")]
-    assert new_pos and float(new_pos[0].quantity) == pytest.approx(20.0)
+    signals = [
+        {"symbol": "AAPL", "signal_label": "buy", "signal_score": 0.6},
+        {"symbol": "MSFT", "signal_label": "buy", "signal_score": 0.3},
+        {"symbol": "GOOG", "signal_label": "buy", "signal_score": 0.1},
+    ]
+    prices = {"AAPL": 100.0, "MSFT": 100.0, "GOOG": 100.0}
+    apply_signals_to_portfolio(db, pf, signals, prices, _NO_SLIP, {"max_positions": 5}, _AS_OF)
+    qa, qm, qg = _qty_added(db, "AAPL"), _qty_added(db, "MSFT"), _qty_added(db, "GOOG")
+    assert qa > qm > qg > 0  # sized by conviction, all funded
 
 
-def test_sell_to_flat_credits_cash_and_removes_position():
+def test_dynamic_exposure_raises_cash_on_weak_conviction():
+    """Weak/broad conviction ⇒ less invested (more cash) than strong conviction."""
+    weak_signals = [{"symbol": s, "signal_label": "buy", "signal_score": 0.1}
+                    for s in ("A", "B", "C")]
+    strong_signals = [{"symbol": s, "signal_label": "buy", "signal_score": 0.6}
+                      for s in ("A", "B", "C")]
+    prices = {"A": 100.0, "B": 100.0, "C": 100.0}
+
+    weak_db, weak_pf = FakeSession(), _portfolio(cash=10_000.0)
+    apply_signals_to_portfolio(weak_db, weak_pf, weak_signals, prices, _NO_SLIP, {}, _AS_OF)
+
+    strong_db, strong_pf = FakeSession(), _portfolio(cash=10_000.0)
+    apply_signals_to_portfolio(strong_db, strong_pf, strong_signals, prices, _NO_SLIP, {}, _AS_OF)
+
+    assert weak_pf.current_cash > strong_pf.current_cash  # de-risked when conviction is weak
+    assert strong_pf.current_cash < 10_000.0  # but still deployed capital
+
+
+def test_diversification_cap_limits_single_name():
+    """A single high-conviction name is capped by ``max_position_pct`` (rest stays cash)."""
+    db = FakeSession()
+    pf = _portfolio(cash=10_000.0)
+    signals = [{"symbol": "NVDA", "signal_label": "buy", "signal_score": 0.9}]
+    apply_signals_to_portfolio(db, pf, signals, {"NVDA": 100.0}, _NO_SLIP,
+                               {"max_position_pct": 0.3}, _AS_OF)
+    assert _qty_added(db, "NVDA") == pytest.approx(30.0)  # 0.3 * 10_000 / 100
+    assert pf.current_cash == pytest.approx(7_000.0)
+
+
+def test_full_exit_on_sell_signal():
     pos = _position("AAPL", 20.0, 100.0)
     db = FakeSession(positions=[pos])
     pf = _portfolio(cash=8_000.0)
@@ -93,7 +138,24 @@ def test_sell_to_flat_credits_cash_and_removes_position():
     trades = apply_signals_to_portfolio(db, pf, signals, {"AAPL": 110.0}, _NO_SLIP, {}, _AS_OF)
     assert pf.current_cash == pytest.approx(8_000.0 + 20 * 110.0)  # 10,200
     assert pos in db.deleted
-    assert len(trades) == 1
+    assert [t.side for t in trades] == ["sell"]
+
+
+def test_decayed_holding_rotated_into_better_idea():
+    """Capital rotates: a held name with no edge is exited when a stronger idea wins the slot."""
+    old = _position("OLD", 10.0, 100.0)
+    db = FakeSession(positions=[old])
+    pf = _portfolio(cash=0.0)  # fully invested in OLD; equity = 1_000
+    signals = [
+        {"symbol": "OLD", "signal_label": "hold", "signal_score": 0.0},
+        {"symbol": "NEW", "signal_label": "buy", "signal_score": 0.6},
+    ]
+    prices = {"OLD": 100.0, "NEW": 100.0}
+    trades = apply_signals_to_portfolio(db, pf, signals, prices, _NO_SLIP,
+                                        {"max_positions": 1}, _AS_OF)
+    assert old in db.deleted  # exited the decayed holding
+    assert _qty_added(db, "NEW") > 0  # rotated into the better idea
+    assert sorted(t.side for t in trades) == ["buy", "sell"]
 
 
 def test_no_short_sell_when_not_held():
@@ -106,47 +168,30 @@ def test_no_short_sell_when_not_held():
     assert pf.current_cash == pytest.approx(5_000.0)
 
 
-def test_no_add_to_existing_position():
-    pos = _position("AAPL", 10.0, 100.0)
-    db = FakeSession(positions=[pos])
-    pf = _portfolio(cash=10_000.0)
-    signals = [{"symbol": "AAPL", "signal_label": "buy"}]
-    trades = apply_signals_to_portfolio(db, pf, signals, {"AAPL": 100.0}, _NO_SLIP, {}, _AS_OF)
-    assert trades == []
-    assert pf.current_cash == pytest.approx(10_000.0)
-
-
-def test_max_positions_cap_blocks_new_buys():
-    held = [_position(s, 1.0, 100.0) for s in ("A", "B", "C", "D", "E")]
-    db = FakeSession(positions=held)
-    pf = _portfolio(cash=10_000.0)
-    signals = [{"symbol": "NEW", "signal_label": "buy"}]
-    trades = apply_signals_to_portfolio(db, pf, signals, {"NEW": 100.0}, _NO_SLIP,
-                                        {"max_positions": 5}, _AS_OF)
-    assert trades == []
-
-
-def test_same_day_sell_frees_slot_for_buy():
-    held = [_position(s, 1.0, 100.0) for s in ("A", "B", "C", "D", "E")]
-    db = FakeSession(positions=held)
-    pf = _portfolio(cash=10_000.0)
-    signals = [
-        {"symbol": "A", "signal_label": "sell"},
-        {"symbol": "NEW", "signal_label": "buy"},
-    ]
-    trades = apply_signals_to_portfolio(db, pf, signals, {"A": 100.0, "NEW": 50.0}, _NO_SLIP,
-                                        {"max_positions": 5, "position_size_pct": 0.1}, _AS_OF)
-    sides = sorted(t.side for t in trades)
-    assert sides == ["buy", "sell"]
-
-
-def test_hold_signal_is_noop():
+def test_max_positions_caps_holdings():
     db = FakeSession()
     pf = _portfolio(cash=10_000.0)
-    signals = [{"symbol": "AAPL", "signal_label": "hold"}]
-    trades = apply_signals_to_portfolio(db, pf, signals, {"AAPL": 100.0}, _NO_SLIP, {}, _AS_OF)
-    assert trades == []
-    assert pf.current_cash == pytest.approx(10_000.0)
+    signals = [
+        {"symbol": s, "signal_label": "buy", "signal_score": score}
+        for s, score in (("A", 0.6), ("B", 0.5), ("C", 0.4), ("D", 0.3), ("E", 0.2))
+    ]
+    prices = {s: 100.0 for s in ("A", "B", "C", "D", "E")}
+    apply_signals_to_portfolio(db, pf, signals, prices, _NO_SLIP, {"max_positions": 3}, _AS_OF)
+    bought = {a.symbol for a in db.added if hasattr(a, "quantity")}
+    assert bought == {"A", "B", "C"}  # only the 3 highest-conviction names
+
+
+def test_rebalance_band_skips_small_drift():
+    """A holding already near its target weight is left alone (avoids churn/slippage)."""
+    pos = _position("AAPL", 34.0, 100.0)  # 3_400 of a 10_000 book; target ≈ 3_500
+    db = FakeSession(positions=[pos])
+    pf = _portfolio(cash=6_600.0)
+    signals = [{"symbol": "AAPL", "signal_label": "buy", "signal_score": 0.9}]
+    trades = apply_signals_to_portfolio(db, pf, signals, {"AAPL": 100.0}, _NO_SLIP,
+                                        {"max_position_pct": 0.35, "rebalance_band_pct": 0.05},
+                                        _AS_OF)
+    assert trades == []  # 100 drift < 5% band (500) — no trade
+    assert pf.current_cash == pytest.approx(6_600.0)
 
 
 # --- valuation ----------------------------------------------------------------

@@ -1,15 +1,29 @@
-"""Rules-based position sizing for the paper-trading engine.
+"""Portfolio-construction strategy for the paper-trading engine.
 
 ``apply_signals_to_portfolio`` is the single strategy code path shared by the live
-daily cycle (Phase 4) and the walk-forward backtester (Phase 3) — the only difference
-is whether ``as_of`` is "today" or a replayed historical date.
+daily/intraday cycle (Phase 4) and the walk-forward backtester (Phase 3) — the only
+difference is whether ``as_of`` is "today" or a replayed historical date.
 
-Rules (no shorting, no leverage):
-  * BUY signal  → open a position sized at ``position_size_pct`` of current cash,
-    unless already held or at ``max_positions`` concurrent holdings.
-  * SELL signal → sell the entire position to flat (if held).
-  * HOLD        → do nothing.
-Sells are processed before buys so freed cash and slots are reusable same-day.
+This is a **target-weight portfolio manager** run like a discretionary money manager, not
+an independent stock picker. On each cycle it:
+
+  1. Marks the whole book to current prices and computes **total equity** (cash + positions).
+  2. Selects the target holdings: names currently signaling ``buy``, plus names already held
+     that are *not* signaling ``sell``, ranked by signal score and capped at ``max_positions``;
+     names whose conviction has decayed to ≤ ``min_conviction`` are dropped (exited).
+  3. **Sizes by conviction** — higher-scored ideas get a larger target weight (not naive
+     equal-weight), each capped at ``max_position_pct`` for diversification.
+  4. **Manages gross exposure dynamically** — total invested scales with the strength and
+     breadth of conviction (``base_exposure_pct`` + mean conviction, capped at
+     ``max_invested_pct``). Weak/few signals ⇒ raise cash and de-risk; strong broad signals
+     ⇒ lean in. This is the risk-off lever a manager uses in poor regimes.
+  5. **Rebalances toward those weights** — trimming overweight winners, topping up underweight
+     names, exiting dropped/``sell`` names entirely — skipping drift smaller than
+     ``rebalance_band_pct`` of equity to avoid churn/slippage.
+
+Sizing is a fraction of *total equity*, not *remaining cash*, so positions are balanced and
+order-independent (the old model produced declining, path-dependent sizes and left cash idle).
+No shorting, no leverage: targets and trades are always ≥ 0.
 """
 import logging
 from typing import Optional
@@ -22,8 +36,37 @@ from app.paper_trading.executor import ExecutionResult, TradeExecutor
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_POSITION_SIZE_PCT = 0.20
 DEFAULT_MAX_POSITIONS = 5
+DEFAULT_MAX_INVESTED_PCT = 0.95      # hard ceiling on gross exposure; always keep some cash
+DEFAULT_BASE_EXPOSURE_PCT = 0.45     # floor exposure; mean conviction is added on top
+DEFAULT_MAX_POSITION_PCT = 0.35      # per-name concentration cap (diversification)
+DEFAULT_MIN_CONVICTION = 0.0         # drop/exit names whose score has decayed to ≤ this
+DEFAULT_REBALANCE_BAND_PCT = 0.05    # skip rebalance trades smaller than 5% of equity
+
+_QTY_EPSILON = 1e-9
+
+
+def _cap_and_redistribute(weights: dict[str, float], cap: float) -> dict[str, float]:
+    """Cap each weight at ``cap`` and push the excess onto the uncapped names, iterating.
+
+    Preserves the total weight (gross exposure) unless every name is capped. Keeps the
+    book diversified without silently leaking exposure to cash on the first capped name.
+    """
+    w = dict(weights)
+    for _ in range(len(w) + 1):
+        over = {s: v for s, v in w.items() if v > cap + 1e-12}
+        if not over:
+            break
+        excess = sum(v - cap for v in over.values())
+        for s in over:
+            w[s] = cap
+        uncapped = [s for s in w if w[s] < cap - 1e-12]
+        if not uncapped or excess <= 0:
+            break
+        share = excess / len(uncapped)
+        for s in uncapped:
+            w[s] = min(cap, w[s] + share)
+    return w
 
 
 def _record_trade(db, portfolio, res: ExecutionResult, as_of, signal_score) -> PaperTrade:
@@ -50,15 +93,23 @@ def apply_signals_to_portfolio(
     params: Optional[dict],
     as_of,
 ) -> list[PaperTrade]:
-    """Apply one day's signals to ``portfolio``, mutating cash/positions and writing trades.
+    """Rebalance ``portfolio`` toward equal-weight target holdings for ``as_of``.
 
     ``signals``: list of dicts with ``symbol``, ``signal_label`` (buy/sell/hold), and
-    optional ``signal_score``. ``prices``: symbol → reference (fill) price for ``as_of``.
-    Returns the list of executed trades.
+    optional ``signal_score``. ``prices``: symbol → reference (fill) price for ``as_of``;
+    must cover every held name and every buy candidate. Returns the executed trades.
     """
     params = params or {}
-    pos_size_pct = float(params.get("position_size_pct", DEFAULT_POSITION_SIZE_PCT))
     max_positions = int(params.get("max_positions", DEFAULT_MAX_POSITIONS))
+    max_invested = float(params.get("target_invested_pct", DEFAULT_MAX_INVESTED_PCT))
+    base_exposure = float(params.get("base_exposure_pct", DEFAULT_BASE_EXPOSURE_PCT))
+    min_conviction = float(params.get("min_conviction", DEFAULT_MIN_CONVICTION))
+    # Legacy ``position_size_pct`` (old per-cash sizing) is reinterpreted as the per-name
+    # weight cap so existing backtest param grids still tune concentration meaningfully.
+    max_pos_pct = float(
+        params.get("max_position_pct", params.get("position_size_pct", DEFAULT_MAX_POSITION_PCT))
+    )
+    band = float(params.get("rebalance_band_pct", DEFAULT_REBALANCE_BAND_PCT))
 
     positions = {
         p.symbol: p
@@ -67,62 +118,125 @@ def apply_signals_to_portfolio(
         ).scalars()
     }
     cash = float(portfolio.current_cash)
+
+    sig: dict[str, tuple[Optional[str], float]] = {}
+    for s in signals:
+        score = s.get("signal_score")
+        sig[s["symbol"]] = (s.get("signal_label"), float(score) if score is not None else 0.0)
+
+    def price_of(sym: str) -> Optional[float]:
+        p = prices.get(sym)
+        return float(p) if p is not None and p > 0 else None
+
+    # --- Mark the book and compute total equity (cash + positions at current prices) ---
+    positions_value = 0.0
+    for sym, pos in positions.items():
+        px = price_of(sym) or float(pos.avg_cost)  # hold at cost if no fresh mark
+        positions_value += float(pos.quantity) * px
+    equity = cash + positions_value
+    if equity <= 0:
+        return []
+
+    # --- Select target holdings: buys + retained holds (exclude sells), ranked by score ---
+    sell_syms = {sym for sym, (lbl, _) in sig.items() if lbl == "sell"}
+    candidates: dict[str, float] = {}
+    for sym in positions:  # keep currently-held names unless they signal sell
+        if sym in sell_syms or price_of(sym) is None:
+            continue
+        candidates[sym] = sig.get(sym, ("hold", 0.0))[1]
+    for sym, (lbl, score) in sig.items():  # add fresh buy candidates
+        if lbl == "buy" and sym not in sell_syms and price_of(sym) is not None:
+            candidates[sym] = score
+    ranked = sorted(candidates.items(), key=lambda kv: kv[1], reverse=True)[:max_positions]
+    # Conviction = positive score. Drop names with no remaining edge — a manager exits a
+    # thesis that has decayed rather than holding it for its own sake.
+    slate = [(sym, max(score, 0.0)) for sym, score in ranked if score > min_conviction]
+    targets = {sym for sym, _ in slate}
+
+    # --- Conviction-weighted target dollars with dynamic gross exposure ---
+    target_dollars: dict[str, float] = {}
+    if slate:
+        mean_conviction = sum(c for _, c in slate) / len(slate)
+        # Lean in when conviction is strong/broad; raise cash when it's weak. Bounded so we
+        # never go past the gross ceiling and always retain a cash buffer.
+        gross = max(0.0, min(max_invested, base_exposure + mean_conviction))
+        total_conviction = sum(c for _, c in slate)
+        if total_conviction > 0:
+            rel = {sym: c / total_conviction for sym, c in slate}
+        else:  # all exactly at the floor — fall back to equal weight
+            rel = {sym: 1.0 / len(slate) for sym, _ in slate}
+        abs_weights = _cap_and_redistribute({sym: w * gross for sym, w in rel.items()}, max_pos_pct)
+        for sym, w in abs_weights.items():
+            target_dollars[sym] = w * equity
+
+    # --- Compute rebalance deltas (skip small drift on existing holdings) ---
+    deltas: dict[str, tuple[float, float]] = {}
+    for sym in set(positions) | targets:
+        px = price_of(sym)
+        if px is None:
+            continue  # can't value or trade without a price — leave the position untouched
+        cur_val = float(positions[sym].quantity) * px if sym in positions else 0.0
+        tgt = target_dollars.get(sym, 0.0)
+        delta = tgt - cur_val
+        full_exit = tgt == 0.0 and sym in positions
+        new_entry = sym not in positions and tgt > 0.0
+        if not full_exit and not new_entry and abs(delta) < band * equity:
+            continue  # within rebalance band — not worth the turnover
+        deltas[sym] = (delta, px)
+
     trades: list[PaperTrade] = []
 
-    sells = [s for s in signals if s.get("signal_label") == "sell"]
-    buys = [s for s in signals if s.get("signal_label") == "buy"]
-
-    # --- Sells first: sell-to-flat, freeing cash and position slots ---
-    for s in sells:
-        sym = s["symbol"]
+    # --- Sells first (most-negative delta first), freeing cash for the buys ---
+    for sym, (delta, px) in sorted(deltas.items(), key=lambda kv: kv[1][0]):
+        if delta >= 0:
+            continue
         pos = positions.get(sym)
         if pos is None:
-            continue  # nothing to sell — never short
-        price = prices.get(sym)
-        if price is None or price <= 0:
             continue
-        qty = float(pos.quantity)
-        res = executor.execute(sym, "sell", qty, price)
+        sell_qty = min(float(pos.quantity), (-delta) / px)
+        if sell_qty <= _QTY_EPSILON:
+            continue
+        res = executor.execute(sym, "sell", sell_qty, px)
         if not res.filled:
             continue
         cash += res.quantity * res.price
-        trades.append(_record_trade(db, portfolio, res, as_of, s.get("signal_score")))
-        db.delete(pos)
-        del positions[sym]
+        trades.append(_record_trade(db, portfolio, res, as_of, sig.get(sym, (None, 0.0))[1]))
+        remaining = float(pos.quantity) - res.quantity
+        if remaining <= _QTY_EPSILON:
+            db.delete(pos)
+            del positions[sym]
+        else:
+            pos.quantity = remaining
 
-    # --- Buys: fixed % of cash, capped at max_positions, no adding to held names ---
-    for s in buys:
-        sym = s["symbol"]
-        if sym in positions:
+    # --- Buys (largest delta first), constrained by available cash ---
+    for sym, (delta, px) in sorted(deltas.items(), key=lambda kv: kv[1][0], reverse=True):
+        if delta <= 0:
             continue
-        if len(positions) >= max_positions:
+        spend = min(delta, cash)
+        if spend <= 0:
             continue
-        price = prices.get(sym)
-        if price is None or price <= 0:
-            continue
-        budget = cash * pos_size_pct
-        if budget <= 0:
-            continue
-        qty = budget / price
-        res = executor.execute(sym, "buy", qty, price)
+        res = executor.execute(sym, "buy", spend / px, px)
         if not res.filled:
             continue
         cost = res.quantity * res.price
-        if cost > cash:  # slippage nudged cost over available cash — trim to fit
+        if cost > cash:  # slippage nudged cost over cash — trim to fit
             res = res._replace(quantity=cash / res.price)
             cost = res.quantity * res.price
-        if res.quantity <= 0:
+        if res.quantity <= _QTY_EPSILON:
             continue
         cash -= cost
-        pos = PaperPosition(
-            portfolio_id=portfolio.id,
-            symbol=sym,
-            quantity=res.quantity,
-            avg_cost=res.price,
-        )
-        db.add(pos)
-        positions[sym] = pos
-        trades.append(_record_trade(db, portfolio, res, as_of, s.get("signal_score")))
+        pos = positions.get(sym)
+        if pos is None:
+            pos = PaperPosition(
+                portfolio_id=portfolio.id, symbol=sym, quantity=res.quantity, avg_cost=res.price
+            )
+            db.add(pos)
+            positions[sym] = pos
+        else:  # topping up — blend the average cost
+            total_qty = float(pos.quantity) + res.quantity
+            pos.avg_cost = (float(pos.quantity) * float(pos.avg_cost) + cost) / total_qty
+            pos.quantity = total_qty
+        trades.append(_record_trade(db, portfolio, res, as_of, sig.get(sym, (None, 0.0))[1]))
 
     portfolio.current_cash = cash
     db.add(portfolio)
