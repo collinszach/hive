@@ -60,6 +60,7 @@ def _portfolio(cash=10_000.0, **kw):
         starting_cash=kw.get("starting_cash", cash),
         benchmark_symbol=kw.get("benchmark_symbol", "SPY"),
         benchmark_start_price=kw.get("benchmark_start_price", None),
+        peak_value=kw.get("peak_value", None),
     )
 
 
@@ -96,7 +97,9 @@ def test_conviction_weighting_sizes_best_idea_larger():
         {"symbol": "GOOG", "signal_label": "buy", "signal_score": 0.1},
     ]
     prices = {"AAPL": 100.0, "MSFT": 100.0, "GOOG": 100.0}
-    apply_signals_to_portfolio(db, pf, signals, prices, _NO_SLIP, {"max_positions": 5}, _AS_OF)
+    # Relax the caps so this isolates conviction sizing (caps have their own tests).
+    params = {"max_positions": 5, "max_position_pct": 0.9, "sector_cap_pct": 1.0}
+    apply_signals_to_portfolio(db, pf, signals, prices, _NO_SLIP, params, _AS_OF)
     qa, qm, qg = _qty_added(db, "AAPL"), _qty_added(db, "MSFT"), _qty_added(db, "GOOG")
     assert qa > qm > qg > 0  # sized by conviction, all funded
 
@@ -192,6 +195,48 @@ def test_rebalance_band_skips_small_drift():
                                         _AS_OF)
     assert trades == []  # 100 drift < 5% band (500) — no trade
     assert pf.current_cash == pytest.approx(6_600.0)
+
+
+# --- risk overlay -------------------------------------------------------------
+
+def test_stop_loss_forces_exit_despite_buy_signal():
+    """A holding down past the stop is sold even when it still signals buy."""
+    pos = _position("LOSE", 10.0, 100.0)
+    db = FakeSession(positions=[pos])
+    pf = _portfolio(cash=0.0)  # equity = 10 * 75 = 750
+    signals = [{"symbol": "LOSE", "signal_label": "buy", "signal_score": 0.6}]
+    trades = apply_signals_to_portfolio(db, pf, signals, {"LOSE": 75.0}, _NO_SLIP,
+                                        {"stop_loss_pct": 0.20}, _AS_OF)  # 75 < 100*0.8
+    assert pos in db.deleted
+    assert [t.side for t in trades] == ["sell"]
+
+
+def test_sector_cap_limits_concentration():
+    """Two same-sector winners are scaled so the sector stays within its cap."""
+    db = FakeSession()
+    pf = _portfolio(cash=10_000.0)
+    # NVDA + AMD are both Information Technology in the sector map.
+    signals = [
+        {"symbol": "NVDA", "signal_label": "buy", "signal_score": 0.6},
+        {"symbol": "AMD", "signal_label": "buy", "signal_score": 0.6},
+    ]
+    apply_signals_to_portfolio(db, pf, signals, {"NVDA": 100.0, "AMD": 100.0}, _NO_SLIP,
+                               {"sector_cap_pct": 0.30, "max_position_pct": 0.20}, _AS_OF)
+    it_value = (_qty_added(db, "NVDA") + _qty_added(db, "AMD")) * 100.0
+    assert it_value == pytest.approx(3_000.0, rel=1e-3)  # capped at 30% of the book
+
+
+def test_drawdown_brake_flattens_to_cash():
+    """Past the flatten threshold, all targets go to zero and holdings are sold."""
+    pos = _position("AAPL", 75.0, 100.0)
+    db = FakeSession(positions=[pos])
+    pf = _portfolio(cash=300.0, peak_value=10_000.0)  # equity 7_800 → 22% drawdown
+    signals = [{"symbol": "AAPL", "signal_label": "buy", "signal_score": 0.6}]
+    trades = apply_signals_to_portfolio(db, pf, signals, {"AAPL": 100.0}, _NO_SLIP,
+                                        {"dd_flatten_pct": 0.20}, _AS_OF)
+    assert pos in db.deleted  # flattened despite the buy signal
+    assert pf.current_cash == pytest.approx(7_800.0)
+    assert all(t.side == "sell" for t in trades)
 
 
 # --- valuation ----------------------------------------------------------------
