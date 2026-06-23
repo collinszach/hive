@@ -27,13 +27,8 @@ struct DashboardView: View {
         Screen(title: "Home", refresh: { await refreshAll() }) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 HomeGreetingSection(onAdd: { showAdd = true }, onOptimize: { showOptimize = true })
-                HomeSafeToSpendSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(0)
-                HomeAttentionSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(1)
-                HomeGlanceSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(2)
-                HomeNetWorthSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(3)
-                HomeInvestmentsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(4)
-                // Always-visible entry to the paper-trading signal engine (doesn't depend
-                // on SnapTrade holdings, unlike the Investments card above).
+                // Paper-trading signal engine — placed near the top for visibility and
+                // independent of SnapTrade holdings (unlike the Investments card below).
                 NavigationLink { PaperTradingView() } label: {
                     Card {
                         HStack(spacing: Theme.Spacing.md) {
@@ -52,7 +47,11 @@ struct DashboardView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .hiveEntrance(4)
+                HomeSafeToSpendSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(0)
+                HomeAttentionSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(1)
+                HomeGlanceSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(2)
+                HomeNetWorthSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(3)
+                HomeInvestmentsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(4)
                 HomeCategoriesSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(5)
                 HomeAccountsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(6)
                 HomeGoalsPointsSection(token: refreshToken, onAuthExpired: signOut).hiveEntrance(7)
