@@ -99,6 +99,10 @@ struct PaperTradingView: View {
             Card {
                 VStack(spacing: Theme.Spacing.sm) {
                     metricRow("CAGR", pct(r.cagr), "Benchmark", pct(r.benchmarkReturn))
+                    metricRow("Alpha (ann., β-adj)", pct(r.alphaAnnualized),
+                              "Beta", r.beta.map { String(format: "%.2f", $0) } ?? "—")
+                    metricRow("Sharpe", r.sharpe.map { String(format: "%.2f", $0) } ?? "—",
+                              "Benchmark Sharpe", r.benchmarkSharpe.map { String(format: "%.2f", $0) } ?? "—")
                     metricRow("Max drawdown", pct(r.maxDrawdown), "Win rate",
                               r.winRate.map { "\(Int(($0 * 100).rounded()))%" } ?? "—")
                     metricRow("Trades closed", "\(r.tradesClosed)", "Status", r.status)
