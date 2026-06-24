@@ -65,6 +65,55 @@ DEFAULT_DD_FLATTEN_PCT = 1.0         # disabled by default; set <1 to re-enable
 _QTY_EPSILON = 1e-9
 
 
+def _apply_sector_caps(
+    target_dollars: dict[str, float], equity: float, sector_cap: float, name_cap: float
+) -> dict[str, float]:
+    """Enforce a per-sector dollar cap, redistributing the excess to names with headroom.
+
+    Naively scaling an over-cap sector down sends the trimmed dollars to cash (drag).
+    Instead this water-fills: cap over-cap sectors, then redistribute the freed budget to
+    names that still have room under *both* the per-name and per-sector caps, iterating
+    until stable. Whatever can't be placed without breaching a cap stays in cash.
+    """
+    if sector_cap <= 0 or not target_dollars:
+        return target_dollars
+    cap_d = sector_cap * equity
+    name_cap_d = name_cap * equity
+    budget = sum(target_dollars.values())  # intended gross to preserve where possible
+    w = dict(target_dollars)
+
+    for _ in range(8):
+        sector_total: dict[str, float] = {}
+        for s, d in w.items():
+            sector_total[sector_of(s)] = sector_total.get(sector_of(s), 0.0) + d
+        # Scale any over-cap sector back down to its cap.
+        capped = False
+        for s in list(w):
+            tot = sector_total[sector_of(s)]
+            if tot > cap_d + 1e-9:
+                w[s] *= cap_d / tot
+                capped = True
+        # Redistribute the deficit to names with both name- and sector-headroom.
+        deficit = budget - sum(w.values())
+        if deficit <= 1e-9 and not capped:
+            break
+        sector_total = {}
+        for s, d in w.items():
+            sector_total[sector_of(s)] = sector_total.get(sector_of(s), 0.0) + d
+        headroom = {
+            s: hr
+            for s in w
+            if (hr := min(name_cap_d - w[s], cap_d - sector_total[sector_of(s)])) > 1e-9
+        }
+        total_hr = sum(headroom.values())
+        if deficit <= 1e-9 or total_hr <= 1e-9:
+            break
+        add = min(deficit, total_hr)
+        for s, hr in headroom.items():
+            w[s] += add * hr / total_hr
+    return w
+
+
 def _cap_and_redistribute(weights: dict[str, float], cap: float) -> dict[str, float]:
     """Cap each weight at ``cap`` and push the excess onto the uncapped names, iterating.
 
@@ -202,16 +251,9 @@ def apply_signals_to_portfolio(
                 target_dollars[sym] = 0.0
                 targets.discard(sym)
 
-    # 2) Sector cap: scale every name in an over-cap sector down pro-rata (excess → cash).
-    if sector_cap > 0 and target_dollars:
-        by_sector: dict[str, float] = {}
-        for sym, dollars in target_dollars.items():
-            by_sector[sector_of(sym)] = by_sector.get(sector_of(sym), 0.0) + dollars
-        cap_dollars = sector_cap * equity
-        for sym in list(target_dollars):
-            sec_total = by_sector[sector_of(sym)]
-            if sec_total > cap_dollars > 0:
-                target_dollars[sym] *= cap_dollars / sec_total
+    # 2) Sector cap: hold any GICS sector within sector_cap, redistributing the trimmed
+    #    budget to under-cap names rather than leaking it to cash.
+    target_dollars = _apply_sector_caps(target_dollars, equity, sector_cap, max_pos_pct)
 
     # 3) Drawdown brake: de-risk as the book draws down from its high-water mark.
     peak = float(portfolio.peak_value) if getattr(portfolio, "peak_value", None) else 0.0
