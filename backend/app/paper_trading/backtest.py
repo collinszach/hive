@@ -38,11 +38,13 @@ _DEFAULT_STARTING_CASH = 100_000.0
 _BENCHMARK = "SPY"
 
 # Small default parameter grid for the training search.
+# Grid the knobs the momentum strategy actually uses. (The old grid tuned RSI
+# thresholds, which the factor signal ignores entirely.) These trade diversification
+# against return: how many names, how tight the sector cap, how wide the stop.
 _DEFAULT_PARAM_GRID = {
-    "position_size_pct": [0.10, 0.20],
-    "max_positions": [3, 5],
-    "rsi_oversold": [30.0],
-    "rsi_overbought": [70.0],
+    "max_positions": [5, 8],
+    "sector_cap_pct": [0.30, 0.50],
+    "stop_loss_pct": [0.20, 0.35],
 }
 
 

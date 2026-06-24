@@ -404,6 +404,13 @@ def _process_live_portfolios(db, as_of, *, notify: bool = True) -> dict:
             {s["symbol"] for s in signals} | set(held) | {pf.benchmark_symbol or BENCHMARK_SYMBOL}
         )
         prices = get_reference_prices(db, symbols, as_of)
+        # Safety: with no signals for as_of, the rebalancer would see zero targets and
+        # liquidate the whole book to cash. That's never intended (it means signal
+        # generation didn't run today) — mark-to-market only, never trade on empty signals.
+        if not signals:
+            logger.warning("no live signals for %s — skipping trades, mark-to-market only", as_of)
+            mark_to_market(db, pf, prices, as_of)
+            continue
         trades = apply_signals_to_portfolio(db, pf, signals, prices, executor, pf.strategy_params, as_of)
         mark_to_market(db, pf, prices, as_of)
         processed += 1

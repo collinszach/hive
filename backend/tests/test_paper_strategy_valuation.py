@@ -226,6 +226,25 @@ def test_sector_cap_limits_concentration():
     assert it_value == pytest.approx(3_000.0, rel=1e-3)  # capped at 30% of the book
 
 
+def test_sector_cap_redistributes_excess_to_other_sectors():
+    """Excess trimmed from a capped sector fills an under-cap sector, not cash."""
+    db = FakeSession()
+    pf = _portfolio(cash=10_000.0)
+    # NVDA+AMD (Information Technology) over-cap; JPM (Financials) has room.
+    signals = [
+        {"symbol": "NVDA", "signal_label": "buy", "signal_score": 0.6},
+        {"symbol": "AMD", "signal_label": "buy", "signal_score": 0.6},
+        {"symbol": "JPM", "signal_label": "buy", "signal_score": 0.3},
+    ]
+    prices = {"NVDA": 100.0, "AMD": 100.0, "JPM": 100.0}
+    apply_signals_to_portfolio(db, pf, signals, prices, _NO_SLIP,
+                               {"sector_cap_pct": 0.30, "max_position_pct": 0.35}, _AS_OF)
+    it_value = (_qty_added(db, "NVDA") + _qty_added(db, "AMD")) * 100.0
+    jpm_value = _qty_added(db, "JPM") * 100.0
+    assert it_value == pytest.approx(3_000.0, rel=1e-3)   # IT held at its 30% cap
+    assert jpm_value == pytest.approx(3_000.0, rel=1e-3)  # filled to Financials' cap (was 2_500)
+
+
 def test_drawdown_brake_flattens_to_cash():
     """Past the flatten threshold, all targets go to zero and holdings are sold."""
     pos = _position("AAPL", 75.0, 100.0)
