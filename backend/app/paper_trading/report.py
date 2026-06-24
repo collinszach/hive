@@ -28,6 +28,30 @@ def _sharpe(values: list[float]) -> float:
     return float((rets.mean() / sd) * np.sqrt(_TRADING_DAYS_PER_YEAR))
 
 
+def _beta_and_alpha(pvals: list[float], bvals: list[float]):
+    """CAPM beta and annualized Jensen's alpha of the portfolio vs the benchmark.
+
+    Takes *aligned* (same-date) portfolio and benchmark value series, regresses daily
+    portfolio returns on daily benchmark returns: beta = cov/var, alpha = the intercept
+    (mean excess return not explained by market exposure), annualized. Returns
+    ``(None, None)`` without enough overlapping history. This separates genuine alpha
+    from levered beta — raw outperformance can be entirely market exposure.
+    """
+    if len(pvals) < 3 or len(bvals) != len(pvals):
+        return None, None
+    p = np.asarray(pvals, dtype=float)
+    b = np.asarray(bvals, dtype=float)
+    pr = p[1:] / p[:-1] - 1.0
+    br = b[1:] / b[:-1] - 1.0
+    mask = np.isfinite(pr) & np.isfinite(br)
+    pr, br = pr[mask], br[mask]
+    if len(pr) < 3 or br.var(ddof=1) == 0:
+        return None, None
+    beta = float(np.cov(pr, br, ddof=1)[0, 1] / br.var(ddof=1))
+    alpha_daily = float(pr.mean() - beta * br.mean())
+    return beta, alpha_daily * _TRADING_DAYS_PER_YEAR
+
+
 def _max_drawdown(values: list[float]) -> float:
     """Most negative peak-to-trough return over the series (<= 0)."""
     if not values:
@@ -101,9 +125,23 @@ def compute_evaluation_report(
 
     benchmark_return = None
     alpha = None
+    beta = None
+    alpha_annualized = None
+    benchmark_sharpe = None
     if bvals:
         benchmark_return = bvals[-1] / starting_cash - 1.0
-        alpha = total_return - benchmark_return
+        alpha = total_return - benchmark_return  # raw outperformance (includes beta)
+        benchmark_sharpe = _sharpe(bvals)
+        # Beta-adjusted alpha needs date-aligned portfolio/benchmark series.
+        aligned = [
+            (float(s["portfolio_value"]), float(s["benchmark_value"]))
+            for s in snaps
+            if s.get("benchmark_value") is not None
+        ]
+        if len(aligned) >= 3:
+            beta, alpha_annualized = _beta_and_alpha(
+                [a[0] for a in aligned], [a[1] for a in aligned]
+            )
 
     pnls = _realized_trade_pnls(trades)
     wins = [p for p in pnls if p > 0]
@@ -125,6 +163,9 @@ def compute_evaluation_report(
         "cagr": r(cagr),
         "benchmark_return": r(benchmark_return),
         "alpha": r(alpha),
+        "beta": r(beta, 4),
+        "alpha_annualized": r(alpha_annualized),
+        "benchmark_sharpe": r(benchmark_sharpe, 4),
         "sharpe": r(_sharpe(pvals), 4),
         "max_drawdown": r(_max_drawdown(pvals)),
         "win_rate": r(win_rate, 4),

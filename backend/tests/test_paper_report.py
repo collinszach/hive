@@ -55,6 +55,24 @@ def test_report_metrics_hand_computed():
     assert r["status"] == "in_progress"
 
 
+def test_report_beta_and_jensen_alpha():
+    # Portfolio daily return is exactly 2x the benchmark's each day → beta 2, alpha 0.
+    bench = [100.0, 110.0, 104.5, 114.95]      # returns +10%, -5%, +10%
+    port = [100.0, 120.0, 108.0, 129.6]        # returns +20%, -10%, +20%
+    snaps = _snaps(list(zip(port, bench)))
+    r = compute_evaluation_report(100.0, snaps, [])
+    assert r["beta"] == pytest.approx(2.0, abs=0.02)
+    assert r["alpha_annualized"] == pytest.approx(0.0, abs=1e-6)
+    assert r["benchmark_sharpe"] is not None
+
+
+def test_report_beta_null_without_enough_history():
+    snaps = _snaps([(100_000, 100_000), (110_000, 105_000)])  # only 1 return
+    r = compute_evaluation_report(100_000, snaps, [])
+    assert r["beta"] is None
+    assert r["alpha_annualized"] is None
+
+
 def test_report_status_complete_after_window():
     snaps = _snaps([(100_000, 100_000)] + [(101_000, 100_500)])
     # stretch the last day past the 180-day window

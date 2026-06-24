@@ -826,6 +826,9 @@ export interface PaperEvaluationReport {
   cagr: number | null;
   benchmark_return: number | null;
   alpha: number | null;
+  beta: number | null;
+  alpha_annualized: number | null;
+  benchmark_sharpe: number | null;
   sharpe: number | null;
   max_drawdown: number | null;
   win_rate: number | null;

@@ -72,6 +72,9 @@ struct PaperEvaluationReportDTO: Decodable {
     let cagr: Double?
     let benchmarkReturn: Double?
     let alpha: Double?
+    let beta: Double?
+    let alphaAnnualized: Double?
+    let benchmarkSharpe: Double?
     let sharpe: Double?
     let maxDrawdown: Double?
     let winRate: Double?
