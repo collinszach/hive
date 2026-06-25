@@ -7,6 +7,7 @@ from datetime import date, timedelta
 
 from sqlalchemy import select, text
 
+from app.analytics.spend import net_spend_sql
 from app.celery_app import app as celery_app
 from app.db import SyncSessionLocal
 from app.models.budget import Budget
@@ -15,6 +16,9 @@ from app.models.subscription import Subscription
 from app.models.transaction import Transaction
 
 logger = logging.getLogger(__name__)
+
+# Spend insights/budget-pace alerts net out expense shares, matching budgets.
+_NET = net_spend_sql("transactions")
 
 # Minimum occurrences to classify as a subscription
 _MIN_CHARGES = 2
@@ -194,7 +198,7 @@ def generate_insights(self) -> dict:
 
         this_month_spend: list = session.execute(
             text("""
-                SELECT category, SUM(amount) AS total
+                SELECT category, SUM(""" + _NET + """) AS total
                 FROM transactions
                 WHERE date >= :start AND NOT is_excluded AND NOT is_transfer
                   AND NOT pending AND amount > 0
@@ -208,7 +212,7 @@ def generate_insights(self) -> dict:
             text("""
                 SELECT
                     category,
-                    SUM(amount) / 3.0 AS avg_monthly
+                    SUM(""" + _NET + """) / 3.0 AS avg_monthly
                 FROM transactions
                 WHERE date >= :start AND date < :end
                   AND NOT is_excluded AND NOT is_transfer
@@ -333,7 +337,7 @@ def generate_insights(self) -> dict:
             # Get actual spend per category this month in one query
             spend_rows: list = session.execute(
                 text("""
-                    SELECT category, SUM(amount) AS total
+                    SELECT category, SUM(""" + _NET + """) AS total
                     FROM transactions
                     WHERE date >= :start AND NOT is_excluded AND NOT is_transfer
                       AND NOT pending AND amount > 0

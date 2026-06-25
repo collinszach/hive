@@ -7,10 +7,14 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.spend import net_spend_sql
 from app.db import get_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+# Spend reports count the user's own portion (net of expense shares), matching budgets.
+_NET_T = net_spend_sql("t")
 
 @router.get("/spending-by-category")
 async def spending_by_category(
@@ -34,7 +38,7 @@ async def spending_by_category(
                 t.category,
                 t.subcategory,
                 COUNT(*) AS transaction_count,
-                SUM(t.amount) AS total,
+                SUM(""" + _NET_T + """) AS total,
                 AVG(t.amount) AS avg_transaction
             FROM transactions t
             JOIN accounts a ON t.account_id = a.id
@@ -213,7 +217,7 @@ async def budget_history(
                 TO_CHAR(b.month, 'YYYY-MM') AS month,
                 b.category,
                 b.budget_amount,
-                COALESCE(SUM(t.amount), 0) AS actual_spend
+                COALESCE(SUM(""" + _NET_T + """), 0) AS actual_spend
             FROM budgets b
             LEFT JOIN transactions t ON
                 t.category = b.category
@@ -266,7 +270,7 @@ async def spending_by_weekday(
                 EXTRACT(DOW FROM t.date)::int AS dow,
                 TO_CHAR(t.date, 'Dy')          AS day_name,
                 COUNT(*)                        AS transaction_count,
-                SUM(t.amount)                   AS total,
+                SUM({_NET_T})                   AS total,
                 AVG(t.amount)                   AS avg_transaction,
                 COUNT(DISTINCT t.date)          AS days_with_spend
             FROM transactions t
@@ -320,7 +324,7 @@ async def daily_spend(
         text("""
             SELECT
                 t.date,
-                SUM(t.amount)   AS total,
+                SUM(""" + _NET_T + """)   AS total,
                 COUNT(*)        AS count
             FROM transactions t
             JOIN accounts a ON t.account_id = a.id
@@ -364,7 +368,7 @@ async def category_trend(
         text("""
             SELECT
                 TO_CHAR(t.date, 'YYYY-MM')  AS month,
-                SUM(t.amount)               AS total,
+                SUM(""" + _NET_T + """)               AS total,
                 COUNT(*)                    AS count
             FROM transactions t
             JOIN accounts a ON t.account_id = a.id
@@ -413,7 +417,7 @@ async def spending_by_card(
                 COALESCE(a.card_slug, a.subtype, a.type)    AS card_slug,
                 a.type                                      AS account_type,
                 a.subtype                                   AS account_subtype,
-                SUM(t.amount)                               AS total_spend,
+                SUM(""" + _NET_T + """)                               AS total_spend,
                 COUNT(*)                                    AS transaction_count,
                 AVG(t.amount)                               AS avg_transaction,
                 COUNT(DISTINCT t.category)                  AS category_count
@@ -440,7 +444,7 @@ async def spending_by_card(
             SELECT
                 t.account_id::text  AS account_id,
                 t.category          AS category,
-                SUM(t.amount)       AS total
+                SUM(""" + _NET_T + """)       AS total
             FROM transactions t
             JOIN accounts a ON t.account_id = a.id
             WHERE t.date BETWEEN :start AND :end
@@ -504,7 +508,7 @@ async def top_merchants(
                 MODE() WITHIN GROUP (ORDER BY t.category)          AS category,
                 MODE() WITHIN GROUP (ORDER BY t.subcategory)       AS subcategory,
                 COUNT(*)            AS transaction_count,
-                SUM(t.amount)       AS total_spend,
+                SUM(""" + _NET_T + """)       AS total_spend,
                 AVG(t.amount)       AS avg_transaction,
                 MAX(t.date)         AS last_seen
             FROM transactions t

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.spend import net_spend_expr
 from app.db import get_db
 from app.gates import get_current_user
 from app.models.account import Account
@@ -209,9 +210,10 @@ async def safe_to_spend(db: AsyncSession = Depends(get_db), user: User = Depends
     else:
         monthly_income = 0.0
 
-    # 2. Spent this month (expenses only, non-excluded, non-pending, credit cards only)
+    # 2. Spent this month (expenses only, non-excluded, non-pending, credit cards only).
+    #    Netted by expense shares so safe-to-spend reflects the user's own portion.
     spent_row = await db.execute(
-        select(func.coalesce(func.sum(Transaction.amount), 0))
+        select(func.coalesce(func.sum(net_spend_expr()), 0))
         .join(Account, Transaction.account_id == Account.id)
         .where(
             and_(
@@ -501,7 +503,7 @@ async def health_score(db: AsyncSession = Depends(get_db), user: User = Depends(
     monthly_income = float(income_res.scalar_one() or 0)
 
     expense_res = await db.execute(
-        select(func.coalesce(func.sum(Transaction.amount), 0))
+        select(func.coalesce(func.sum(net_spend_expr()), 0))
         .join(Account, Transaction.account_id == Account.id)
         .where(
             Transaction.date >= month_start,

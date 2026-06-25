@@ -28,6 +28,10 @@ class Transaction(Base):
     subcategory: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     category_source: Mapped[str] = mapped_column(Text, server_default="pending")
     plaid_category: Mapped[Optional[list]] = mapped_column(ARRAY(Text), nullable=True)
+    # Plaid's modern personal_finance_category (primary + detailed). The legacy
+    # `category` list above often omits income; PFC carries a reliable INCOME_* signal.
+    plaid_pfc_primary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    plaid_pfc_detailed: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_transfer: Mapped[bool] = mapped_column(Boolean, server_default="false")
     is_excluded: Mapped[bool] = mapped_column(Boolean, server_default="false")
     is_subscription: Mapped[bool] = mapped_column(Boolean, server_default="false")

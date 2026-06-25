@@ -480,6 +480,34 @@ def _categorize_with_claude(description: str) -> Optional[tuple[str, str]]:
 # Public API
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Plaid personal_finance_category → Income mapping.
+# PFC is Plaid's modern, ML-derived label and carries a reliable INCOME_* signal
+# even when the deposit's description is just a company name (no "payroll" token)
+# and the legacy `category` list is empty. Only INCOME_* maps here — refunds and
+# transfers carry other primaries, so this never mislabels a refund as income.
+# ---------------------------------------------------------------------------
+_PFC_INCOME_SUB: dict[str, str] = {
+    "INCOME_WAGES": "Salary",
+    "INCOME_OTHER_INCOME": "Other",
+    "INCOME_DIVIDENDS": "Dividend",
+    "INCOME_INTEREST_EARNED": "Interest",
+    "INCOME_RETIREMENT_PENSION": "Other",
+    "INCOME_UNEMPLOYMENT": "Other",
+    "INCOME_TAX_REFUND": "Tax Refund",
+}
+
+
+def income_from_pfc(pfc_primary: Optional[str], pfc_detailed: Optional[str]) -> Optional[tuple[str, str]]:
+    """Map Plaid's personal_finance_category to (category, subcategory) if it's income.
+
+    Returns ("Income", <subcategory>) when the PFC primary is INCOME, else None.
+    """
+    if (pfc_primary or "").upper() == "INCOME":
+        return "Income", _PFC_INCOME_SUB.get((pfc_detailed or "").upper(), "Other")
+    return None
+
+
 def categorize_transaction(
     description: str,
     plaid_category: Optional[list[str]] = None,

@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.celery_app import app
 from app.db import get_sync_db
-from app.ml.categorizer import categorize_transaction
+from app.ml.categorizer import categorize_transaction, income_from_pfc
 from app.ml.transfer_detector import classify_transfer_subcategory, is_transfer
 from app.models.account import Account
 from app.models.plaid_link import PlaidLink
@@ -325,6 +325,9 @@ def _plaid_tx_to_dict(account_map: dict, tx, custom_rules: list) -> Optional[dic
         or ""
     )
     plaid_cat = tx.get("category") or []
+    pfc = tx.get("personal_finance_category") or {}
+    pfc_primary = pfc.get("primary") if hasattr(pfc, "get") else getattr(pfc, "primary", None)
+    pfc_detailed = pfc.get("detailed") if hasattr(pfc, "get") else getattr(pfc, "detailed", None)
     tx_is_transfer, tx_is_excluded = is_transfer(raw_desc, plaid_cat)
 
     tx_date = tx.get("date")
@@ -367,6 +370,23 @@ def _plaid_tx_to_dict(account_map: dict, tx, custom_rules: list) -> Optional[dic
         tx_is_transfer = True
         tx_is_excluded = True
 
+    # Income override: when the keyword pipeline misses a generically-named paycheck,
+    # fall back to Plaid's PFC INCOME_* signal. Only for inflows (amount < 0) that
+    # aren't transfers, and never over a manual/custom-rule result.
+    if (
+        not tx_is_transfer
+        and tx["amount"] < 0
+        and categorization.get("category") not in ("Income", "Transfers")
+        and categorization.get("category_source") not in ("manual", "custom_rule")
+    ):
+        income = income_from_pfc(pfc_primary, pfc_detailed)
+        if income:
+            categorization = {
+                "category": income[0],
+                "subcategory": income[1],
+                "category_source": "plaid_pfc",
+            }
+
     return {
         "plaid_transaction_id": tx["transaction_id"],
         "account_id": account_id,
@@ -378,6 +398,8 @@ def _plaid_tx_to_dict(account_map: dict, tx, custom_rules: list) -> Optional[dic
         "raw_description": raw_desc,
         **categorization,
         "plaid_category": plaid_cat if plaid_cat else None,
+        "plaid_pfc_primary": pfc_primary,
+        "plaid_pfc_detailed": pfc_detailed,
         "is_transfer": tx_is_transfer,
         "is_excluded": tx_is_excluded,
         "pending": tx.get("pending", False),
@@ -428,6 +450,8 @@ def _upsert_transactions(db, account_map: dict, transactions: list) -> int:
             "logo_url": stmt.excluded.logo_url,
             "is_transfer": stmt.excluded.is_transfer,
             "is_excluded": stmt.excluded.is_excluded,
+            "plaid_pfc_primary": stmt.excluded.plaid_pfc_primary,
+            "plaid_pfc_detailed": stmt.excluded.plaid_pfc_detailed,
             # Re-categorize on modify, but never overwrite a manual override.
             "category": sa_case(
                 (Transaction.category_source == "manual", Transaction.category),
@@ -463,6 +487,90 @@ def _remove_transactions(db, removed: list) -> int:
     count = result.rowcount
     logger.info("Removed %d transactions", count)
     return count
+
+
+@app.task(
+    name="app.tasks.ingestion.reclassify_income",
+    bind=True,
+    max_retries=2,
+)
+def reclassify_income(self) -> dict:
+    """Re-label inflows that are really income but were missed by keyword matching.
+
+    Targets non-excluded, non-transfer inflows (amount < 0) not already 'Income'
+    and not manually categorized. Uses Plaid's PFC INCOME_* signal first, then the
+    keyword pipeline. Manual overrides are never touched.
+
+    Run once after deploying the PFC change (and after a full re-sync has populated
+    plaid_pfc_primary for history).
+    """
+    from app.ml.categorizer import income_from_pfc
+
+    db = get_sync_db()
+    try:
+        rows = db.execute(
+            select(Transaction).where(
+                Transaction.amount < 0,
+                Transaction.is_excluded == False,  # noqa: E712
+                Transaction.is_transfer == False,  # noqa: E712
+                Transaction.category != "Income",
+                Transaction.category_source != "manual",
+            )
+        ).scalars().all()
+
+        updated = 0
+        for tx in rows:
+            result = income_from_pfc(tx.plaid_pfc_primary, tx.plaid_pfc_detailed)
+            source = "plaid_pfc"
+            if not result:
+                try:
+                    cat, sub, _ = categorize_transaction(tx.raw_description, plaid_category=tx.plaid_category)
+                except Exception:
+                    continue
+                if cat == "Income":
+                    result, source = (cat, sub), "rules"
+            if result:
+                tx.category, tx.subcategory = result
+                tx.category_source = source
+                db.add(tx)
+                updated += 1
+
+        db.commit()
+        logger.info("reclassify_income: relabelled %d transactions as Income", updated)
+        return {"updated": updated}
+    finally:
+        db.close()
+
+
+@app.task(
+    name="app.tasks.ingestion.resync_all_links_full",
+    bind=True,
+    max_retries=2,
+)
+def resync_all_links_full(self) -> dict:
+    """Reset every active link's cursor and re-pull from scratch.
+
+    /transactions/sync with an empty cursor returns the full history as 'added';
+    the plaid_transaction_id unique constraint makes the upsert idempotent, so this
+    is safe — it just refreshes existing rows (notably populating plaid_pfc_* for
+    transactions synced before that column existed). Manual categorizations are
+    preserved by the upsert's CASE guards.
+    """
+    db = get_sync_db()
+    try:
+        links = db.execute(
+            select(PlaidLink).where(PlaidLink.is_active == True)  # noqa: E712
+        ).scalars().all()
+        for link in links:
+            link.sync_cursor = None
+            db.add(link)
+        db.commit()
+        for link in links:
+            sync_single_link.delay(link.item_id)
+        logger.info("resync_all_links_full: reset cursor + queued re-sync for %d links", len(links))
+        return {"resynced": len(links)}
+    finally:
+        db.close()
 
 
 @app.task(

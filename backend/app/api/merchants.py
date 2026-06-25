@@ -8,10 +8,13 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.spend import net_spend_sql
 from app.db import get_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/merchants", tags=["merchants"])
+
+_NET = net_spend_sql("transactions")
 
 
 @router.get("")
@@ -30,7 +33,7 @@ async def top_merchants(
             SELECT
                 COALESCE(merchant, raw_description) AS merchant_name,
                 COUNT(*) AS transaction_count,
-                SUM(amount) AS total_spent,
+                SUM(""" + _NET + """) AS total_spent,
                 AVG(amount) AS avg_amount,
                 MAX(date) AS last_seen,
                 category,
@@ -89,7 +92,7 @@ async def merchant_history(
         text("""
             SELECT
                 TO_CHAR(date, 'YYYY-MM') AS month,
-                SUM(amount) AS total,
+                SUM(""" + _NET + """) AS total,
                 COUNT(*) AS count
             FROM transactions
             WHERE (COALESCE(merchant, raw_description) ILIKE :merchant OR merchant ILIKE :merchant)

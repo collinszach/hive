@@ -10,6 +10,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.spend import net_spend_expr
 from app.db import get_db
 from app.models.budget import Budget
 from app.models.transaction import Transaction
@@ -97,9 +98,10 @@ async def list_budgets(
     )
     budgets = budget_result.scalars().all()
 
-    # Actual spend per category (non-excluded, non-pending, non-transfer, positive amounts)
+    # Actual spend per category (non-excluded, non-pending, non-transfer, positive amounts).
+    # Spend is netted by what others owe the user (expense shares).
     spend_result = await db.execute(
-        select(Transaction.category, func.sum(Transaction.amount))
+        select(Transaction.category, func.sum(net_spend_expr()))
         .where(
             and_(
                 Transaction.date >= start,
@@ -130,9 +132,9 @@ async def list_budgets(
         )
         prior_budgets = {pb.category: float(pb.budget_amount) for pb in prior_budget_result.scalars().all()}
 
-        # Fetch prior month actual spend
+        # Fetch prior month actual spend (netted by expense shares)
         prior_spend_result = await db.execute(
-            select(Transaction.category, func.sum(Transaction.amount))
+            select(Transaction.category, func.sum(net_spend_expr()))
             .where(
                 and_(
                     Transaction.date >= prior_start,
@@ -230,9 +232,9 @@ async def upsert_budget(
     )
     b = result.scalar_one()
 
-    # Compute actual spend
+    # Compute actual spend (netted by expense shares)
     spend_result = await db.execute(
-        select(func.sum(Transaction.amount)).where(
+        select(func.sum(net_spend_expr())).where(
             and_(
                 Transaction.category == body.category,
                 Transaction.date >= start,
@@ -360,7 +362,7 @@ async def suggest_budgets(
         history_start = date(target_month.year, target_month.month - lookback_months, 1)
 
     rows = await db.execute(
-        select(Transaction.category, func.sum(Transaction.amount).label("total"))
+        select(Transaction.category, func.sum(net_spend_expr()).label("total"))
         .where(
             and_(
                 Transaction.date >= history_start,
@@ -374,7 +376,7 @@ async def suggest_budgets(
             )
         )
         .group_by(Transaction.category)
-        .order_by(func.sum(Transaction.amount).desc())
+        .order_by(func.sum(net_spend_expr()).desc())
     )
     results = rows.all()
 
