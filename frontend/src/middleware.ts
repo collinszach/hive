@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
 
 const PUBLIC_PATHS = ["/", "/login", "/register", "/pricing", "/privacy"];
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public paths, API calls, and static assets
@@ -16,25 +15,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Presence check only. The backend is the single source of truth for token
+  // validity — it verifies the JWT signature/expiry on every /api/auth/me and
+  // protected API call. Re-verifying here required the frontend to hold a copy
+  // of SECRET_KEY; any drift between the two silently rejected valid sessions
+  // and logged the user out on every navigation. A bad/expired cookie that
+  // slips past this check is caught by the backend (401 → client redirects to
+  // /login), so nothing is exposed.
   const token = request.cookies.get("hive_auth")?.value;
   if (!token) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
-  }
-
-  // Validate the JWT — invalid/expired tokens redirect to login
-  const secret = process.env.SECRET_KEY;
-  if (secret) {
-    try {
-      await jwtVerify(token, new TextEncoder().encode(secret));
-    } catch {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", pathname);
-      const res = NextResponse.redirect(loginUrl);
-      res.cookies.delete("hive_auth");
-      return res;
-    }
   }
 
   return NextResponse.next();

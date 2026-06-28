@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense, Fragment } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api, Transaction, Tag as TagType, Contact, ExpenseShare, Account } from "@/lib/api";
 import { fmt, fmtDate, currentMonth } from "@/lib/utils";
@@ -1069,12 +1069,12 @@ function TransactionsPageInner() {
 
           <div className="flex items-center gap-3 ml-1">
             <label className="flex items-center gap-1.5 text-[12px] text-ink-tertiary cursor-pointer select-none hover:text-ink-secondary transition-colors">
-              <input type="checkbox" checked={includePending} onChange={(e) => setIncludePending(e.target.checked)}
+              <input type="checkbox" checked={includePending} onChange={(e) => { setIncludePending(e.target.checked); setPage(1); }}
                 className="rounded accent-[#F5B942] w-3 h-3" />
               Pending
             </label>
             <label className="flex items-center gap-1.5 text-[12px] text-ink-tertiary cursor-pointer select-none hover:text-ink-secondary transition-colors">
-              <input type="checkbox" checked={includeExcluded} onChange={(e) => setIncludeExcluded(e.target.checked)}
+              <input type="checkbox" checked={includeExcluded} onChange={(e) => { setIncludeExcluded(e.target.checked); setPage(1); }}
                 className="rounded accent-[#F5B942] w-3 h-3" />
               Excluded
             </label>
@@ -1216,9 +1216,8 @@ function TransactionsPageInner() {
               const isChecked = selectedIds.has(tx.id);
               const isExpanded = selectedTx?.id === tx.id;
               return (
-                <>
+                <Fragment key={tx.id}>
                   <tr
-                    key={tx.id}
                     onClick={() => setSelectedTx((prev) => prev?.id === tx.id ? null : tx)}
                     className={cn(
                       "group hover:bg-white/[0.02] cursor-pointer transition-colors animate-slide-in-row",
@@ -1234,6 +1233,9 @@ function TransactionsPageInner() {
                         type="checkbox"
                         className="rounded accent-[#F5B942] w-3.5 h-3.5 cursor-pointer"
                         checked={isChecked}
+                        // Stop the click from bubbling to the <td>, which also toggles —
+                        // otherwise a direct checkbox click toggles twice (net no-op).
+                        onClick={(e) => e.stopPropagation()}
                         onChange={() => toggleSelect(tx.id)}
                       />
                     </td>
@@ -1285,7 +1287,7 @@ function TransactionsPageInner() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
           </tbody>
