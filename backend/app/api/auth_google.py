@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.auth import JWT_ALGORITHM, _create_access_token
+from app.api.auth import JWT_ALGORITHM, SESSION_MAX_AGE_SECONDS, _create_access_token
 from app.config import settings
 from app.db import get_db
 from app.models.user import User, UserRole
@@ -37,9 +37,33 @@ _GOOGLE_ISSUERS = {"accounts.google.com", "https://accounts.google.com"}
 # link carrying the handoff token, the app catches it and navigates the WKWebView
 # to /exchange, and /exchange (now running inside the WKWebView's cookie jar)
 # mints the real session cookie. The long-lived session JWT never transits a URL.
-_MOBILE_STATE_PREFIX = "m."
 _MOBILE_CALLBACK_URL = "hive://auth/callback"
 _HANDOFF_EXPIRE_SECONDS = 60
+_OAUTH_STATE_EXPIRE_SECONDS = 600
+
+
+def _create_oauth_state(platform: str | None) -> str:
+    """Mint the OAuth `state` as a short-lived signed token (no cookie needed).
+
+    The previous design paired a random state value with an `oauth_state` cookie
+    and compared them on callback. On iOS the system browser
+    (SFSafariViewController) routinely drops a `Set-Cookie` issued on the off-site
+    redirect to Google, so that cookie was missing on the first sign-in attempt
+    and the callback failed with "Invalid OAuth state" — the user had to tap twice.
+    A self-verifying signed state removes the cookie round-trip entirely; we only
+    need to confirm we minted it (signature + expiry + `typ`).
+    """
+    expire = datetime.now(timezone.utc) + timedelta(seconds=_OAUTH_STATE_EXPIRE_SECONDS)
+    return jwt.encode(
+        {
+            "typ": "oauth_state",
+            "platform": "ios" if platform == "ios" else "web",
+            "nonce": secrets.token_urlsafe(16),
+            "exp": expire,
+        },
+        settings.secret_key,
+        algorithm=JWT_ALGORITHM,
+    )
 
 
 def _create_handoff_token(username: str, role: str) -> str:
@@ -120,12 +144,10 @@ async def google_login(request: Request) -> RedirectResponse:
     if not settings.google_client_id:
         raise HTTPException(status_code=501, detail="Google OAuth is not configured")
 
-    state = secrets.token_urlsafe(32)
     # Native (iOS) clients pass ?platform=ios so the callback returns via deep link
-    # rather than setting a cookie the WKWebView can't see. We carry the marker in
-    # the OAuth state itself, which round-trips through Google untouched.
-    if request.query_params.get("platform") == "ios":
-        state = _MOBILE_STATE_PREFIX + state
+    # rather than setting a cookie the WKWebView can't see. The platform marker is
+    # baked into the signed state, which round-trips through Google untouched.
+    state = _create_oauth_state(request.query_params.get("platform"))
     params = urlencode({
         "client_id": settings.google_client_id,
         "redirect_uri": settings.google_redirect_uri,
@@ -134,18 +156,7 @@ async def google_login(request: Request) -> RedirectResponse:
         "state": state,
         "access_type": "online",
     })
-    url = f"{_GOOGLE_AUTH_URL}?{params}"
-    response = RedirectResponse(url=url)
-    response.set_cookie(
-        key="oauth_state",
-        value=state,
-        httponly=True,
-        samesite="lax",
-        secure=settings.cookie_secure,
-        path="/",
-        max_age=300,
-    )
-    return response
+    return RedirectResponse(url=f"{_GOOGLE_AUTH_URL}?{params}")
 
 
 @router.get("/callback")
@@ -154,11 +165,18 @@ async def google_callback(
     db: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
     """Handle Google's redirect after user grants consent."""
-    state_cookie = request.cookies.get("oauth_state")
     state_param = request.query_params.get("state")
-    if not state_cookie or state_cookie != state_param:
-        logger.warning("OAuth state mismatch — possible CSRF attempt")
+    if not state_param:
         raise HTTPException(status_code=400, detail="Invalid OAuth state")
+    try:
+        state_payload = jwt.decode(state_param, settings.secret_key, algorithms=[JWT_ALGORITHM])
+    except JWTError as exc:
+        logger.warning("OAuth state rejected: %s", exc)
+        raise HTTPException(status_code=400, detail="Invalid OAuth state") from exc
+    if state_payload.get("typ") != "oauth_state":
+        logger.warning("OAuth state has wrong type — possible CSRF attempt")
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
+    is_mobile = state_payload.get("platform") == "ios"
 
     code = request.query_params.get("code")
     if not code:
@@ -202,12 +220,10 @@ async def google_callback(
     # Native (iOS) flow: the system browser's cookie jar is invisible to the
     # WKWebView, so hand the session over via a short-lived deep-link token that
     # the app exchanges for the real cookie from inside the WebView.
-    if (state_param or "").startswith(_MOBILE_STATE_PREFIX):
+    if is_mobile:
         handoff = _create_handoff_token(user.username, user.role)
         params = urlencode({"ht": handoff})
-        response = RedirectResponse(url=f"{_MOBILE_CALLBACK_URL}?{params}", status_code=302)
-        response.delete_cookie(key="oauth_state", path="/")
-        return response
+        return RedirectResponse(url=f"{_MOBILE_CALLBACK_URL}?{params}", status_code=302)
 
     token = _create_access_token(user.username, user.role)
 
@@ -219,9 +235,8 @@ async def google_callback(
         samesite="lax",
         secure=settings.cookie_secure,
         path="/",
-        max_age=60 * 60 * 12,
+        max_age=SESSION_MAX_AGE_SECONDS,
     )
-    response.delete_cookie(key="oauth_state", path="/")
     return response
 
 
@@ -262,7 +277,7 @@ async def google_exchange(request: Request) -> RedirectResponse:
         samesite="lax",
         secure=settings.cookie_secure,
         path="/",
-        max_age=60 * 60 * 12,
+        max_age=SESSION_MAX_AGE_SECONDS,
     )
     return response
 

@@ -27,7 +27,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 JWT_ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 12  # 12 hours
+# 30 days. A 12-hour session forced a daily re-login — painful in the iOS app,
+# where the only sign-in path is the multi-step Google OAuth bridge.
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30
+SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30  # cookie max-age, kept in sync with the JWT exp
 
 
 # ---------------------------------------------------------------------------
@@ -48,9 +51,10 @@ def decode_token(token: str) -> dict:
         payload = jwt.decode(token, settings.secret_key, algorithms=[JWT_ALGORITHM])
     except JWTError as exc:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
-    # Single-purpose handoff tokens (minted for the iOS OAuth bridge) must never
-    # be accepted as session bearers — they are only valid at the /exchange endpoint.
-    if payload.get("typ") == "handoff":
+    # Session tokens carry no `typ`. Single-purpose tokens set one (`handoff` for
+    # the iOS OAuth bridge, `oauth_state` for the consent round-trip) and must
+    # never be accepted as session bearers — they're only valid at their own endpoint.
+    if payload.get("typ") is not None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return payload
 
