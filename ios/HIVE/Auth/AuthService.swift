@@ -29,7 +29,15 @@ struct AuthService {
             throw APIError.cancelled
         }
 
-        guard let idToken = result.user.idToken?.tokenString else {
+        // The first interactive sign-in after a cold launch can hand back a user
+        // whose ID token isn't populated yet — which made the first tap fail and
+        // the second succeed. Force a refresh before giving up.
+        var idTokenString = result.user.idToken?.tokenString
+        if idTokenString == nil {
+            let refreshed = try? await result.user.refreshTokensIfNeeded()
+            idTokenString = refreshed?.idToken?.tokenString
+        }
+        guard let idToken = idTokenString else {
             throw APIError.notAuthenticated
         }
 
