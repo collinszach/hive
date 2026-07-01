@@ -334,6 +334,7 @@ export default function Dashboard() {
   const [weeklyComp, setWeeklyComp]       = useState<WeeklyComparison | null>(null);
   const [topMerchants, setTopMerchants]   = useState<MerchantSummary[]>([]);
   const [position, setPosition]           = useState<MonthlyPosition | null>(null);
+  const [incomeThisMonth, setIncomeThisMonth] = useState<number | null>(null);
   const [loading, setLoading]   = useState(true);
   const [criticalError, setCriticalError] = useState<string | null>(null);
 
@@ -366,6 +367,8 @@ export default function Dashboard() {
       api.dashboard.weeklyComparison().then(setWeeklyComp).catch(() => {});
       api.merchants.list({ days: 30, limit: 6 }).then(setTopMerchants).catch(() => {});
       api.position.monthly(month).then(setPosition).catch(() => {});
+      // Actual income brought in this month (not the base-pay estimate).
+      api.income.summary(month).then((r) => setIncomeThisMonth(r.total_income)).catch(() => {});
       if (accountsRes.status === "rejected" || budgetsRes.status === "rejected") {
         setCriticalError("Some data failed to load. Check your connection or try refreshing.");
       }
@@ -449,8 +452,11 @@ export default function Dashboard() {
           : null;
 
         const monthSaved = position ? position.available_to_save : 0;
-        const monthIncome = safeToSpend ? safeToSpend.breakdown.monthly_income : 0;
+        // Actual income brought in this month; fall back to the base-pay estimate
+        // only until the income figure loads.
+        const actualIncome = incomeThisMonth ?? (safeToSpend ? safeToSpend.breakdown.monthly_income : 0);
         const monthSpent = safeToSpend ? safeToSpend.breakdown.spent_this_month : 0;
+        const monthNet = actualIncome - monthSpent;
 
         const KPIS = [
           {
@@ -463,18 +469,20 @@ export default function Dashboard() {
               : { text: "updated daily", color: "var(--color-ink-tertiary)" },
           },
           {
-            label: "Monthly Income",
-            value: safeToSpend ? fmt(safeToSpend.breakdown.monthly_income) : "—",
+            label: "Income this month",
+            value: incomeThisMonth !== null ? fmt(actualIncome) : "—",
             href:  "/income",
-            color: safeToSpend && safeToSpend.breakdown.monthly_income > 0 ? "var(--color-income)" : undefined,
-            sub:   { text: "base pay est.", color: "var(--color-ink-tertiary)" },
+            color: actualIncome > 0 ? "var(--color-income)" : undefined,
+            sub:   actualIncome > 0
+              ? { text: `${fmt(monthSpent)} out · net ${monthNet >= 0 ? "" : "−"}${fmt(Math.abs(monthNet))}`, color: monthNet >= 0 ? "var(--color-income)" : "var(--color-expense)" }
+              : { text: "brought in so far", color: "var(--color-ink-tertiary)" },
           },
           {
             label: "Saved",
             value: position ? (monthSaved >= 0 ? fmt(monthSaved) : `−${fmt(Math.abs(monthSaved))}`) : "—",
             href:  "/cash-flow",
             color: monthSaved >= 0 ? "var(--color-income)" : "var(--color-expense)",
-            sub:   { text: monthIncome > 0 ? `${fmt(monthIncome)} in · ${fmt(monthSpent)} out` : `${pctMonth}% of month elapsed`, color: "var(--color-ink-tertiary)" },
+            sub:   { text: actualIncome > 0 ? `${fmt(actualIncome)} in · ${fmt(monthSpent)} out` : `${pctMonth}% of month elapsed`, color: "var(--color-ink-tertiary)" },
           },
           {
             label: "Liquid Cash",
