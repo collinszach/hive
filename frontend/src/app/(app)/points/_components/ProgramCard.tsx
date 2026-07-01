@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Check, X, ArrowRight } from "lucide-react";
+import { Check, X, ArrowRight, Trash2 } from "lucide-react";
 import { fmt } from "@/lib/utils";
 import { api, ProgramSummary } from "@/lib/api";
 import { toast } from "@/components/Toast";
@@ -9,11 +9,12 @@ import { toast } from "@/components/Toast";
 interface ProgramCardProps {
   program: ProgramSummary;
   onBalanceUpdate: (program: string, balance: number) => void;
+  onCleared?: () => void;
   onViewActivity?: (program: string) => void;
   threshold?: number;
 }
 
-export function ProgramCard({ program: p, onBalanceUpdate, onViewActivity, threshold }: ProgramCardProps) {
+export function ProgramCard({ program: p, onBalanceUpdate, onCleared, onViewActivity, threshold }: ProgramCardProps) {
   const [editing, setEditing]     = useState(false);
   const [inputVal, setInputVal]   = useState(String(p.manual_balance ?? ""));
   const [saving, setSaving]       = useState(false);
@@ -42,6 +43,19 @@ export function ProgramCard({ program: p, onBalanceUpdate, onViewActivity, thres
       setEditing(false);
     } catch {
       toast.error("Failed to save balance");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function clearBalance() {
+    setSaving(true);
+    try {
+      await api.points.deleteBalance(p.program);
+      setEditing(false);
+      onCleared?.();
+    } catch {
+      toast.error("Failed to clear balance");
     } finally {
       setSaving(false);
     }
@@ -100,6 +114,17 @@ export function ProgramCard({ program: p, onBalanceUpdate, onViewActivity, thres
               <button type="button" onClick={cancelEdit} className="text-ink-tertiary hover:opacity-80">
                 <X className="w-3.5 h-3.5" />
               </button>
+              {p.manual_balance !== null && (
+                <button
+                  type="button"
+                  onClick={clearBalance}
+                  disabled={saving}
+                  title="Remove manual balance (revert to earned points)"
+                  className="text-semantic-expense hover:opacity-80 disabled:opacity-40"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           ) : (
             <button

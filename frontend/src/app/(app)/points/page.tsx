@@ -218,7 +218,7 @@ export default function PointsPage() {
           {!summaryLoading && summary && summary.programs.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {summary.programs.map((p) => (
-                <ProgramCard key={p.program} program={p} onBalanceUpdate={handleBalanceUpdate} onViewActivity={handleViewActivity} threshold={thresholds[p.program]} />
+                <ProgramCard key={p.program} program={p} onBalanceUpdate={handleBalanceUpdate} onCleared={() => fetchData(days)} onViewActivity={handleViewActivity} threshold={thresholds[p.program]} />
               ))}
             </div>
           )}

@@ -930,6 +930,8 @@ export const api = {
       get<LedgerEntry[]>("/api/points/ledger", params as Record<string, string | number | undefined>),
     setBalance: (program: string, balance: number) =>
       put<PointsBalanceResponse>("/api/points/balance", { program, balance }),
+    deleteBalance: (program: string) =>
+      del<{ program: string; deleted: number }>(`/api/points/balance/${encodeURIComponent(program)}`),
     leakage: (days: number) =>
       get<LeakageResponse>("/api/points/leakage", { days }),
     monthlyTrend: (months?: number) =>

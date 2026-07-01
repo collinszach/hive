@@ -6,7 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -93,6 +93,11 @@ class BalanceUpsertResponse(BaseModel):
     program: str
     balance: int
     updated_at: str
+
+
+class BalanceDeleteResponse(BaseModel):
+    program: str
+    deleted: int  # number of snapshot rows removed
 
 
 class LeakageEntry(BaseModel):
@@ -227,6 +232,30 @@ async def upsert_balance(
         balance=body.balance,
         updated_at=datetime.now(tz=timezone.utc).isoformat(),
     )
+
+
+@router.delete("/balance/{program}", response_model=BalanceDeleteResponse)
+async def delete_balance(
+    program: str,
+    db: AsyncSession = Depends(get_db),
+) -> BalanceDeleteResponse:
+    """
+    Remove the manual balance for a program entirely.
+
+    Deletes every points_balances snapshot for the program's card so the
+    summary falls back to actual earned points. Setting the balance to 0 would
+    NOT do this — a 0 is still a manual override that hides earned points.
+    """
+    card_slug = _PROGRAM_TO_CARD_SLUG.get(program)
+    if card_slug is None:
+        raise HTTPException(status_code=422, detail=f"Unknown program: {program}")
+
+    result = await db.execute(
+        delete(PointsBalance).where(PointsBalance.card_slug == card_slug)
+    )
+    await db.commit()
+
+    return BalanceDeleteResponse(program=program, deleted=result.rowcount or 0)
 
 
 @router.get("/optimize", response_model=OptimizerResponse)
