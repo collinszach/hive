@@ -10,11 +10,10 @@ momentum alone. This is the go/no-go before any persistence/integration is built
 """
 import numpy as np
 import pandas as pd
-from sqlalchemy import select, text
+from sqlalchemy import text
 
 from app.db import get_sync_db
 from app.fundamentals.connector import get_connector
-from app.models.paper_watchlist_symbol import PaperWatchlistSymbol
 
 H = 20
 MIN_NAMES = 12
@@ -47,7 +46,7 @@ def corr_with(fac, ref):
 
 def main():
     db = get_sync_db()
-    syms = sorted(db.execute(select(PaperWatchlistSymbol.symbol)).scalars())
+    # Whatever's in the candle table (the wide research universe), not just the watchlist.
     cnd = pd.read_sql(text("SELECT symbol,date::date AS d,close,adj_close FROM paper_candles WHERE symbol<>'SPY'"), db.bind)
     db.close()
 
