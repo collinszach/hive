@@ -39,6 +39,14 @@ app.conf.beat_schedule = {
         "schedule": crontab(hour=2, minute=0),
         "options": {"queue": "default"},
     },
+    # Intraday refresh so balances/transactions stay current through the day.
+    # Runs at 00:00, 06:00, 12:00, 18:00 (the 02:00 daily-sync still anchors the
+    # downstream analytics pipeline). Idempotent — cursor sync + unique constraint.
+    "intraday-sync": {
+        "task": "app.tasks.ingestion.sync_all_accounts",
+        "schedule": crontab(minute=0, hour="*/6"),
+        "options": {"queue": "default"},
+    },
     "daily-points": {
         "task": "app.tasks.points.compute_points_ledger",
         "schedule": crontab(hour=2, minute=30),
