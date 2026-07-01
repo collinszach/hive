@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { toast } from "@/components/Toast";
@@ -35,6 +35,7 @@ export default function IncomePage() {
   const [monthly, setMonthly] = useState<{ month: string; income: number; count: number }[]>([]);
   const [forecast, setForecast] = useState<{ forecast: ForecastPoint[]; avg: number; confidence_band: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const requestId = useRef(0);
 
   const months: string[] = [];
   const d = new Date();
@@ -45,6 +46,7 @@ export default function IncomePage() {
   }
 
   useEffect(() => {
+    const thisRequest = ++requestId.current;
     setLoading(true);
     Promise.allSettled([
       api.income.summary(month),
@@ -52,13 +54,16 @@ export default function IncomePage() {
       api.income.forecast(),
     ])
       .then(([sumR, monR, fcastR]) => {
+        if (thisRequest !== requestId.current) return; // a newer month was selected; drop this stale response
         if (sumR.status === "fulfilled") setSummary(sumR.value);
         else toast.error("Failed to load income summary");
         if (monR.status === "fulfilled") setMonthly(monR.value);
         else toast.error("Failed to load income history");
         if (fcastR.status === "fulfilled") setForecast(fcastR.value);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (thisRequest === requestId.current) setLoading(false);
+      });
   }, [month]);
 
   const maxMonthly = Math.max(...monthly.map((m) => m.income), 1);
