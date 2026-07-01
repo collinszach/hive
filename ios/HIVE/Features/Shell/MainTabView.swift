@@ -7,10 +7,17 @@ struct MainTabView: View {
     enum Tab: Hashable { case home, money, plan, insights, connect }
     @State private var selection: Tab = {
         #if DEBUG
-        // Dev: when jumping straight to Forecast, start on the Plan tab so the Home
-        // (Dashboard) tab never initializes — its load would 401 a synthetic dev token
-        // and trigger a global sign-out before the Forecast cover appears.
-        if ProcessInfo.processInfo.environment["HIVE_DEV_OPEN"] == "forecast" { return .plan }
+        // Dev: launch straight into a given tab, e.g. for portfolio screenshots.
+        // "forecast" is a special case — Plan tab, so Home never initializes (its
+        // load would 401 a synthetic dev token and trigger a global sign-out
+        // before the Forecast cover appears).
+        switch ProcessInfo.processInfo.environment["HIVE_DEV_OPEN"] {
+        case "forecast", "plan": return .plan
+        case "money": return .money
+        case "insights": return .insights
+        case "connect": return .connect
+        default: break
+        }
         #endif
         return .home
     }()
