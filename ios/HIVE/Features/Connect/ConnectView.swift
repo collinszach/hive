@@ -48,7 +48,7 @@ struct ConnectView: View {
         }
         .navigationDestination(isPresented: $showSettings) { SettingsView() }
         .navigationDestination(item: $selectedAccount) { account in
-            AccountDetailView(account: account)
+            AccountDetailView(account: account, onArchived: { Task { await model.load() } })
         }
         .sheet(isPresented: $showLinkChooser) {
             LinkAccountSheet(

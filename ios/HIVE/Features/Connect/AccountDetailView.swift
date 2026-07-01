@@ -5,8 +5,14 @@ import SwiftUI
 /// manual entry stay on their owning screens.
 struct AccountDetailView: View {
     let account: AccountDTO
+    /// Called after the account is archived, so the pushing screen can refresh its list.
+    var onArchived: (() -> Void)? = nil
+    @Environment(\.dismiss) private var dismiss
     @State private var model = AccountDetailViewModel()
     @State private var selected: TransactionDTO?
+    @State private var showArchiveConfirm = false
+    @State private var archiving = false
+    @State private var archiveError: String?
 
     var body: some View {
         Screen(title: account.name, refresh: {
@@ -20,10 +26,29 @@ struct AccountDetailView: View {
                     ordersSection.hiveEntrance(2)
                 }
                 transactionsSection.hiveEntrance(account.snaptradeAccountId != nil ? 3 : 1)
+                archiveSection
             }
             .padding(.top, Theme.Spacing.sm)
         }
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog(
+            "Archive \(account.name)?",
+            isPresented: $showArchiveConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Archive account", role: .destructive) { Task { await archive() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Hides this closed account from your balances and net worth. Its past transactions are kept. You can't undo this in the app.")
+        }
+        .alert("Couldn't archive account", isPresented: .init(
+            get: { archiveError != nil },
+            set: { if !$0 { archiveError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(archiveError ?? "")
+        }
         .task {
             if model.state.value == nil { await model.load(accountId: account.id) }
             if let sid = account.snaptradeAccountId, model.holdingsState?.value == nil {
@@ -91,6 +116,45 @@ struct AccountDetailView: View {
 
     private func money(_ amount: Decimal, _ code: String) -> String {
         amount.formatted(.currency(code: code).precision(.fractionLength(2)))
+    }
+
+    // MARK: Archive (closed accounts)
+
+    private var archiveSection: some View {
+        Button {
+            Haptics.selection(); showArchiveConfirm = true
+        } label: {
+            HStack(spacing: Theme.Spacing.sm) {
+                if archiving {
+                    ProgressView().controlSize(.mini).tint(Theme.expense)
+                } else {
+                    Image(systemName: "archivebox").font(.system(size: 14, weight: .medium))
+                }
+                Text("Archive account")
+                    .font(.hiveBody(14, weight: .medium))
+            }
+            .foregroundStyle(Theme.expense)
+            .frame(maxWidth: .infinity, minHeight: Theme.minTouchTarget)
+        }
+        .buttonStyle(.plain)
+        .disabled(archiving)
+        .accessibilityHint("Hides this closed account from balances and net worth")
+    }
+
+    /// Archive a closed account, then pop back so the caller's list refreshes.
+    private func archive() async {
+        archiving = true
+        defer { archiving = false }
+        do {
+            try await APIClient.shared.sendVoid(.post("/api/accounts/\(account.id)/archive"))
+            Haptics.success()
+            onArchived?()
+            dismiss()
+        } catch let error as APIError {
+            archiveError = error.userMessage
+        } catch {
+            archiveError = "Something went wrong. Please try again."
+        }
     }
 
     // MARK: Holdings (SnapTrade investment accounts)

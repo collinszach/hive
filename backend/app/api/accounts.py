@@ -309,3 +309,31 @@ async def update_billing(
     await db.commit()
     await db.refresh(acct)
     return AccountOut.model_validate(acct)
+
+
+@router.post("/{account_id}/archive", status_code=204)
+async def archive_account(
+    account_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Archive (deactivate) a single account that's been closed at the institution.
+
+    Sets `is_active=False` so it drops out of the accounts list and net-worth
+    snapshots. Plaid sync never re-activates accounts (it only updates balances
+    for accounts it still returns), so this is durable. Transactions are kept for
+    history; archiving just hides the now-closed account.
+    """
+    result = await db.execute(
+        select(Account).where(Account.id == account_id, Account.is_active == True)  # noqa: E712
+    )
+    acct = result.scalar_one_or_none()
+    if not acct:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    acct.is_active = False
+    db.add(acct)
+    await db.commit()
+    logger.info("Archived account %s (%s · %s)", account_id, acct.institution, acct.name)
+
+    from app.tasks.maintenance import snapshot_net_worth
+    snapshot_net_worth.delay()
