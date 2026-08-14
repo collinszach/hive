@@ -71,7 +71,7 @@ async def dashboard_summary(
 
     # Spending by category
     spend_result = await db.execute(
-        select(Transaction.category, func.sum(Transaction.amount))
+        select(Transaction.category, func.sum(net_spend_expr()))
         .join(Account, Transaction.account_id == Account.id)
         .where(
             and_(
@@ -87,7 +87,7 @@ async def dashboard_summary(
             )
         )
         .group_by(Transaction.category)
-        .order_by(func.sum(Transaction.amount).desc())
+        .order_by(func.sum(net_spend_expr()).desc())
     )
     spend_rows = spend_result.all()
     total_spend = sum(float(r[1]) for r in spend_rows if r[0] is not None)
@@ -337,7 +337,7 @@ async def pace_alerts(
 
     # Get actual spend per category this month (credit cards only)
     spend_result = await db.execute(
-        select(Transaction.category, func.sum(Transaction.amount).label("total"))
+        select(Transaction.category, func.sum(net_spend_expr()).label("total"))
         .join(Account, Transaction.account_id == Account.id)
         .where(
             and_(
@@ -449,7 +449,7 @@ async def health_score(db: AsyncSession = Depends(get_db), user: User = Depends(
 
     if budgets:
         spend_res = await db.execute(
-            select(Transaction.category, func.sum(Transaction.amount).label("total"))
+            select(Transaction.category, func.sum(net_spend_expr()).label("total"))
             .join(Account, Transaction.account_id == Account.id)
             .where(
                 Transaction.date >= month_start,
@@ -688,7 +688,7 @@ async def weekly_comparison(db: AsyncSession = Depends(get_db), user: User = Dep
     rows = await db.execute(
         select(
             Transaction.date.label("txn_date"),
-            func.sum(Transaction.amount).label("total"),
+            func.sum(net_spend_expr()).label("total"),
             func.count().label("count"),
         )
         .join(Account, Transaction.account_id == Account.id)

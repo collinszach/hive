@@ -20,6 +20,7 @@ from app.models.points_ledger import PointsLedger
 from app.models.tag import TransactionTag
 from app.models.transaction import Transaction
 from app.models.user import User
+from app.ml.transfer_detector import flags_for_category
 from app.points.tracker import compute_points_for_transaction
 
 logger = logging.getLogger(__name__)
@@ -487,6 +488,7 @@ async def update_category(
     tx.category = body.category
     tx.subcategory = body.subcategory
     tx.category_source = "manual"
+    tx.is_transfer, tx.is_excluded = flags_for_category(tx.category, tx.subcategory)
     db.add(tx)
     await db.commit()
 
@@ -560,6 +562,7 @@ async def patch_transaction(
 
     if body.merchant is not None:
         tx.merchant = body.merchant.strip() or None
+    category_changed = body.category is not None or body.subcategory is not None
     if body.category is not None:
         tx.category = body.category.strip() or None
         tx.category_source = "manual"
@@ -567,6 +570,8 @@ async def patch_transaction(
         tx.subcategory = body.subcategory.strip() or None
     if body.notes is not None:
         tx.reimbursement_note = body.notes.strip() or None
+    if category_changed:
+        tx.is_transfer, tx.is_excluded = flags_for_category(tx.category, tx.subcategory)
 
     db.add(tx)
     await db.commit()
@@ -692,6 +697,7 @@ async def bulk_update(
             tx.category = body.category
             tx.subcategory = body.subcategory  # None clears subcategory
             tx.category_source = "manual"
+            tx.is_transfer, tx.is_excluded = flags_for_category(tx.category, tx.subcategory)
         if body.is_excluded is not None:
             tx.is_excluded = body.is_excluded
 

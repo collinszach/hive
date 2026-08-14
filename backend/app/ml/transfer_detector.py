@@ -56,6 +56,19 @@ def classify_transfer_subcategory(description: str) -> str:
     return "Payment"
 
 
+def flags_for_category(category: str | None, subcategory: str | None) -> tuple[bool, bool]:
+    """
+    Derive (is_transfer, is_excluded) from a resolved category/subcategory — used
+    whenever a category is set directly (manual override, bulk update) rather than
+    through the raw-description pipeline. Mirrors the ingestion-time rule: Transfers/
+    Payment or Transfers/P2P is an internal move or bank/card payment and must be
+    excluded from spend & income analytics.
+    """
+    if category == "Transfers" and subcategory in ("Payment", "P2P"):
+        return True, True
+    return False, False
+
+
 def is_transfer(description: str, plaid_category: list[str] | None = None) -> tuple[bool, bool]:
     """
     Check if a transaction is a transfer that should be excluded from analytics.

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.spend import net_spend_expr
 from app.db import get_db
 from app.models.budget import Budget
 from app.models.net_worth import NetWorthSnapshot
@@ -76,7 +77,7 @@ async def get_monthly_review(
 
     # ── Spend this month by category ──
     spend_q = await db.execute(
-        select(Transaction.category, func.sum(Transaction.amount).label("total"))
+        select(Transaction.category, func.sum(net_spend_expr()).label("total"))
         .where(
             Transaction.date >= month_start,
             Transaction.date < next_month_start,
@@ -91,7 +92,7 @@ async def get_monthly_review(
 
     # ── Spend last month by category ──
     spend_prev_q = await db.execute(
-        select(Transaction.category, func.sum(Transaction.amount).label("total"))
+        select(Transaction.category, func.sum(net_spend_expr()).label("total"))
         .where(
             Transaction.date >= prev_month_start,
             Transaction.date < month_start,
