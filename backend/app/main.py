@@ -41,7 +41,6 @@ from app.api.points import router as points_router
 from app.api.position import router as position_router
 from app.api.reports import router as reports_router
 from app.api.review import router as review_router
-from app.api.roth import router as roth_router
 from app.api.rules import router as rules_router
 from app.api.subscriptions import router as subscriptions_router
 from app.api.shares import router as shares_router
@@ -184,7 +183,6 @@ app.include_router(points_router)
 app.include_router(position_router)
 app.include_router(reports_router)
 app.include_router(review_router)
-app.include_router(roth_router)
 app.include_router(rules_router)
 app.include_router(shares_router)
 app.include_router(snaptrade_router)
