@@ -10,7 +10,7 @@ import { useState } from "react";
    "More" sheet exposes every sibling so nothing is unreachable on mobile. */
 const SECTIONS = {
   money:    ["/transactions", "/bills", "/income", "/subscriptions", "/cash-flow", "/merchants", "/rules"],
-  plan:     ["/budgets", "/goals", "/debt", "/net-worth", "/position", "/plan", "/points", "/optimize"],
+  plan:     ["/budgets", "/goals", "/debt", "/net-worth", "/position", "/plan", "/points", "/optimize", "/mba-budget"],
   insights: ["/insights", "/reports", "/review", "/anomalies", "/chat"],
   connect:  ["/connect", "/settings", "/account", "/security", "/billing"],
 };
@@ -40,6 +40,7 @@ const MORE_GROUPS: { title: string; items: { href: string; label: string }[] }[]
     { href: "/plan",      label: "Plan"      },
     { href: "/points",    label: "Points"    },
     { href: "/optimize",  label: "Optimizer" },
+    { href: "/mba-budget", label: "MBA Budget" },
   ]},
   { title: "Insights", items: [
     { href: "/reports",   label: "Reports"   },
