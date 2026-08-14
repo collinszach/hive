@@ -7,7 +7,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.spend import net_spend_expr
@@ -110,11 +110,16 @@ async def mba_summary(
     }
 
     # Actual: netted spend per category per month over the same range.
+    # `text("'month'")` (not a plain Python string) so SQLAlchemy emits the same
+    # literal in both SELECT and GROUP BY — a bound string param gets a fresh
+    # placeholder each time it's compiled, which Postgres then treats as two
+    # different expressions and rejects with a GROUP BY error.
     range_end_exclusive = _add_month(end)
+    month_trunc = func.date_trunc(text("'month'"), Transaction.date)
     actual_result = await db.execute(
         select(
             Transaction.category,
-            func.date_trunc("month", Transaction.date).label("month"),
+            month_trunc.label("month"),
             func.sum(net_spend_expr()).label("total"),
         )
         .where(
@@ -128,7 +133,7 @@ async def mba_summary(
                 Transaction.amount > 0,
             )
         )
-        .group_by(Transaction.category, func.date_trunc("month", Transaction.date))
+        .group_by(Transaction.category, month_trunc)
     )
     actual: dict[tuple[str, str], float] = {
         (row.category, _month_str(row.month.date())): float(row.total) for row in actual_result.all()
@@ -138,7 +143,7 @@ async def mba_summary(
     # months; there's no structural "planned income" for future months.
     income_result = await db.execute(
         select(
-            func.date_trunc("month", Transaction.date).label("month"),
+            month_trunc.label("month"),
             func.sum(-Transaction.amount).label("total"),
         )
         .where(
@@ -149,7 +154,7 @@ async def mba_summary(
                 Transaction.amount < 0,
             )
         )
-        .group_by(func.date_trunc("month", Transaction.date))
+        .group_by(month_trunc)
     )
     income_by_month: dict[str, float] = {
         _month_str(row.month.date()): float(row.total) for row in income_result.all()
