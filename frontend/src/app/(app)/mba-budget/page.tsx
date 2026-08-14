@@ -260,7 +260,7 @@ export default function MbaBudgetPage() {
                 Predicted Balance
               </h2>
               <span className="text-[11px] text-ink-tertiary">
-                Net worth, as of {monthLabel(summary.starting_balance_month)}: <span className="text-ink-primary font-medium">{fmt(summary.starting_balance)}</span>
+                Liquid balance, as of {monthLabel(summary.starting_balance_month)}: <span className="text-ink-primary font-medium">{fmt(summary.starting_balance)}</span>
               </span>
             </div>
             <p className="text-[10px] text-ink-ghost mb-4">

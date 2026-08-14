@@ -13,10 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.analytics.spend import net_spend_expr
 from app.db import get_db
 from app.gates import get_current_user
+from app.models.account import Account
 from app.models.budget import Budget
 from app.models.loan import Loan
 from app.models.loan_entry import LoanEntry
-from app.models.net_worth import NetWorthSnapshot
 from app.models.transaction import Transaction
 from app.models.user import User
 
@@ -33,6 +33,13 @@ _CATEGORY_LABELS: dict[str, str] = {
     "Entertainment": "Entertainment",
     "Travel": "Travel",
 }
+
+# Roth IRA contribution basis — the portion actually withdrawable penalty-free.
+# The account's full balance includes growth that isn't accessible, so per the
+# user's instruction this flat figure is counted instead of the live balance.
+# Update this by hand as new contributions are made (it's not derived from the
+# account balance on purpose).
+_ROTH_ACCESSIBLE_BASIS = 17500.00
 
 
 class MonthLine(BaseModel):
@@ -181,21 +188,29 @@ async def mba_summary(
         elif e.entry_type == "payment":
             loan_paid_by_month[m] = loan_paid_by_month.get(m, 0.0) + (-float(e.amount))
 
-    # Starting balance: total net worth (all assets minus liabilities) from the most
-    # recent daily snapshot — every dollar you have access to, not just checking/savings.
-    # NetWorthSnapshot is refreshed daily by the existing "daily-net-worth" beat task
-    # (after the daily Plaid sync), so this projection's anchor moves every day without
-    # any extra scheduling here.
-    net_worth_result = await db.execute(
-        select(NetWorthSnapshot.net_worth, NetWorthSnapshot.snapshot_date)
-        .order_by(NetWorthSnapshot.snapshot_date.desc())
-        .limit(1)
+    # Starting balance: liquidity only, not full net worth — CDs, checking, savings,
+    # and the manual Education Fund / Car accounts (all `depository` or `other` type),
+    # minus what's owed on credit cards, plus a flat figure for the Roth (its
+    # contribution basis, not the live balance — see _ROTH_ACCESSIBLE_BASIS). The 401k
+    # and the rest of the Roth's growth are deliberately excluded as inaccessible.
+    liquid_result = await db.execute(
+        select(func.coalesce(func.sum(Account.current_balance), 0)).where(
+            Account.user_id == user.id,
+            Account.is_active == True,  # noqa: E712
+            Account.type.in_(["depository", "other"]),
+        )
     )
-    net_worth_row = net_worth_result.first()
-    starting_balance = round(float(net_worth_row[0]), 2) if net_worth_row else 0.0
-    # Anchor at the snapshot's own month (in case it lags a day or two behind "today")
-    # rather than assuming today's snapshot has already run.
-    balance_anchor_month = net_worth_row[1].replace(day=1) if net_worth_row else today_month_start
+    credit_result = await db.execute(
+        select(func.coalesce(func.sum(Account.current_balance), 0)).where(
+            Account.user_id == user.id,
+            Account.is_active == True,  # noqa: E712
+            Account.type == "credit",
+        )
+    )
+    liquid = float(liquid_result.scalar_one() or 0)
+    credit_owed = float(credit_result.scalar_one() or 0)
+    starting_balance = round(liquid - credit_owed + _ROTH_ACCESSIBLE_BASIS, 2)
+    balance_anchor_month = today_month_start
 
     months: list[MonthSummary] = []
     running: Optional[float] = None
