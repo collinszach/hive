@@ -328,6 +328,11 @@ export interface MbaMonthSummary {
   lines: MbaMonthLine[];
   total_planned: number;
   total_actual: number | null;
+  income: number;
+  loan_disbursed: number;
+  loan_paid: number;
+  net_change: number | null;
+  running_balance: number | null;
 }
 
 export interface MbaLoanSummary {
@@ -341,6 +346,8 @@ export interface MbaLoanSummary {
 export interface MbaSummary {
   months: MbaMonthSummary[];
   loans: MbaLoanSummary[];
+  starting_balance: number;
+  starting_balance_month: string;
 }
 
 export interface AnomalyTransaction {

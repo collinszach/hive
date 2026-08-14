@@ -6,7 +6,9 @@ import { toast } from "@/components/Toast";
 import { fmt, cn } from "@/lib/utils";
 import { PageHero } from "@/components/PageHero";
 import { GlassCard } from "@/components/GlassCard";
-import { Plus, Trash2, GraduationCap } from "lucide-react";
+import { ChartTooltip, CHART_AXIS_PROPS } from "@/components/ChartTooltip";
+import { Plus, Trash2, GraduationCap, TrendingDown } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -242,6 +244,56 @@ export default function MbaBudgetPage() {
           )}
         </div>
       </GlassCard>
+
+      {/* ── Predicted balance ────────────────────────────────────────────── */}
+      {summary && (() => {
+        const projected = summary.months.filter((m) => m.running_balance !== null);
+        if (projected.length === 0) return null;
+        const chartData = projected.map((m) => ({ month: monthLabel(m.month), balance: m.running_balance as number }));
+        const final = projected[projected.length - 1];
+        const runsOut = projected.find((m) => (m.running_balance as number) < 0);
+        return (
+          <GlassCard className="p-5">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-[13px] font-semibold text-ink-primary flex items-center gap-2">
+                <TrendingDown className="w-4 h-4 text-ink-tertiary" />
+                Predicted Balance
+              </h2>
+              <span className="text-[11px] text-ink-tertiary">
+                Checking + savings, as of {monthLabel(summary.starting_balance_month)}: <span className="text-ink-primary font-medium">{fmt(summary.starting_balance)}</span>
+              </span>
+            </div>
+            <p className="text-[10px] text-ink-ghost mb-4">
+              Projects forward using your budgeted plan and any loan entries you&apos;ve logged &mdash; it does not assume future paychecks or disbursements you haven&apos;t entered.
+            </p>
+
+            <div className="flex items-baseline gap-3 mb-4">
+              <span className={cn("text-[24px] font-semibold", final.running_balance! < 0 ? "text-semantic-expense" : "text-ink-primary")}>
+                {fmt(final.running_balance as number)}
+              </span>
+              <span className="text-[11px] text-ink-tertiary">predicted by {monthLabel(final.month)}</span>
+            </div>
+
+            {runsOut && (
+              <p className="text-[11px] text-semantic-expense mb-4">
+                Projected to go negative around {monthLabel(runsOut.month)} at this spending plan, unless more income or loan funds come in.
+              </p>
+            )}
+
+            <div className="h-[180px] -ml-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="month" {...CHART_AXIS_PROPS} axisLine={false} tickLine={false} />
+                  <YAxis {...CHART_AXIS_PROPS} axisLine={false} tickLine={false} tickFormatter={(v) => fmt(v)} width={70} />
+                  <Tooltip content={<ChartTooltip formatValue={fmt} />} />
+                  <ReferenceLine y={0} stroke="#3A3D45" />
+                  <Line type="monotone" dataKey="balance" name="Predicted balance" stroke="#F5A623" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassCard>
+        );
+      })()}
 
       {/* ── Month range ──────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2">

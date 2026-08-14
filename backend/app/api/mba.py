@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.analytics.spend import net_spend_expr
 from app.db import get_db
 from app.gates import get_current_user
+from app.models.account import Account
 from app.models.budget import Budget
 from app.models.loan import Loan
 from app.models.loan_entry import LoanEntry
@@ -47,6 +48,11 @@ class MonthSummary(BaseModel):
     lines: list[MonthLine]
     total_planned: float
     total_actual: Optional[float]
+    income: float             # actual Income-category inflow this month (0 for future months)
+    loan_disbursed: float     # loan entries dated this month that add cash
+    loan_paid: float          # loan payments dated this month that draw down cash
+    net_change: Optional[float]   # income + loan_disbursed - expense - loan_paid; None before the projection anchor
+    running_balance: Optional[float]  # projected cash remaining at the end of this month; None for past months
 
 
 class LoanSummary(BaseModel):
@@ -60,6 +66,8 @@ class LoanSummary(BaseModel):
 class MbaSummary(BaseModel):
     months: list[MonthSummary]
     loans: list[LoanSummary]
+    starting_balance: float       # current checking + savings balance, as of now
+    starting_balance_month: str   # YYYY-MM the projection is anchored at
 
 
 def _month_str(d: date) -> str:
@@ -126,11 +134,68 @@ async def mba_summary(
         (row.category, _month_str(row.month.date())): float(row.total) for row in actual_result.all()
     }
 
+    # Actual monthly income (Income-category inflows) — only meaningful for past/current
+    # months; there's no structural "planned income" for future months.
+    income_result = await db.execute(
+        select(
+            func.date_trunc("month", Transaction.date).label("month"),
+            func.sum(-Transaction.amount).label("total"),
+        )
+        .where(
+            and_(
+                Transaction.category == "Income",
+                Transaction.date >= start,
+                Transaction.date < range_end_exclusive,
+                Transaction.amount < 0,
+            )
+        )
+        .group_by(func.date_trunc("month", Transaction.date))
+    )
+    income_by_month: dict[str, float] = {
+        _month_str(row.month.date()): float(row.total) for row in income_result.all()
+    }
+
+    # Loan cash flow per month — disbursements/interest add cash, payments draw it down.
+    # Only reflects entries the user has actually logged (past disbursements, or future
+    # ones they've pre-entered); nothing is assumed.
+    loan_entries_result = await db.execute(
+        select(LoanEntry).where(
+            and_(
+                LoanEntry.user_id == user.id,
+                LoanEntry.entry_date >= start,
+                LoanEntry.entry_date < range_end_exclusive,
+            )
+        )
+    )
+    loan_disbursed_by_month: dict[str, float] = {}
+    loan_paid_by_month: dict[str, float] = {}
+    for e in loan_entries_result.scalars().all():
+        m = _month_str(e.entry_date)
+        if e.entry_type in ("disbursement", "interest"):
+            loan_disbursed_by_month[m] = loan_disbursed_by_month.get(m, 0.0) + float(e.amount)
+        elif e.entry_type == "payment":
+            loan_paid_by_month[m] = loan_paid_by_month.get(m, 0.0) + (-float(e.amount))
+
+    # Starting cash: current checking + savings balance across the user's active accounts.
+    # This anchors the projection at "now" — months before this one show no projection
+    # (that's settled history), and the projection walks forward from here.
+    cash_result = await db.execute(
+        select(func.coalesce(func.sum(Account.current_balance), 0)).where(
+            Account.user_id == user.id,
+            Account.is_active == True,  # noqa: E712
+            Account.type == "depository",
+            Account.subtype.in_(["checking", "savings"]),
+        )
+    )
+    starting_balance = round(float(cash_result.scalar_one() or 0), 2)
+
     months: list[MonthSummary] = []
+    running: Optional[float] = None
     cursor = start
     while cursor <= end:
         m = _month_str(cursor)
         is_past = cursor < today_month_start
+        is_anchor = cursor == today_month_start
         lines = []
         total_planned = 0.0
         total_actual = 0.0
@@ -143,12 +208,31 @@ async def mba_summary(
                 total_actual += a
                 any_actual = True
             lines.append(MonthLine(category=cat, label=label, planned=round(p, 2), actual=round(a, 2) if a is not None else None))
+
+        income = round(income_by_month.get(m, 0.0), 2)
+        loan_disbursed = round(loan_disbursed_by_month.get(m, 0.0), 2)
+        loan_paid = round(loan_paid_by_month.get(m, 0.0), 2)
+
+        net_change: Optional[float] = None
+        if is_anchor:
+            running = starting_balance
+        elif not is_past:
+            expense = total_planned
+            net_change = round(income + loan_disbursed - expense - loan_paid, 2)
+            if running is not None:
+                running = round(running + net_change, 2)
+
         months.append(MonthSummary(
             month=m,
             is_past=is_past,
             lines=lines,
             total_planned=round(total_planned, 2),
             total_actual=round(total_actual, 2) if (any_actual or is_past) else None,
+            income=income,
+            loan_disbursed=loan_disbursed,
+            loan_paid=loan_paid,
+            net_change=net_change,
+            running_balance=running if not is_past else None,
         ))
         cursor = _add_month(cursor)
 
@@ -166,4 +250,9 @@ async def mba_summary(
             balance=round(balance, 2), total_disbursed=round(disbursed, 2), total_paid=round(paid, 2),
         ))
 
-    return MbaSummary(months=months, loans=loan_summaries)
+    return MbaSummary(
+        months=months,
+        loans=loan_summaries,
+        starting_balance=starting_balance,
+        starting_balance_month=_month_str(today_month_start),
+    )
