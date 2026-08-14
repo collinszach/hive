@@ -27,6 +27,9 @@ from app.models.plan_event import PlanEvent  # noqa: F401
 from app.models.plan_scenario import PlanScenario  # noqa: F401
 from app.models.plan_assumption import PlanAssumption  # noqa: F401
 from app.models.income_stream import IncomeStream  # noqa: F401
+from app.models.loan import Loan  # noqa: F401
+from app.models.loan_entry import LoanEntry  # noqa: F401
+from app.models.roth_contribution import RothContribution  # noqa: F401
 from app.models.user import User  # noqa: F401
 
 __all__ = [
@@ -41,6 +44,8 @@ __all__ = [
     "GoalType",
     "IncomeStream",
     "Insight",
+    "Loan",
+    "LoanEntry",
     "NetWorthSnapshot",
     "PaperBacktestRun",
     "PaperCandle",
@@ -56,6 +61,7 @@ __all__ = [
     "PlanScenario",
     "PointsBalance",
     "PointsLedger",
+    "RothContribution",
     "Subscription",
     "Transaction",
     "User",

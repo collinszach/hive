@@ -125,6 +125,7 @@ export interface Account {
   is_manual: boolean;
   is_active: boolean;
   is_excluded: boolean;
+  is_retirement: boolean;
 }
 
 export interface LinkedInstitution {
@@ -271,7 +272,75 @@ export interface NetWorthSnapshot {
   total_assets: number;
   total_liabilities: number;
   net_worth: number;
+  total_liquid_assets: number;
+  liquid_net_worth: number;
   breakdown: Record<string, number>;
+}
+
+export interface RothAccountSummary {
+  account_id: string;
+  account_name: string;
+  current_balance: number | null;
+  total_contributed: number;
+  total_withdrawn: number;
+  available_basis: number;
+}
+
+export interface RothEntry {
+  id: string;
+  account_id: string;
+  amount: number;
+  is_withdrawal: boolean;
+  contributed_on: string;
+  note: string | null;
+}
+
+export interface Loan {
+  id: string;
+  name: string;
+  interest_rate: number | null;
+  origination_date: string | null;
+  notes: string | null;
+  balance: number;
+  total_disbursed: number;
+  total_paid: number;
+}
+
+export interface LoanEntry {
+  id: string;
+  loan_id: string;
+  entry_type: "disbursement" | "payment" | "interest";
+  amount: number;
+  entry_date: string;
+  note: string | null;
+}
+
+export interface MbaMonthLine {
+  category: string;
+  label: string;
+  planned: number;
+  actual: number | null;
+}
+
+export interface MbaMonthSummary {
+  month: string;
+  is_past: boolean;
+  lines: MbaMonthLine[];
+  total_planned: number;
+  total_actual: number | null;
+}
+
+export interface MbaLoanSummary {
+  id: string;
+  name: string;
+  balance: number;
+  total_disbursed: number;
+  total_paid: number;
+}
+
+export interface MbaSummary {
+  months: MbaMonthSummary[];
+  loans: MbaLoanSummary[];
 }
 
 export interface AnomalyTransaction {
@@ -867,6 +936,29 @@ export const api = {
       del<UnlinkResponse>(`/api/accounts/linked/${item_id}`, { delete_transactions }),
     updateBilling: (id: string, statement_close_day?: number | null, payment_due_day?: number | null, credit_limit?: number, autopay?: boolean) =>
       patch<Account>(`/api/accounts/${id}/billing`, { statement_close_day, payment_due_day, credit_limit, autopay }),
+    setRetirement: (id: string, is_retirement: boolean) =>
+      patch<Account>(`/api/accounts/${id}/classification`, { is_retirement }),
+  },
+  roth: {
+    accounts: () => get<RothAccountSummary[]>("/api/roth/accounts"),
+    entries: (account_id: string) => get<RothEntry[]>("/api/roth/entries", { account_id }),
+    addEntry: (body: { account_id: string; amount: number; is_withdrawal: boolean; contributed_on: string; note?: string | null }) =>
+      post<RothEntry>("/api/roth/entries", body),
+    deleteEntry: (id: string) => del<void>(`/api/roth/entries/${id}`),
+  },
+  loans: {
+    list: () => get<Loan[]>("/api/loans"),
+    create: (body: { name: string; interest_rate?: number | null; origination_date?: string | null; notes?: string | null }) =>
+      post<Loan>("/api/loans", body),
+    delete: (id: string) => del<void>(`/api/loans/${id}`),
+    entries: (loan_id: string) => get<LoanEntry[]>(`/api/loans/${loan_id}/entries`),
+    addEntry: (loan_id: string, body: { entry_type: "disbursement" | "payment" | "interest"; amount: number; entry_date: string; note?: string | null }) =>
+      post<LoanEntry>(`/api/loans/${loan_id}/entries`, body),
+    deleteEntry: (id: string) => del<void>(`/api/loans/entries/${id}`),
+  },
+  mba: {
+    summary: (start_month: string, end_month: string) =>
+      get<MbaSummary>("/api/mba/summary", { start_month, end_month }),
   },
   transactions: {
     list: (params: {

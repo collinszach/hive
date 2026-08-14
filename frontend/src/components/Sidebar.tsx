@@ -28,6 +28,7 @@ import {
   Filter,
   Link as LinkIcon,
   CreditCard,
+  GraduationCap,
 } from "lucide-react";
 import { clearToken } from "@/lib/auth";
 import { api } from "@/lib/api";
@@ -51,6 +52,7 @@ const NAV_SECTIONS = [
       { href: "/income",    label: "Income",    icon: ArrowDownLeft },
       { href: "/bills",     label: "Bills",     icon: CalendarClock },
       { href: "/reports",   label: "Reports",   icon: BarChart2 },
+      { href: "/mba-budget", label: "MBA Budget", icon: GraduationCap },
       { href: "/paper-trading", label: "Paper Trading", icon: FlaskConical },
     ],
   },

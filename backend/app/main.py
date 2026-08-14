@@ -26,6 +26,8 @@ from app.api.goals import router as goals_router
 from app.api.iap import router as iap_router
 from app.api.income import router as income_router
 from app.api.insights import router as insights_router
+from app.api.loans import router as loans_router
+from app.api.mba import router as mba_router
 from app.api.merchants import router as merchants_router
 from app.api.net_worth import router as net_worth_router
 from app.api.notifications import router as notifications_router
@@ -39,6 +41,7 @@ from app.api.points import router as points_router
 from app.api.position import router as position_router
 from app.api.reports import router as reports_router
 from app.api.review import router as review_router
+from app.api.roth import router as roth_router
 from app.api.rules import router as rules_router
 from app.api.subscriptions import router as subscriptions_router
 from app.api.shares import router as shares_router
@@ -166,6 +169,8 @@ app.include_router(goals_router)
 app.include_router(iap_router)
 app.include_router(income_router)
 app.include_router(insights_router)
+app.include_router(loans_router)
+app.include_router(mba_router)
 app.include_router(merchants_router)
 app.include_router(net_worth_router)
 app.include_router(notifications_router)
@@ -179,6 +184,7 @@ app.include_router(points_router)
 app.include_router(position_router)
 app.include_router(reports_router)
 app.include_router(review_router)
+app.include_router(roth_router)
 app.include_router(rules_router)
 app.include_router(shares_router)
 app.include_router(snaptrade_router)
