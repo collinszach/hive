@@ -13,10 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.analytics.spend import net_spend_expr
 from app.db import get_db
 from app.gates import get_current_user
-from app.models.account import Account
 from app.models.budget import Budget
 from app.models.loan import Loan
 from app.models.loan_entry import LoanEntry
+from app.models.net_worth import NetWorthSnapshot
 from app.models.transaction import Transaction
 from app.models.user import User
 
@@ -181,18 +181,21 @@ async def mba_summary(
         elif e.entry_type == "payment":
             loan_paid_by_month[m] = loan_paid_by_month.get(m, 0.0) + (-float(e.amount))
 
-    # Starting cash: current checking + savings balance across the user's active accounts.
-    # This anchors the projection at "now" — months before this one show no projection
-    # (that's settled history), and the projection walks forward from here.
-    cash_result = await db.execute(
-        select(func.coalesce(func.sum(Account.current_balance), 0)).where(
-            Account.user_id == user.id,
-            Account.is_active == True,  # noqa: E712
-            Account.type == "depository",
-            Account.subtype.in_(["checking", "savings"]),
-        )
+    # Starting balance: total net worth (all assets minus liabilities) from the most
+    # recent daily snapshot — every dollar you have access to, not just checking/savings.
+    # NetWorthSnapshot is refreshed daily by the existing "daily-net-worth" beat task
+    # (after the daily Plaid sync), so this projection's anchor moves every day without
+    # any extra scheduling here.
+    net_worth_result = await db.execute(
+        select(NetWorthSnapshot.net_worth, NetWorthSnapshot.snapshot_date)
+        .order_by(NetWorthSnapshot.snapshot_date.desc())
+        .limit(1)
     )
-    starting_balance = round(float(cash_result.scalar_one() or 0), 2)
+    net_worth_row = net_worth_result.first()
+    starting_balance = round(float(net_worth_row[0]), 2) if net_worth_row else 0.0
+    # Anchor at the snapshot's own month (in case it lags a day or two behind "today")
+    # rather than assuming today's snapshot has already run.
+    balance_anchor_month = net_worth_row[1].replace(day=1) if net_worth_row else today_month_start
 
     months: list[MonthSummary] = []
     running: Optional[float] = None
@@ -200,7 +203,7 @@ async def mba_summary(
     while cursor <= end:
         m = _month_str(cursor)
         is_past = cursor < today_month_start
-        is_anchor = cursor == today_month_start
+        is_anchor = cursor == balance_anchor_month
         lines = []
         total_planned = 0.0
         total_actual = 0.0
@@ -259,5 +262,5 @@ async def mba_summary(
         months=months,
         loans=loan_summaries,
         starting_balance=starting_balance,
-        starting_balance_month=_month_str(today_month_start),
+        starting_balance_month=_month_str(balance_anchor_month),
     )
