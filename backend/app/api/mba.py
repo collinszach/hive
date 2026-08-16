@@ -223,8 +223,14 @@ async def mba_summary(
         total_planned = 0.0
         total_actual = 0.0
         any_actual = False
+        month_loan_disbursed = loan_disbursed_by_month.get(m, 0.0)
         for cat, label in _CATEGORY_LABELS.items():
             p = planned.get((cat, m), 0.0)
+            if cat == "Education":
+                # Loan proceeds fund tuition directly, so the budgeted target for
+                # this month is net of what the loan covers, not the full sticker
+                # price — per the user's instruction.
+                p = round(p - month_loan_disbursed, 2)
             a = actual.get((cat, m))
             total_planned += p
             if a is not None:
@@ -240,8 +246,11 @@ async def mba_summary(
         if is_anchor:
             running = starting_balance
         elif not is_past:
+            # total_planned already nets the loan disbursement out of the Education
+            # line above, so it isn't added again here as separate income — doing
+            # so would double-count the loan's cash benefit.
             expense = total_planned
-            net_change = round(income + loan_disbursed - expense - loan_paid, 2)
+            net_change = round(income - expense - loan_paid, 2)
             if running is not None:
                 running = round(running + net_change, 2)
 
