@@ -25,6 +25,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/mba", tags=["mba"])
 
 # HIVE's existing taxonomy categories mapped to the sheet's MBA budget lines.
+# The Education/Tuition `Budget.budget_amount` entered for a term is expected to
+# already be net of scholarships/waivers — i.e. the school's billed total minus
+# any waiver line items, sourced from the term's billing statement (e.g.
+# CalCentral). This file then nets that figure against the month's loan
+# disbursement below, so the "planned" tuition line ends up net of both
+# scholarships and loan financing — the actual out-of-pocket cost.
 _CATEGORY_LABELS: dict[str, str] = {
     "Education": "Tuition",
     "Home": "Living",
@@ -58,7 +64,9 @@ class MonthSummary(BaseModel):
     income: float             # actual Income-category inflow this month (0 for future months)
     loan_disbursed: float     # loan entries dated this month that add cash
     loan_paid: float          # loan payments dated this month that draw down cash
-    net_change: Optional[float]   # income + loan_disbursed - expense - loan_paid; None before the projection anchor
+    net_change: Optional[float]   # income - expense - loan_paid; None before the projection anchor.
+                                   # loan_disbursed isn't added separately — it's already netted into
+                                   # the Education line's `expense` above.
     running_balance: Optional[float]  # projected cash remaining at the end of this month; None for past months
 
 
