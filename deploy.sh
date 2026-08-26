@@ -9,7 +9,8 @@
 #
 # Usage:
 #   ./deploy.sh            # full deploy
-#   ./deploy.sh --migrate  # force alembic upgrade head
+#   ./deploy.sh --migrate  # accepted for compatibility; a no-op. `alembic upgrade
+#                          #   head` already runs on every deploy.
 #   ./deploy.sh --pull     # rebuild images only, no restart
 
 set -euo pipefail
@@ -17,6 +18,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/.env"
 COMPOSE="docker compose -f docker-compose.yml"
+PUBLIC_URL="https://hive.zacharyjcollins.com"
+PUBLIC_HEALTH_URL="$PUBLIC_URL/api/health"
+# Parsed for compatibility only — migrations run unconditionally below.
 MIGRATE=false
 PULL_ONLY=false
 
@@ -93,20 +97,6 @@ if [[ "$PULL_ONLY" == true ]]; then
   exit 0
 fi
 
-# ── Free port 8080 before starting nginx container ──────────────────────────
-echo "==> Checking for processes on port 8080"
-
-if systemctl is-active --quiet nginx 2>/dev/null; then
-  echo "  System nginx service is active — stopping it"
-  if sudo systemctl stop nginx 2>/dev/null; then
-    echo "  Stopped. Run 'sudo systemctl disable nginx' to prevent it starting on reboot."
-  else
-    echo "  WARNING: Could not stop system nginx. Run: sudo systemctl disable --now nginx"
-    echo "  Then re-run deploy.sh"
-    exit 1
-  fi
-fi
-
 # ── Free port 6380 before starting redis container ───────────────────────────
 # hive-redis uses host networking and binds 127.0.0.1:6380. If a previous
 # container was removed without its process being reaped (e.g. a dockerd
@@ -144,10 +134,18 @@ $COMPOSE up -d --remove-orphans
 echo "  Waiting for backend health check..."
 timeout 120 bash -c "until $COMPOSE ps backend | grep -q healthy; do sleep 3; done"
 
-# The web app is served by nginx (there is no separate `frontend` compose
-# service). nginx has no Docker healthcheck, so probe its HTTP port directly.
-echo "  Waiting for nginx (web) to serve..."
-timeout 120 bash -c 'until curl -fs -o /dev/null http://localhost:8080/api/health; do sleep 3; done'
+# The web app is NOT served from this compose file — the frontend is hosted on
+# Vercel, and the public domain is fronted by a shared reverse proxy outside this
+# stack. This probe is therefore informational only: a failure here means the
+# proxy or DNS needs attention, not that the backend deploy went wrong, so it
+# must never fail the deploy.
+echo "  Probing public endpoint (informational)..."
+if curl -fs -o /dev/null --max-time 15 "$PUBLIC_HEALTH_URL"; then
+  echo "  Public endpoint OK: $PUBLIC_HEALTH_URL"
+else
+  echo "  NOTE: could not reach $PUBLIC_HEALTH_URL — backend is healthy locally,"
+  echo "        so check the reverse proxy / DNS if the site looks down."
+fi
 
 # ── Status ────────────────────────────────────────────────────────────────────
 echo ""
@@ -155,7 +153,8 @@ echo "==> Stack status"
 $COMPOSE ps
 
 echo ""
-echo "✓ Hive is live."
-echo "  Dashboard: http://$(hostname -I | awk '{print $1}'):8080"
+echo "✓ Hive backend is live."
+echo "  Public:    $PUBLIC_URL  (frontend deploys separately via Vercel)"
+echo "  Local API: http://$(hostname -I | awk '{print $1}'):8000/health"
 echo "  Logs:      docker compose logs -f [service]"
 echo "  Stop:      $COMPOSE down"
