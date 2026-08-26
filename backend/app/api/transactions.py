@@ -389,7 +389,6 @@ async def spend_by_category(
                 Transaction.date < end,
                 Transaction.is_excluded == False,  # noqa: E712
                 Transaction.is_transfer == False,  # noqa: E712
-                Transaction.pending == False,  # noqa: E712
                 Transaction.amount > 0,
                 Transaction.category.isnot(None),
                 Transaction.category != "Transfers",

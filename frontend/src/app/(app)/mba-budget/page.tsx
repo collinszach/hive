@@ -368,7 +368,7 @@ export default function MbaBudgetPage() {
             </tbody>
           </table>
         )}
-        <p className="text-[10px] text-ink-ghost mt-3">Actual / Planned. Planned comes from Budgets for Education, Home, Groceries, Food &amp; Drink, Entertainment, and Travel.</p>
+        <p className="text-[10px] text-ink-ghost mt-3">Actual / Planned. Actual includes pending charges, so it can shift as they settle. Planned comes from Budgets for Education, Home, Groceries, Food &amp; Drink, Entertainment, and Travel; Tuition shows the full budgeted amount, with loan disbursements counted as incoming cash in the projection rather than subtracted from it.</p>
       </GlassCard>
     </div>
   );

@@ -70,7 +70,6 @@ async def _build_financial_context(db: AsyncSession) -> str:
             and_(
                 Transaction.date >= three_months_ago,
                 Transaction.is_excluded == False,  # noqa: E712
-                Transaction.pending == False,  # noqa: E712
                 Transaction.amount > 0,
             )
         )
@@ -86,7 +85,6 @@ async def _build_financial_context(db: AsyncSession) -> str:
                 Transaction.date >= month_start,
                 Transaction.date < month_end,
                 Transaction.is_excluded == False,  # noqa: E712
-                Transaction.pending == False,  # noqa: E712
                 Transaction.amount > 0,
             )
         )
@@ -143,7 +141,6 @@ async def _build_financial_context(db: AsyncSession) -> str:
             and_(
                 Transaction.date >= three_months_ago,
                 Transaction.is_excluded == False,  # noqa: E712
-                Transaction.pending == False,  # noqa: E712
                 Transaction.amount > 0,
                 Transaction.merchant.isnot(None),
             )

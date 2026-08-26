@@ -53,7 +53,6 @@ async def income_summary(
         Transaction.amount < 0,
         Transaction.category == "Income",
         Transaction.is_excluded == False,  # noqa: E712
-        Transaction.pending == False,  # noqa: E712
         # Exclude deposits into balance-only accounts (savings/CD/money-market) — a matured
         # CD or transfer landing there isn't take-home income. Mirrors safe-to-spend.
         Transaction.account_id.in_(
@@ -127,7 +126,6 @@ async def income_monthly(
                 Transaction.amount < 0,
                 Transaction.category == "Income",
                 Transaction.is_excluded == False,  # noqa: E712
-                Transaction.pending == False,  # noqa: E712
                 Transaction.date >= cutoff,
             )
         )
@@ -179,7 +177,6 @@ async def income_forecast(
                 Transaction.amount < 0,
                 Transaction.category == "Income",
                 Transaction.is_excluded == False,  # noqa: E712
-                Transaction.pending == False,  # noqa: E712
                 Transaction.date >= cutoff,
             )
         )

@@ -108,7 +108,6 @@ async def list_budgets(
                 Transaction.date < end,
                 Transaction.is_excluded == False,  # noqa: E712
                 Transaction.is_transfer == False,  # noqa: E712
-                Transaction.pending == False,  # noqa: E712
                 Transaction.amount > 0,
                 Transaction.category != "Transfers",
             )
@@ -141,7 +140,6 @@ async def list_budgets(
                     Transaction.date < prior_end,
                     Transaction.is_excluded == False,  # noqa: E712
                     Transaction.is_transfer == False,  # noqa: E712
-                    Transaction.pending == False,  # noqa: E712
                     Transaction.amount > 0,
                     Transaction.category.in_(rollover_categories),
                 )
@@ -241,7 +239,6 @@ async def upsert_budget(
                 Transaction.date < end,
                 Transaction.is_excluded == False,  # noqa: E712
                 Transaction.is_transfer == False,  # noqa: E712
-                Transaction.pending == False,  # noqa: E712
                 Transaction.amount > 0,
             )
         )
@@ -369,7 +366,6 @@ async def suggest_budgets(
                 Transaction.date < target_month,
                 Transaction.is_excluded == False,  # noqa: E712
                 Transaction.is_transfer == False,  # noqa: E712
-                Transaction.pending == False,  # noqa: E712
                 Transaction.amount > 0,
                 Transaction.category.isnot(None),
                 Transaction.category != "Transfers",

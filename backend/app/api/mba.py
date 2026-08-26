@@ -28,9 +28,10 @@ router = APIRouter(prefix="/api/mba", tags=["mba"])
 # The Education/Tuition `Budget.budget_amount` entered for a term is expected to
 # already be net of scholarships/waivers — i.e. the school's billed total minus
 # any waiver line items, sourced from the term's billing statement (e.g.
-# CalCentral). This file then nets that figure against the month's loan
-# disbursement below, so the "planned" tuition line ends up net of both
-# scholarships and loan financing — the actual out-of-pocket cost.
+# CalCentral). That figure is shown on the Tuition line as entered. Loan
+# disbursements are NOT subtracted from it: a loan is financing, not a discount,
+# so the tuition line reads at its true cost and the loan's cash benefit is
+# added as an inflow in the projection instead (see `net_change` below).
 _CATEGORY_LABELS: dict[str, str] = {
     "Education": "Tuition",
     "Home": "Living",
@@ -64,9 +65,9 @@ class MonthSummary(BaseModel):
     income: float             # actual Income-category inflow this month (0 for future months)
     loan_disbursed: float     # loan entries dated this month that add cash
     loan_paid: float          # loan payments dated this month that draw down cash
-    net_change: Optional[float]   # income - expense - loan_paid; None before the projection anchor.
-                                   # loan_disbursed isn't added separately — it's already netted into
-                                   # the Education line's `expense` above.
+    net_change: Optional[float]   # income + loan_disbursed - expense - loan_paid; None before the
+                                   # projection anchor. The Education line carries full budgeted
+                                   # tuition, so the loan is counted here as an inflow.
     running_balance: Optional[float]  # projected cash remaining at the end of this month; None for past months
 
 
@@ -144,7 +145,6 @@ async def mba_summary(
                 Transaction.date < range_end_exclusive,
                 Transaction.is_excluded == False,  # noqa: E712
                 Transaction.is_transfer == False,  # noqa: E712
-                Transaction.pending == False,  # noqa: E712
                 Transaction.amount > 0,
             )
         )
@@ -234,11 +234,6 @@ async def mba_summary(
         month_loan_disbursed = loan_disbursed_by_month.get(m, 0.0)
         for cat, label in _CATEGORY_LABELS.items():
             p = planned.get((cat, m), 0.0)
-            if cat == "Education":
-                # Loan proceeds fund tuition directly, so the budgeted target for
-                # this month is net of what the loan covers, not the full sticker
-                # price — per the user's instruction.
-                p = round(p - month_loan_disbursed, 2)
             a = actual.get((cat, m))
             total_planned += p
             if a is not None:
@@ -254,11 +249,12 @@ async def mba_summary(
         if is_anchor:
             running = starting_balance
         elif not is_past:
-            # total_planned already nets the loan disbursement out of the Education
-            # line above, so it isn't added again here as separate income — doing
-            # so would double-count the loan's cash benefit.
+            # The Education line now carries the full budgeted tuition, so the
+            # loan's cash benefit is added here as an inflow. Net effect on the
+            # running balance is identical to netting it into the expense line,
+            # but the Tuition line reads at its true cost.
             expense = total_planned
-            net_change = round(income - expense - loan_paid, 2)
+            net_change = round(income + month_loan_disbursed - expense - loan_paid, 2)
             if running is not None:
                 running = round(running + net_change, 2)
 

@@ -80,7 +80,6 @@ async def dashboard_summary(
                 Transaction.date < end,
                 Transaction.is_excluded == False,  # noqa: E712
                 Transaction.is_transfer == False,  # noqa: E712
-                Transaction.pending == False,  # noqa: E712
                 Transaction.amount > 0,
                 Transaction.category != "Transfers",
                 Account.subtype.notin_(["savings", "cd", "money market", "checking"]),
@@ -188,7 +187,6 @@ async def safe_to_spend(db: AsyncSession = Depends(get_db), user: User = Depends
               AND amount < 0
               AND category = 'Income'
               AND is_excluded = FALSE
-              AND pending = FALSE
               AND account_id IN (
                   SELECT id FROM accounts
                   WHERE is_active = TRUE AND user_id = :uid
@@ -222,7 +220,6 @@ async def safe_to_spend(db: AsyncSession = Depends(get_db), user: User = Depends
                 Transaction.amount > 0,
                 Transaction.is_excluded == False,  # noqa: E712
                 Transaction.is_transfer == False,   # noqa: E712
-                Transaction.pending == False,        # noqa: E712
                 Account.subtype.notin_(["savings", "cd", "money market", "checking"]),
             )
         )
@@ -346,7 +343,6 @@ async def pace_alerts(
                 Transaction.amount > 0,
                 Transaction.is_excluded == False,  # noqa: E712
                 Transaction.is_transfer == False,   # noqa: E712
-                Transaction.pending == False,        # noqa: E712
                 Transaction.category.in_(list(budgets.keys())),
                 Account.subtype.notin_(["savings", "cd", "money market", "checking"]),
             )
@@ -457,7 +453,6 @@ async def health_score(db: AsyncSession = Depends(get_db), user: User = Depends(
                 Transaction.amount > 0,
                 Transaction.is_excluded.is_(False),
                 Transaction.is_transfer.is_(False),
-                Transaction.pending.is_(False),
                 Transaction.category.in_([b.category for b in budgets]),
                 Account.subtype.notin_(["savings", "cd", "money market", "checking"]),
             )
@@ -492,7 +487,6 @@ async def health_score(db: AsyncSession = Depends(get_db), user: User = Depends(
               AND category = 'Income'
               AND is_excluded = FALSE
               AND is_transfer = FALSE
-              AND pending = FALSE
               AND account_id IN (
                   SELECT id FROM accounts
                   WHERE is_active = TRUE AND user_id = :uid
@@ -511,7 +505,6 @@ async def health_score(db: AsyncSession = Depends(get_db), user: User = Depends(
             Transaction.amount > 0,
             Transaction.is_excluded.is_(False),
             Transaction.is_transfer.is_(False),
-            Transaction.pending.is_(False),
             Account.subtype.notin_(["savings", "cd", "money market", "checking"]),
             Account.user_id == user.id,
         )
@@ -698,7 +691,6 @@ async def weekly_comparison(db: AsyncSession = Depends(get_db), user: User = Dep
             Transaction.amount > 0,
             Transaction.is_excluded.is_(False),
             Transaction.is_transfer.is_(False),
-            Transaction.pending.is_(False),
             Account.subtype.notin_(["savings", "cd", "money market", "checking"]),
         )
         .group_by(Transaction.date)
