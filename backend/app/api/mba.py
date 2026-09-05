@@ -39,6 +39,8 @@ _CATEGORY_LABELS: dict[str, str] = {
     "Food & Drink": "Eating Out",
     "Entertainment": "Entertainment",
     "Travel": "Travel",
+    "Utilities": "Utilities",
+    "Transportation": "Transport",
 }
 
 # Roth IRA contribution basis — the portion actually withdrawable penalty-free.
