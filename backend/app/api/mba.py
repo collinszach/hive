@@ -41,6 +41,10 @@ _CATEGORY_LABELS: dict[str, str] = {
     "Travel": "Travel",
     "Utilities": "Utilities",
     "Transportation": "Transport",
+    "Shopping": "Shopping",
+    "Health": "Health",
+    "Personal Care": "Personal",
+    "Business": "Business",
 }
 
 # Roth IRA contribution basis — the portion actually withdrawable penalty-free.
@@ -64,7 +68,8 @@ class MonthSummary(BaseModel):
     lines: list[MonthLine]
     total_planned: float
     total_actual: Optional[float]
-    income: float             # actual Income-category inflow this month (0 for future months)
+    income: float             # actual Income-category inflow; for future months, the
+                              # planned figure from an "Income" budget row (0 if none)
     loan_disbursed: float     # loan entries dated this month that add cash
     loan_paid: float          # loan payments dated this month that draw down cash
     net_change: Optional[float]   # income + loan_disbursed - expense - loan_paid; None before the
@@ -157,8 +162,9 @@ async def mba_summary(
         (row.category, _month_str(row.month.date())): float(row.total) for row in actual_result.all()
     }
 
-    # Actual monthly income (Income-category inflows) — only meaningful for past/current
-    # months; there's no structural "planned income" for future months.
+    # Actual monthly income (Income-category inflows). Past/current months use these;
+    # future months fall back to a planned figure (an "Income" Budget row) so an
+    # expected inflow like a summer internship can be modelled — see below.
     income_result = await db.execute(
         select(
             month_trunc.label("month"),
@@ -176,6 +182,19 @@ async def mba_summary(
     )
     income_by_month: dict[str, float] = {
         _month_str(row.month.date()): float(row.total) for row in income_result.all()
+    }
+
+    # Planned income for future months. There is no payroll to project once the
+    # user leaves work, so this stays empty unless they deliberately enter an
+    # "Income" budget row (e.g. an expected summer internship). Past months always
+    # use real transactions — a planned figure never overrides what actually landed.
+    planned_income_result = await db.execute(
+        select(Budget.month, Budget.budget_amount).where(
+            and_(Budget.category == "Income", Budget.month >= start, Budget.month <= end)
+        )
+    )
+    planned_income_by_month: dict[str, float] = {
+        _month_str(row.month): float(row.budget_amount) for row in planned_income_result.all()
     }
 
     # Loan cash flow per month — disbursements add cash, payments draw it down.
@@ -246,7 +265,10 @@ async def mba_summary(
                 any_actual = True
             lines.append(MonthLine(category=cat, label=label, planned=round(p, 2), actual=round(a, 2) if a is not None else None))
 
-        income = round(income_by_month.get(m, 0.0), 2)
+        if is_past or is_anchor:
+            income = round(income_by_month.get(m, 0.0), 2)
+        else:
+            income = round(income_by_month.get(m) or planned_income_by_month.get(m, 0.0), 2)
         loan_disbursed = round(loan_disbursed_by_month.get(m, 0.0), 2)
         loan_paid = round(loan_paid_by_month.get(m, 0.0), 2)
 
