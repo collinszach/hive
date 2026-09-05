@@ -78,6 +78,7 @@ class LoanSummary(BaseModel):
     name: str
     balance: float
     total_disbursed: float
+    total_interest: float   # accrued interest — raises the balance but is not cash
     total_paid: float
 
 
@@ -177,7 +178,9 @@ async def mba_summary(
         _month_str(row.month.date()): float(row.total) for row in income_result.all()
     }
 
-    # Loan cash flow per month — disbursements/interest add cash, payments draw it down.
+    # Loan cash flow per month — disbursements add cash, payments draw it down.
+    # Accrued interest is deliberately NOT cash: it increases what's owed without
+    # putting a dollar in the account, so it belongs in the loan balance only.
     # Only reflects entries the user has actually logged (past disbursements, or future
     # ones they've pre-entered); nothing is assumed.
     loan_entries_result = await db.execute(
@@ -193,7 +196,7 @@ async def mba_summary(
     loan_paid_by_month: dict[str, float] = {}
     for e in loan_entries_result.scalars().all():
         m = _month_str(e.entry_date)
-        if e.entry_type in ("disbursement", "interest"):
+        if e.entry_type == "disbursement":
             loan_disbursed_by_month[m] = loan_disbursed_by_month.get(m, 0.0) + float(e.amount)
         elif e.entry_type == "payment":
             loan_paid_by_month[m] = loan_paid_by_month.get(m, 0.0) + (-float(e.amount))
@@ -281,11 +284,13 @@ async def mba_summary(
         entries_result = await db.execute(select(LoanEntry).where(LoanEntry.loan_id == loan.id))
         entries = entries_result.scalars().all()
         balance = sum(float(e.amount) for e in entries)
-        disbursed = sum(float(e.amount) for e in entries if e.entry_type in ("disbursement", "interest"))
+        disbursed = sum(float(e.amount) for e in entries if e.entry_type == "disbursement")
+        accrued = sum(float(e.amount) for e in entries if e.entry_type == "interest")
         paid = sum(-float(e.amount) for e in entries if e.entry_type == "payment")
         loan_summaries.append(LoanSummary(
             id=str(loan.id), name=loan.name,
-            balance=round(balance, 2), total_disbursed=round(disbursed, 2), total_paid=round(paid, 2),
+            balance=round(balance, 2), total_disbursed=round(disbursed, 2),
+            total_interest=round(accrued, 2), total_paid=round(paid, 2),
         ))
 
     return MbaSummary(

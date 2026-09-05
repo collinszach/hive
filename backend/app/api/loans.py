@@ -55,6 +55,7 @@ class LoanOut(BaseModel):
     notes: Optional[str]
     balance: float
     total_disbursed: float
+    total_interest: float   # accrued interest — raises the balance but is not cash
     total_paid: float
 
     model_config = {"from_attributes": True}
@@ -69,7 +70,8 @@ async def _owned_loan(loan_id: uuid.UUID, user: User, db: AsyncSession) -> Loan:
 
 
 def _to_out(loan: Loan, entries: list[LoanEntry]) -> LoanOut:
-    disbursed = sum(float(e.amount) for e in entries if e.entry_type in ("disbursement", "interest") and e.amount > 0)
+    disbursed = sum(float(e.amount) for e in entries if e.entry_type == "disbursement" and e.amount > 0)
+    accrued = sum(float(e.amount) for e in entries if e.entry_type == "interest")
     paid = sum(-float(e.amount) for e in entries if e.entry_type == "payment")
     balance = sum(float(e.amount) for e in entries)
     return LoanOut(
@@ -80,6 +82,7 @@ def _to_out(loan: Loan, entries: list[LoanEntry]) -> LoanOut:
         notes=loan.notes,
         balance=round(balance, 2),
         total_disbursed=round(disbursed, 2),
+        total_interest=round(accrued, 2),
         total_paid=round(paid, 2),
     )
 

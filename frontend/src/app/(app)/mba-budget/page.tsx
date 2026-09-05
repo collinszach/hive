@@ -162,7 +162,7 @@ export default function MbaBudgetPage() {
                 <div>
                   <p className="text-[13px] font-medium text-ink-primary">{loan.name}</p>
                   <p className="text-[11px] text-ink-tertiary">
-                    Disbursed {fmt(loan.total_disbursed)} · Paid {fmt(loan.total_paid)}
+                    Disbursed {fmt(loan.total_disbursed)} · Interest {fmt(loan.total_interest)} · Paid {fmt(loan.total_paid)}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

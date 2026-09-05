@@ -303,6 +303,7 @@ export interface Loan {
   notes: string | null;
   balance: number;
   total_disbursed: number;
+  total_interest: number;
   total_paid: number;
 }
 
@@ -340,6 +341,7 @@ export interface MbaLoanSummary {
   name: string;
   balance: number;
   total_disbursed: number;
+  total_interest: number;
   total_paid: number;
 }
 
