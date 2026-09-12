@@ -207,10 +207,25 @@ export interface Budget {
 export interface ProgramSummary {
   program: string;
   points_earned_90d: number;
+  /** The raw manual snapshot, exactly as entered. */
   manual_balance: number | null;
   estimated_value_dollars: number;
   redemption_threshold: number | null;
   above_threshold: boolean;
+  /** ISO date the snapshot was taken. */
+  balance_as_of?: string | null;
+  /** Points earned since that date. */
+  points_since_balance?: number;
+  /** Snapshot rolled forward by points earned since — the figure to display. */
+  current_balance?: number | null;
+  /** current_balance is carried forward, so it can't see redemptions since. */
+  is_estimated?: boolean;
+}
+
+/** The points figure to show for a program: rolled-forward balance, else the raw
+ *  snapshot, else what the ledger recorded in the window. */
+export function programPoints(p: ProgramSummary): number {
+  return p.current_balance ?? p.manual_balance ?? Math.round(p.points_earned_90d);
 }
 
 export interface PointsSummary {

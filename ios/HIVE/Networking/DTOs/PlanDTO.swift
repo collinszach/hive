@@ -65,6 +65,15 @@ struct ProgramSummary: Decodable, Identifiable {
     let estimatedValueDollars: Decimal
     let redemptionThreshold: Int?
     let aboveThreshold: Bool
+    /// ISO date the manual snapshot was taken (nil when none has been entered).
+    let balanceAsOf: String?
+    /// Points earned since that snapshot.
+    let pointsSinceBalance: Double
+    /// Snapshot rolled forward by points earned since — the figure to display.
+    let currentBalance: Int?
+    /// `currentBalance` was carried forward, so it can't account for redemptions
+    /// or transfers out since the snapshot. Present it as approximate.
+    let isEstimated: Bool
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -74,17 +83,23 @@ struct ProgramSummary: Decodable, Identifiable {
         estimatedValueDollars = try c.decodeIfPresent(Decimal.self, forKey: .estimatedValueDollars) ?? 0
         redemptionThreshold = try c.decodeIfPresent(Int.self, forKey: .redemptionThreshold)
         aboveThreshold = try c.decodeIfPresent(Bool.self, forKey: .aboveThreshold) ?? false
+        balanceAsOf = try c.decodeIfPresent(String.self, forKey: .balanceAsOf)
+        pointsSinceBalance = try c.decodeIfPresent(Double.self, forKey: .pointsSinceBalance) ?? 0
+        currentBalance = try c.decodeIfPresent(Int.self, forKey: .currentBalance)
+        isEstimated = try c.decodeIfPresent(Bool.self, forKey: .isEstimated) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
         case program, pointsEarned90d, manualBalance, estimatedValueDollars, redemptionThreshold, aboveThreshold
+        case balanceAsOf, pointsSinceBalance, currentBalance, isEstimated
     }
 
     var id: String { program }
 
-    /// The points figure to surface: a manually-entered balance if present,
-    /// otherwise points earned in the lookback window.
+    /// The points figure to surface: the snapshot rolled forward by everything
+    /// earned since, else the raw snapshot, else points earned in the window.
     var displayPoints: Int {
+        if let current = currentBalance { return current }
         if let manual = manualBalance { return manual }
         return Int(pointsEarned90d.rounded())
     }

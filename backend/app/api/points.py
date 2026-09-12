@@ -6,7 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,10 +42,21 @@ for _rule in EARN_RULES:
 class ProgramSummary(BaseModel):
     program: str
     points_earned_90d: float          # field name kept for backward compat; reflects actual window
-    manual_balance: Optional[int]
+    manual_balance: Optional[int]     # the raw snapshot, exactly as entered
     estimated_value_dollars: float
     redemption_threshold: Optional[int]
     above_threshold: bool
+    # --- rolled-forward balance -------------------------------------------
+    # A manual balance is a snapshot that goes stale the moment it's entered, so
+    # showing it raw understates the balance by everything earned since. These
+    # carry the snapshot forward by ledger activity after `balance_as_of`.
+    balance_as_of: Optional[str] = None       # ISO date of the snapshot
+    points_since_balance: float = 0.0         # earned strictly after that date
+    current_balance: Optional[int] = None     # manual_balance + points_since_balance
+    # True when current_balance is a roll-forward rather than a fresh snapshot.
+    # The ledger only ever adds, so an estimate can overstate if points were
+    # redeemed or transferred out since — clients should label it as approximate.
+    is_estimated: bool = False
 
 
 class PointsSummaryResponse(BaseModel):
@@ -135,9 +146,17 @@ async def points_summary(
     days: int = Query(90, ge=7, le=365),
     db: AsyncSession = Depends(get_db),
 ) -> PointsSummaryResponse:
-    """
-    Total points earned (within `days` window) per program, plus manual balance if entered,
-    estimated dollar value, and redemption nudge.
+    """Per-program points position: earned in the window, current balance, value, nudge.
+
+    Balances come from manual snapshots (no card issuer offers a consumer API for
+    reward balances, and Plaid does not carry them). A snapshot is therefore stale
+    from the moment it lands, so `current_balance` rolls it forward by ledger points
+    earned after `balance_as_of`, and dollar value plus the redemption nudge are both
+    computed from that rolled-forward figure rather than the raw snapshot.
+
+    The roll-forward only adds, since the ledger has no visibility into redemptions or
+    transfers out — `is_estimated` marks a figure that has been carried forward so
+    clients can present it as approximate. Entering a fresh snapshot resets the drift.
     """
     from app.models.transaction import Transaction
 
@@ -154,18 +173,38 @@ async def points_summary(
         row[0]: float(row[1]) for row in earned_rows.all()
     }
 
-    # Latest manual balance per program (most recent as_of date only)
+    # Latest manual balance per program, with the date it was taken.
     from sqlalchemy import text as sa_text
     latest_balances = await db.execute(
         sa_text(
-            "SELECT DISTINCT ON (program) program, balance "
+            "SELECT DISTINCT ON (program) program, balance, as_of "
             "FROM points_balances "
             "ORDER BY program, as_of DESC"
         )
     )
-    manual_by_program: dict[str, int] = {
-        row[0]: int(row[1]) for row in latest_balances.all()
-    }
+    manual_by_program: dict[str, int] = {}
+    as_of_by_program: dict[str, date] = {}
+    for row in latest_balances.all():
+        manual_by_program[row[0]] = int(row[1])
+        as_of_by_program[row[0]] = row[2]
+
+    # Points earned since each program's snapshot, so a months-old manual balance
+    # isn't shown as if nothing had been earned since. One query with an OR per
+    # program rather than a query each — there are only a handful of programs.
+    since_by_program: dict[str, float] = {}
+    if as_of_by_program:
+        since_rows = await db.execute(
+            select(PointsLedger.program, func.sum(PointsLedger.points_earned))
+            .join(Transaction, PointsLedger.transaction_id == Transaction.id)
+            .where(
+                or_(*[
+                    and_(PointsLedger.program == prog, Transaction.date > snapshot_date)
+                    for prog, snapshot_date in as_of_by_program.items()
+                ])
+            )
+            .group_by(PointsLedger.program)
+        )
+        since_by_program = {row[0]: float(row[1] or 0) for row in since_rows.all()}
 
     all_programs = set(earned_by_program) | set(manual_by_program) | set(POINT_VALUES_CPP)
     programs = []
@@ -174,19 +213,39 @@ async def points_summary(
     for program in sorted(all_programs):
         earned = earned_by_program.get(program, 0.0)
         manual = manual_by_program.get(program)
+        snapshot_date = as_of_by_program.get(program)
+        since = since_by_program.get(program, 0.0)
         cpp = POINT_VALUES_CPP.get(program, 1.0)
 
-        balance_for_value = float(manual) if manual is not None else earned
+        # Roll the snapshot forward by everything earned after it was taken. With
+        # no snapshot at all there's nothing to roll forward from, so fall back to
+        # ledger-earned within the window (the previous behaviour).
+        if manual is not None:
+            current = int(round(manual + since))
+            is_estimated = since > 0
+        else:
+            current = None
+            is_estimated = False
+
+        balance_for_value = float(current) if current is not None else earned
         est_value = round(balance_for_value * cpp / 100.0, 2)
         total_value += est_value
+
+        threshold = REDEMPTION_THRESHOLDS.get(program)
 
         programs.append(ProgramSummary(
             program=program,
             points_earned_90d=round(earned, 2),
             manual_balance=manual,
             estimated_value_dollars=est_value,
-            redemption_threshold=None,
-            above_threshold=False,
+            redemption_threshold=threshold,
+            # Nudge off the rolled-forward balance — the stale snapshot is exactly
+            # what kept big balances from ever crossing their threshold.
+            above_threshold=threshold is not None and balance_for_value >= threshold,
+            balance_as_of=snapshot_date.isoformat() if snapshot_date else None,
+            points_since_balance=round(since, 2),
+            current_balance=current,
+            is_estimated=is_estimated,
         ))
 
     return PointsSummaryResponse(

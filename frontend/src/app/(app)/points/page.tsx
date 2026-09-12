@@ -121,6 +121,12 @@ export default function PointsPage() {
             ...p,
             manual_balance: balance,
             estimated_value_dollars: newEstValue,
+            // A fresh snapshot resets the drift: nothing has been earned since it
+            // yet, so the number is exact rather than carried forward.
+            current_balance: balance,
+            points_since_balance: 0,
+            balance_as_of: new Date().toISOString().slice(0, 10),
+            is_estimated: false,
           }
         : p
     );

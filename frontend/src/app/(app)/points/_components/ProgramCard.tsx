@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { Check, X, ArrowRight, Trash2 } from "lucide-react";
 import { fmt } from "@/lib/utils";
-import { api, ProgramSummary } from "@/lib/api";
+import { api, ProgramSummary, programPoints } from "@/lib/api";
 import { toast } from "@/components/Toast";
 
 interface ProgramCardProps {
@@ -16,6 +16,9 @@ interface ProgramCardProps {
 
 export function ProgramCard({ program: p, onBalanceUpdate, onCleared, onViewActivity, threshold }: ProgramCardProps) {
   const [editing, setEditing]     = useState(false);
+  // What to show: the snapshot rolled forward by points earned since. The edit
+  // field still seeds from the raw snapshot — editing replaces the snapshot itself.
+  const balance = programPoints(p);
   const [inputVal, setInputVal]   = useState(String(p.manual_balance ?? ""));
   const [saving, setSaving]       = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -75,12 +78,13 @@ export function ProgramCard({ program: p, onBalanceUpdate, onCleared, onViewActi
         </div>
       </div>
 
-      {/* Redemption threshold badge */}
-      {threshold && p.manual_balance !== null && p.manual_balance >= threshold && (
+      {/* Redemption threshold badge — measured against the rolled-forward balance,
+          since a stale snapshot is exactly what keeps a big balance from crossing. */}
+      {threshold && p.manual_balance !== null && balance >= threshold && (
         <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-semantic-income/10 border border-semantic-income/20">
           <span className="text-[11px] font-medium text-semantic-income">Ready to redeem</span>
           <span className="text-[10px] text-ink-tertiary font-mono">
-            {p.manual_balance.toLocaleString()} / {threshold.toLocaleString()} pts
+            {balance.toLocaleString()} / {threshold.toLocaleString()} pts
           </span>
         </div>
       )}
@@ -134,7 +138,8 @@ export function ProgramCard({ program: p, onBalanceUpdate, onCleared, onViewActi
             >
               {p.manual_balance !== null ? (
                 <span className="text-[12px] font-mono text-ink-secondary tabular-nums group-hover:text-ink-primary transition-colors">
-                  {p.manual_balance.toLocaleString()} pts
+                  {balance.toLocaleString()} pts
+                  {p.is_estimated && <span className="text-ink-tertiary/60">*</span>}
                 </span>
               ) : (
                 <span className="text-[12px] text-ink-tertiary/40 group-hover:text-ink-tertiary transition-colors">
@@ -151,6 +156,19 @@ export function ProgramCard({ program: p, onBalanceUpdate, onCleared, onViewActi
             {Math.round(p.points_earned_90d).toLocaleString()} pts
           </span>
         </div>
+
+        {/* Say plainly that the balance is a snapshot carried forward: it only
+            adds, so redemptions since won't be reflected. */}
+        {p.is_estimated && p.balance_as_of && (
+          <p className="text-[10px] text-ink-tertiary/70 leading-snug">
+            * {p.manual_balance?.toLocaleString()} entered{" "}
+            {new Date(`${p.balance_as_of}T00:00:00`).toLocaleDateString(undefined, {
+              month: "short", day: "numeric",
+            })}
+            , plus {Math.round(p.points_since_balance ?? 0).toLocaleString()} earned since.
+            Redemptions since aren&apos;t counted — re-enter to reset.
+          </p>
+        )}
 
       </div>
 

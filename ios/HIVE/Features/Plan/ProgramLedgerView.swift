@@ -64,6 +64,15 @@ struct ProgramLedgerView: View {
                         .font(.hiveBody(13))
                         .foregroundStyle(program.aboveThreshold ? Theme.honeyBright : Theme.inkSecondary)
                 }
+                // No card issuer exposes a balance API, so this is a manual snapshot
+                // carried forward by what's been earned since. It only adds — say so
+                // rather than presenting a derived number as though it were exact.
+                if program.isEstimated, let asOf = program.balanceAsOf {
+                    Text("Estimated: \(program.manualBalance?.formatted(.number.grouping(.automatic)) ?? "—") entered \(DateOnly.shortLabel(asOf)), plus \(Int(program.pointsSinceBalance.rounded()).formatted(.number.grouping(.automatic))) earned since. Redemptions aren't counted.")
+                        .font(.hiveBody(11))
+                        .foregroundStyle(Theme.inkTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
