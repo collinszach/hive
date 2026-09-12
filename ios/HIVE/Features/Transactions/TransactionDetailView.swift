@@ -84,8 +84,17 @@ struct TransactionDetailView: View {
             Text(transaction.displayName)
                 .font(.hiveBody(20, weight: .semibold))
                 .foregroundStyle(Theme.inkPrimary)
-            MoneyText(amount: transaction.isCredit ? -transaction.amount : transaction.amount,
+            // On a shared charge the hero is the user's own portion — what this actually
+            // costs them, and what budgets count. The full charge (which earned the
+            // points) is spelled out underneath so nothing looks like it went missing.
+            MoneyText(amount: transaction.isCredit ? -ownAmount : ownAmount,
                       size: 34, weight: .semibold, signed: transaction.isCredit)
+            if sharedTotal > 0 {
+                Text("\(money(transaction.amount)) charged · \(money(sharedTotal)) owed to you · points earned on the full charge")
+                    .font(.hiveBody(12))
+                    .foregroundStyle(Theme.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Text(DateOnly.relativeLabel(transaction.date))
                 .font(.hiveBody(13))
                 .foregroundStyle(Theme.inkSecondary)
@@ -190,6 +199,17 @@ struct TransactionDetailView: View {
 
     /// Sum already assigned to people, so "what's left" is accurate.
     private var sharedTotal: Decimal { shares.reduce(0) { $0 + $1.amount } }
+
+    /// The user's own portion of the charge — what budgets and spend totals count.
+    /// Clamped at 0 so an over-assigned charge can't read as negative spend.
+    private var ownAmount: Decimal {
+        guard !transaction.isCredit else { return transaction.amount }
+        return max(0, transaction.amount - sharedTotal)
+    }
+
+    private func money(_ d: Decimal) -> String {
+        d.formatted(.currency(code: transaction.currency).precision(.fractionLength(2)))
+    }
 
     private var shareCard: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {

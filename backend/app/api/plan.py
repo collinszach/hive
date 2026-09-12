@@ -8,11 +8,15 @@ from pydantic import BaseModel
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.spend import net_spend_sql
 from app.db import get_db
 from app.models.plan_event import PlanEvent
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/plan", tags=["plan"])
+
+# Spend net of amounts charged back to other people — see app/analytics/spend.py.
+_NET = net_spend_sql("transactions")
 
 
 @router.get("/projection")
@@ -217,9 +221,9 @@ async def trim_recommendations(
     # 1. Gather last 3 months of category-level spend
     cutoff = date.today().replace(day=1) - timedelta(days=90)
     spend = await session.execute(
-        text("""
+        text(f"""
             SELECT category, subcategory,
-                   SUM(amount) / 3.0 AS monthly_avg,
+                   SUM({_NET}) / 3.0 AS monthly_avg,
                    COUNT(*) AS txn_count
             FROM transactions
             WHERE date >= :cutoff

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense, Fragment } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { api, Transaction, Tag as TagType, Contact, ExpenseShare, Account } from "@/lib/api";
+import { api, Transaction, Tag as TagType, Contact, ExpenseShare, Account, ownAmount, isShared } from "@/lib/api";
 import { fmt, fmtDate, currentMonth } from "@/lib/utils";
 import { cn, ALL_CATEGORIES, SUBCATEGORIES } from "@/lib/utils";
 import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, Check, X, Pencil, Tag, EyeOff, FileText, Plus, Trash2, Download, ChevronDown, Users } from "lucide-react";
@@ -1272,7 +1272,20 @@ function TransactionsPageInner() {
                             <Trash2 className="w-3 h-3" />
                           </button>
                         )}
-                        {tx.amount < 0 ? `+${fmt(Math.abs(tx.amount))}` : fmt(tx.amount)}
+                        {/* Shared charges show the user's own portion — what budgets count —
+                            with the full charge (which earned the points) beneath it. */}
+                        {tx.amount < 0 ? (
+                          `+${fmt(Math.abs(tx.amount))}`
+                        ) : isShared(tx) ? (
+                          <span className="flex flex-col items-end leading-tight">
+                            <span>{fmt(ownAmount(tx))}</span>
+                            <span className="text-[10px] font-normal text-ink-tertiary">
+                              of {fmt(tx.amount)}
+                            </span>
+                          </span>
+                        ) : (
+                          fmt(tx.amount)
+                        )}
                       </div>
                     </td>
                   </tr>

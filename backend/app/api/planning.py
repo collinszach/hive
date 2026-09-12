@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.spend import net_spend_sql
 from app.api.auth import _get_bearer_token, decode_token
 from app.config import settings
 from app.db import get_db
@@ -27,6 +28,9 @@ from app.models.user import PlanTier, User, UserRole
 from app.planning.engine import Assumptions
 from app.planning.engine import IncomeStream as EngineIncome
 from app.planning.engine import PlanEventInput, ProjectionInputs, ProjectionResult, project
+
+# Spend net of amounts charged back to other people — see app/analytics/spend.py.
+_NET = net_spend_sql("transactions")
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/planning", tags=["planning"])
@@ -576,8 +580,8 @@ async def _baseline_monthly_expenses(session: AsyncSession, anchor: date) -> flo
     short transaction history isn't diluted toward zero."""
     cutoff = anchor - timedelta(days=365)
     row = (await session.execute(text(
-        """
-        SELECT COALESCE(SUM(amount), 0) AS total,
+        f"""
+        SELECT COALESCE(SUM({_NET}), 0) AS total,
                GREATEST(COUNT(DISTINCT date_trunc('month', date)), 1) AS months
         FROM transactions
         WHERE date >= :cutoff AND amount > 0

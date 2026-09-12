@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.spend import net_spend_expr
 from app.db import get_db
 from app.models.account import Account
 from app.models.contact import Contact
@@ -100,7 +101,7 @@ async def get_monthly_position(
 
     # ── Spent ──
     spent_q = await db.execute(
-        select(func.sum(Transaction.amount)).where(
+        select(func.sum(net_spend_expr())).where(
             Transaction.date >= month_start,
             Transaction.date < next_month_start,
             Transaction.amount > 0,

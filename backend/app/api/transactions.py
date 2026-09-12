@@ -13,9 +13,11 @@ from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.spend import net_spend_expr, shared_out_subq
 from app.db import get_db
 from app.gates import _get_request_user
 from app.models.account import Account
+from app.models.expense_share import ExpenseShare
 from app.models.points_ledger import PointsLedger
 from app.models.tag import TransactionTag
 from app.models.transaction import Transaction
@@ -41,6 +43,16 @@ def _account_display_name(name_col, official_name_col):
     )
 
 
+async def _shared_out_for(db: AsyncSession, transaction_id: uuid.UUID) -> float:
+    """Total assigned to other people on this charge (settled or not)."""
+    result = await db.execute(
+        select(func.coalesce(func.sum(ExpenseShare.amount), 0)).where(
+            ExpenseShare.transaction_id == transaction_id
+        )
+    )
+    return float(result.scalar_one() or 0)
+
+
 class TransactionOut(BaseModel):
     id: uuid.UUID
     plaid_transaction_id: Optional[str]
@@ -63,8 +75,18 @@ class TransactionOut(BaseModel):
     location_state: Optional[str]
     logo_url: Optional[str]
     notes: Optional[str] = None
+    # Amount charged back to other people via expense shares (settled or not), and what
+    # that leaves on the user. `amount` stays the full charge — points are earned on it.
+    shared_out: float = 0.0
+    net_amount: Optional[float] = None
 
     model_config = {"from_attributes": True}
+
+    def apply_shared(self, shared_out: float) -> "TransactionOut":
+        """Attach the shared-out total and derive net_amount (clamped at 0)."""
+        self.shared_out = round(shared_out, 2)
+        self.net_amount = round(max(self.amount - shared_out, 0.0), 2) if self.amount > 0 else self.amount
+        return self
 
     @classmethod
     def from_row(cls, tx, acct_name: Optional[str], acct_slug: Optional[str]) -> "TransactionOut":
@@ -90,6 +112,7 @@ class TransactionOut(BaseModel):
             location_state=tx.location_state,
             logo_url=tx.logo_url,
             notes=tx.reimbursement_note,
+            net_amount=float(tx.amount),
         )
 
 
@@ -219,7 +242,7 @@ async def list_transactions(
             func.count(),
             func.coalesce(
                 func.sum(
-                    sa_case((Transaction.amount > 0, Transaction.amount), else_=0)
+                    sa_case((Transaction.amount > 0, net_spend_expr()), else_=0)
                 ),
                 0,
             ),
@@ -235,7 +258,8 @@ async def list_transactions(
     result = await db.execute(
         select(Transaction,
                _account_display_name(Account.name, Account.official_name).label("account_name"),
-               Account.card_slug.label("account_card_slug"))
+               Account.card_slug.label("account_card_slug"),
+               shared_out_subq().label("shared_out"))
         .join(Account, Account.id == Transaction.account_id, isouter=True)
         .where(where_clause)
         .order_by(Transaction.date.desc(), Transaction.created_at.desc())
@@ -248,11 +272,12 @@ async def list_transactions(
 
     items = []
     for row in rows:
-        tx, acct_name, acct_slug = row[0], row[1], row[2]
+        tx, acct_name, acct_slug, shared_out = row[0], row[1], row[2], row[3]
         out = TransactionOut.model_validate(tx)
         out.account_name = acct_name
         out.card_slug = acct_slug
         out.notes = tx.reimbursement_note
+        out.apply_shared(float(shared_out or 0))
         items.append(out)
 
     return TransactionListResponse(
@@ -381,7 +406,7 @@ async def spend_by_category(
         end = _date(today.year + 1, 1, 1) if today.month == 12 else _date(today.year, today.month + 1, 1)
 
     result = await db.execute(
-        select(Transaction.category, func.sum(Transaction.amount).label("total"))
+        select(Transaction.category, func.sum(net_spend_expr()).label("total"))
         .join(Account, Transaction.account_id == Account.id)
         .where(
             and_(
@@ -396,7 +421,7 @@ async def spend_by_category(
             )
         )
         .group_by(Transaction.category)
-        .order_by(func.sum(Transaction.amount).desc())
+        .order_by(func.sum(net_spend_expr()).desc())
     )
     return [{"category": row[0], "spend": float(row[1])} for row in result.all()]
 
@@ -577,6 +602,7 @@ async def patch_transaction(
     await db.refresh(tx)
     out = TransactionOut.model_validate(tx)
     out.notes = tx.reimbursement_note
+    out.apply_shared(await _shared_out_for(db, tx.id))
     return out
 
 
@@ -643,6 +669,7 @@ async def create_manual_transaction(
     out = TransactionOut.model_validate(tx)
     out.account_name = account.name
     out.notes = tx.reimbursement_note
+    out.apply_shared(0.0)
     return out
 
 

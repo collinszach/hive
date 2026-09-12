@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.spend import net_spend_sql
 from app.db import get_db
 from app.models.transaction import Transaction
 
@@ -27,6 +28,10 @@ _SPEND_EXCLUDE = """
 
 _ACCT_JOIN = "JOIN accounts a ON t.account_id = a.id"
 
+# Spend net of amounts charged back to other people (expense shares). Points are
+# still earned on the full charge — see app/analytics/spend.py.
+_NET = net_spend_sql("t")
+
 
 @router.get("/monthly")
 async def monthly_cash_flow(
@@ -43,7 +48,7 @@ async def monthly_cash_flow(
                 TO_CHAR(t.date, 'YYYY-MM') AS month,
                 SUM(CASE WHEN t.category = 'Income' AND t.amount < 0 AND NOT t.pending THEN ABS(t.amount) ELSE 0 END) AS income,
                 SUM(CASE WHEN t.amount > 0 AND NOT t.is_excluded AND NOT t.is_subscription AND NOT t.pending
-                         AND a.subtype NOT IN ('savings', 'cd', 'money market') THEN t.amount ELSE 0 END) AS expenses
+                         AND a.subtype NOT IN ('savings', 'cd', 'money market') THEN {_NET} ELSE 0 END) AS expenses
             FROM transactions t
             {_ACCT_JOIN}
             WHERE t.date >= :cutoff
@@ -92,7 +97,7 @@ async def cash_flow_summary(
             SELECT
                 SUM(CASE WHEN t.category = 'Income' AND t.amount < 0 AND NOT t.pending THEN ABS(t.amount) ELSE 0 END) AS income,
                 SUM(CASE WHEN t.amount > 0 AND NOT t.is_excluded AND NOT t.is_subscription AND NOT t.pending
-                         AND a.subtype NOT IN ('savings', 'cd', 'money market') THEN t.amount ELSE 0 END) AS expenses
+                         AND a.subtype NOT IN ('savings', 'cd', 'money market') THEN {_NET} ELSE 0 END) AS expenses
             FROM transactions t
             {_ACCT_JOIN}
             WHERE t.date >= :month_start
@@ -144,7 +149,7 @@ async def cash_flow_sankey(
             SELECT
                 SUM(CASE WHEN t.category = 'Income' AND t.amount < 0 AND NOT t.pending THEN ABS(t.amount) ELSE 0 END) AS income,
                 SUM(CASE WHEN t.amount > 0 AND NOT t.is_excluded AND NOT t.is_subscription AND NOT t.pending
-                         AND a.subtype NOT IN ('savings', 'cd', 'money market') THEN t.amount ELSE 0 END) AS expenses
+                         AND a.subtype NOT IN ('savings', 'cd', 'money market') THEN {_NET} ELSE 0 END) AS expenses
             FROM transactions t
             {_ACCT_JOIN}
             WHERE t.date >= :month_start
@@ -164,7 +169,7 @@ async def cash_flow_sankey(
         text(f"""
             SELECT
                 COALESCE(t.category, 'Uncategorized') AS category,
-                SUM(t.amount) AS total
+                SUM({_NET}) AS total
             FROM transactions t
             {_ACCT_JOIN}
             WHERE t.date >= :month_start
@@ -214,7 +219,7 @@ async def category_trend(
         text(f"""
             SELECT
                 TO_CHAR(t.date, 'YYYY-MM') AS month,
-                SUM(t.amount) AS total
+                SUM({_NET}) AS total
             FROM transactions t
             {_ACCT_JOIN}
             WHERE t.date >= :cutoff
@@ -260,7 +265,7 @@ async def daily_spend(
         text(f"""
             SELECT
                 t.date,
-                SUM(t.amount) AS total,
+                SUM({_NET}) AS total,
                 COUNT(*) AS count
             FROM transactions t
             {_ACCT_JOIN}

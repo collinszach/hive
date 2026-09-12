@@ -28,6 +28,11 @@ struct TransactionDTO: Decodable, Identifiable, Hashable {
     let locationState: String?
     let logoUrl: String?
     let notes: String?
+    /// Total assigned to other people on this charge via expense shares (settled or not).
+    /// `nil` on older responses. Points are still earned on the full `amount`.
+    let sharedOut: Decimal?
+    /// What's left on the user after shares — `amount` minus `sharedOut`, clamped at 0.
+    let netAmount: Decimal?
 
     /// Best human label: merchant, else the raw bank descriptor.
     var displayName: String {
@@ -37,6 +42,13 @@ struct TransactionDTO: Decodable, Identifiable, Hashable {
 
     /// A credit/refund/inflow (shown green). Spend is positive in this backend.
     var isCredit: Bool { amount < 0 }
+
+    /// Part of this charge is someone else's.
+    var isShared: Bool { (sharedOut ?? 0) > 0 }
+
+    /// The figure that belongs in spend/budget views: the user's own portion. Falls back
+    /// to the full amount when the backend didn't send a net (no shares, or an old build).
+    var ownAmount: Decimal { netAmount ?? amount }
 
     static func == (l: TransactionDTO, r: TransactionDTO) -> Bool { l.id == r.id }
     func hash(into h: inout Hasher) { h.combine(id) }

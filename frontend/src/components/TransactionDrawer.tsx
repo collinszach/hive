@@ -275,6 +275,13 @@ export function TransactionDrawer({ transaction, onClose, onCategoryChange, onSe
 
   const isOpen = transaction !== null;
   const isIncome = (transaction?.amount ?? 0) < 0;
+  // What's been charged back to other people, and what that leaves on the user. Derived
+  // from the live `shares` list so the hero updates as shares are added or removed.
+  // Budgets count the own portion; points are still earned on the full charge.
+  const sharedOut = shares.reduce((sum, s) => sum + s.amount, 0);
+  const ownPortion = isIncome
+    ? (transaction?.amount ?? 0)
+    : Math.max(0, (transaction?.amount ?? 0) - sharedOut);
   const emoji = CATEGORY_EMOJI[transaction?.category ?? ""] ?? "📋";
   const subcategoryOptions = SUBCATEGORIES[category] ?? [];
   return (
@@ -334,8 +341,14 @@ export function TransactionDrawer({ transaction, onClose, onCategoryChange, onSe
                 )}
               >
                 {isIncome ? "+" : ""}
-                {fmt(Math.abs(transaction.amount))}
+                {fmt(Math.abs(ownPortion))}
               </p>
+              {sharedOut > 0 && (
+                <p className="text-[12px] text-ink-tertiary mt-1">
+                  {fmt(transaction.amount)} charged · {fmt(sharedOut)} owed to you · points
+                  earned on the full charge
+                </p>
+              )}
 
               {/* Badges */}
               <div className="flex items-center gap-2 mt-3 flex-wrap">

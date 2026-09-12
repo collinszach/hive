@@ -165,6 +165,20 @@ export interface Transaction {
   location_state: string | null;
   logo_url: string | null;
   notes: string | null;
+  /** Total assigned to other people on this charge via expense shares (settled or not). */
+  shared_out?: number;
+  /** `amount` minus `shared_out`, clamped at 0 — the user's own portion, which is what
+   *  budgets and spend totals count. Points are still earned on the full `amount`. */
+  net_amount?: number | null;
+}
+
+/** The figure to show in spend/budget contexts: the user's own portion of a charge. */
+export function ownAmount(tx: Transaction): number {
+  return tx.net_amount ?? tx.amount;
+}
+
+export function isShared(tx: Transaction): boolean {
+  return (tx.shared_out ?? 0) > 0;
 }
 
 export interface TransactionListResponse {

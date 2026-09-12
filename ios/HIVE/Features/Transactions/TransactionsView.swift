@@ -244,10 +244,20 @@ struct TransactionRow: View {
             Spacer(minLength: Theme.Spacing.sm)
 
             // Spend is positive in this backend; show credits green with a leading +.
-            MoneyText(amount: tx.isCredit ? -tx.amount : tx.amount,
-                      size: 15,
-                      weight: .medium,
-                      signed: tx.isCredit)
+            // On a shared charge the headline is the user's own portion — what they're
+            // actually out — with the full charge (which earned the points) beneath it.
+            VStack(alignment: .trailing, spacing: 1) {
+                MoneyText(amount: tx.isCredit ? -tx.ownAmount : tx.ownAmount,
+                          size: 15,
+                          weight: .medium,
+                          signed: tx.isCredit)
+                if tx.isShared {
+                    Text("of \(tx.amount.formatted(.currency(code: tx.currency).precision(.fractionLength(2))))")
+                        .font(.hiveBody(11))
+                        .foregroundStyle(Theme.inkSecondary)
+                        .lineLimit(1)
+                }
+            }
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)

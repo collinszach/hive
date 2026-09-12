@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import _get_bearer_token, decode_token
 from app.config import settings
+from app.analytics.spend import net_spend_expr
 from app.db import get_db
 from app.models.account import Account
 from app.models.user import PlanTier, User, UserRole
@@ -65,7 +66,7 @@ async def _build_financial_context(db: AsyncSession) -> str:
 
     # --- Existing queries ---
     spend_result = await db.execute(
-        select(Transaction.category, func.sum(Transaction.amount).label("total"))
+        select(Transaction.category, func.sum(net_spend_expr()).label("total"))
         .where(
             and_(
                 Transaction.date >= three_months_ago,
@@ -74,12 +75,12 @@ async def _build_financial_context(db: AsyncSession) -> str:
             )
         )
         .group_by(Transaction.category)
-        .order_by(func.sum(Transaction.amount).desc())
+        .order_by(func.sum(net_spend_expr()).desc())
     )
     category_spend = spend_result.all()
 
     current_month_result = await db.execute(
-        select(Transaction.category, func.sum(Transaction.amount).label("total"))
+        select(Transaction.category, func.sum(net_spend_expr()).label("total"))
         .where(
             and_(
                 Transaction.date >= month_start,
@@ -89,7 +90,7 @@ async def _build_financial_context(db: AsyncSession) -> str:
             )
         )
         .group_by(Transaction.category)
-        .order_by(func.sum(Transaction.amount).desc())
+        .order_by(func.sum(net_spend_expr()).desc())
     )
     current_month_spend = current_month_result.all()
 
@@ -136,7 +137,7 @@ async def _build_financial_context(db: AsyncSession) -> str:
 
     # Top merchants by spend (last 90 days)
     merchant_result = await db.execute(
-        select(Transaction.merchant, func.sum(Transaction.amount).label("total"))
+        select(Transaction.merchant, func.sum(net_spend_expr()).label("total"))
         .where(
             and_(
                 Transaction.date >= three_months_ago,
@@ -146,7 +147,7 @@ async def _build_financial_context(db: AsyncSession) -> str:
             )
         )
         .group_by(Transaction.merchant)
-        .order_by(func.sum(Transaction.amount).desc())
+        .order_by(func.sum(net_spend_expr()).desc())
         .limit(15)
     )
     top_merchants = merchant_result.all()
