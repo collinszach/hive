@@ -228,6 +228,24 @@ export function programPoints(p: ProgramSummary): number {
   return p.current_balance ?? p.manual_balance ?? Math.round(p.points_earned_90d);
 }
 
+/** A plausible repayment for a share. `amount` is positive — money that came in. */
+export interface SettlementCandidate {
+  transaction_id: string;
+  date: string;
+  description: string;
+  amount: number;
+  /** "exact" | "batch" | "name" | "recent" — why it's offered, strongest first. */
+  match: string;
+}
+
+/** Short label for a candidate's match tier; null for an unremarkable recent inflow. */
+export function matchLabel(match: string): string | null {
+  if (match === "exact") return "Exact amount";
+  if (match === "batch") return "Clears their balance";
+  if (match === "name") return "Name matches";
+  return null;
+}
+
 export interface PointsSummary {
   programs: ProgramSummary[];
   total_estimated_value_dollars: number;
@@ -1278,6 +1296,15 @@ export const api = {
     unsettle: (shareId: string) =>
       patch<ExpenseShare>(`/api/shares/${shareId}/unsettle`, {}),
     delete: (shareId: string) => del<void>(`/api/shares/${shareId}`),
+    /** Inflows that could be the repayment for this share, best guess first. */
+    settlementCandidates: (shareId: string) =>
+      get<SettlementCandidate[]>(`/api/shares/${shareId}/settlement-candidates`),
+    /** Settle several shares against one repayment — all-or-nothing server-side. */
+    settleBatch: (share_ids: string[], settlement_transaction_id?: string | null) =>
+      patch<ExpenseShare[]>("/api/shares/settle-batch", {
+        share_ids,
+        settlement_transaction_id: settlement_transaction_id ?? null,
+      }),
     pending: () => get<ExpenseShare[]>("/api/shares/pending"),
     settled: (limit?: number) => get<ExpenseShare[]>("/api/shares/settled", limit ? { limit } : undefined),
   },

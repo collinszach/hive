@@ -20,6 +20,10 @@ struct TransactionDetailView: View {
     @State private var savingNotes = false
     @State private var showSplitEditor = false
     @State private var showAddShare = false
+    /// The share being settled — drives the "which payment was this?" sheet.
+    @State private var settlingShare: ExpenseShareDTO?
+    /// Other pending shares for that person, fetched so one payment can clear them all.
+    @State private var settlingOtherPending: [ExpenseShareDTO] = []
     @State private var busyShareId: String?
     /// Non-nil shows an error alert. We surface the real failure instead of only a
     /// haptic so a failed save is visible (and reportable), not silent.
@@ -65,6 +69,13 @@ struct TransactionDetailView: View {
         .sheet(isPresented: $showAddShare) {
             ShareEditorView(transaction: transaction, alreadyShared: sharedTotal) { create in
                 await createShare(create)
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $settlingShare) { share in
+            SettleShareView(share: share, otherPending: settlingOtherPending) { txId, alsoIds in
+                await settleShare(share, settlementTransactionId: txId, alsoSettle: alsoIds)
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -282,7 +293,7 @@ struct TransactionDetailView: View {
                 if s.isSettled {
                     Button("Mark as pending") { Task { await unsettleShare(s) } }
                 } else {
-                    Button("Mark as paid back") { Task { await settleShare(s) } }
+                    Button("Mark as paid back") { Task { await beginSettle(s) } }
                 }
                 Button("Delete", role: .destructive) { Task { await deleteShare(s) } }
             } label: {
@@ -433,15 +444,43 @@ struct TransactionDetailView: View {
         }
     }
 
-    private func settleShare(_ s: ExpenseShareDTO) async {
+    /// Open the settle sheet, first fetching this person's *other* pending shares so
+    /// one repayment can clear the lot — which is how people actually settle up.
+    private func beginSettle(_ s: ExpenseShareDTO) async {
+        busyShareId = s.id
+        defer { busyShareId = nil }
+        let pending = (try? await api.send(
+            .get("/api/shares/pending"), as: [ExpenseShareDTO].self
+        )) ?? []
+        settlingOtherPending = pending.filter { $0.contactId == s.contactId && $0.id != s.id }
+        settlingShare = s
+    }
+
+    /// Settle one share, optionally alongside the same person's other pending shares,
+    /// all pointing at the same repayment transaction (nil = settled outside HIVE).
+    private func settleShare(
+        _ s: ExpenseShareDTO,
+        settlementTransactionId txId: String?,
+        alsoSettle alsoIds: [String]
+    ) async {
         busyShareId = s.id
         defer { busyShareId = nil }
         do {
-            let updated = try await api.send(
-                Endpoint(method: .patch, path: "/api/shares/\(s.id)/settle"),
-                body: ShareSettle(), as: ExpenseShareDTO.self
-            )
-            replaceShare(updated)
+            if alsoIds.isEmpty {
+                let updated = try await api.send(
+                    Endpoint(method: .patch, path: "/api/shares/\(s.id)/settle"),
+                    body: ShareSettle(settlementTransactionId: txId), as: ExpenseShareDTO.self
+                )
+                replaceShare(updated)
+            } else {
+                // One call so the lump sum can't leave the ledger half-reconciled.
+                let updated = try await api.send(
+                    Endpoint(method: .patch, path: "/api/shares/settle-batch"),
+                    body: SettleBatch(shareIds: [s.id] + alsoIds, settlementTransactionId: txId),
+                    as: [ExpenseShareDTO].self
+                )
+                for u in updated { replaceShare(u) }
+            }
             Haptics.success()
             await onChange()
         } catch {

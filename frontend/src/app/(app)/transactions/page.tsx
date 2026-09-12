@@ -9,6 +9,7 @@ import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, Check, X, Pencil,
 import { FilterPills } from "@/components/FilterPills";
 import { MonthPicker } from "@/components/MonthPicker";
 import { toast } from "@/components/Toast";
+import { SettleShareModal } from "@/components/SettleShareModal";
 
 // ── Filter pill options ─────────────────────────────────────────────────────
 
@@ -192,6 +193,7 @@ function InlineTransactionEditor({
   const [allTags, setAllTags] = useState<TagType[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [shares, setShares] = useState<ExpenseShare[]>([]);
+  const [settlingShare, setSettlingShare] = useState<ExpenseShare | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [sharesOpen, setSharesOpen] = useState(false);
   const [addingShare, setAddingShare] = useState(false);
@@ -322,12 +324,14 @@ function InlineTransactionEditor({
     finally { setSavingShare(false); }
   }
 
-  async function handleSettleShare(shareId: string) {
+  // Settling opens the picker so the repayment transaction gets linked; the modal
+  // handles the API call (including the lump-sum case) and calls back to refresh.
+  async function reloadShares() {
     try {
-      await api.shares.settle(shareId);
-      setShares((prev) => prev.map((s) => s.id === shareId ? { ...s, status: "settled" as const } : s));
-      toast.success("Marked as settled");
-    } catch { toast.error("Failed to settle"); }
+      setShares(await api.shares.list(transaction.id));
+    } catch {
+      /* leave the list as-is; the modal already reported any failure */
+    }
   }
 
   async function handleDeleteShare(shareId: string) {
@@ -505,7 +509,7 @@ function InlineTransactionEditor({
                   <p className="font-mono text-ink-primary tabular-nums shrink-0">{fmt(share.amount)}</p>
                   {share.status === "pending" ? (
                     <>
-                      <button onClick={() => handleSettleShare(share.id)} className="shrink-0 text-ink-ghost hover:text-semantic-income border border-white/[0.08] hover:border-semantic-income/30 p-1 rounded transition-colors">
+                      <button onClick={() => setSettlingShare(share)} className="shrink-0 text-ink-ghost hover:text-semantic-income border border-white/[0.08] hover:border-semantic-income/30 p-1 rounded transition-colors">
                         <Check className="w-3 h-3" />
                       </button>
                       <button onClick={() => handleDeleteShare(share.id)} className="shrink-0 text-ink-ghost hover:text-semantic-expense transition-colors">
@@ -574,6 +578,12 @@ function InlineTransactionEditor({
           )}
         </div>
       </div>
+
+      <SettleShareModal
+        share={settlingShare}
+        onClose={() => setSettlingShare(null)}
+        onSettled={reloadShares}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { api, Transaction, Tag, Contact, ExpenseShare } from "@/lib/api";
 import { Plus, Check, ChevronRight, Users, X, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { toast } from "@/components/Toast";
+import { SettleShareModal } from "@/components/SettleShareModal";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   "Food & Drink":   "🍽️",
@@ -52,6 +53,7 @@ export function TransactionDrawer({ transaction, onClose, onCategoryChange, onSe
   const [shares, setShares] = useState<ExpenseShare[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [sharesOpen, setSharesOpen] = useState(false);
+  const [settlingShare, setSettlingShare] = useState<ExpenseShare | null>(null);
   const [addingShare, setAddingShare] = useState(false);
   const [newShareContactId, setNewShareContactId] = useState("");
   const [newShareAmount, setNewShareAmount] = useState("");
@@ -239,13 +241,14 @@ export function TransactionDrawer({ transaction, onClose, onCategoryChange, onSe
     }
   }
 
-  async function handleSettleShare(shareId: string) {
+  /// Settling opens the picker so the repayment transaction gets linked; the modal
+  /// handles the API call (including the lump-sum case) and calls back to refresh.
+  async function reloadShares() {
+    if (!transaction) return;
     try {
-      await api.shares.settle(shareId);
-      setShares((prev) => prev.map((s) => s.id === shareId ? { ...s, status: "settled" as const } : s));
-      toast.success("Marked as settled");
+      setShares(await api.shares.list(transaction.id));
     } catch {
-      toast.error("Failed to settle");
+      /* leave the list as-is; the modal already reported any failure */
     }
   }
 
@@ -573,7 +576,7 @@ export function TransactionDrawer({ transaction, onClose, onCategoryChange, onSe
                         <p className="text-[12px] font-mono text-ink-primary tabular-nums shrink-0">{fmt(share.amount)}</p>
                         {share.status === "pending" ? (
                           <>
-                            <button onClick={() => handleSettleShare(share.id)} className="shrink-0 text-ink-ghost hover:text-semantic-income border border-white/[0.08] hover:border-semantic-income/30 p-1 rounded transition-colors">
+                            <button onClick={() => setSettlingShare(share)} className="shrink-0 text-ink-ghost hover:text-semantic-income border border-white/[0.08] hover:border-semantic-income/30 p-1 rounded transition-colors">
                               <Check className="w-3 h-3" />
                             </button>
                             <button onClick={() => handleDeleteShare(share.id)} className="shrink-0 text-ink-ghost hover:text-semantic-expense transition-colors">
@@ -721,6 +724,12 @@ export function TransactionDrawer({ transaction, onClose, onCategoryChange, onSe
           </div>
         )}
       </div>
+
+      <SettleShareModal
+        share={settlingShare}
+        onClose={() => setSettlingShare(null)}
+        onSettled={reloadShares}
+      />
     </>
   );
 }
