@@ -4,7 +4,7 @@ import SwiftUI
 /// **Budgets** (spend vs. plan, this month) and **Points** (rewards value + redemption).
 /// Points is the only place honey/gold is allowed — it IS the rewards context.
 struct PlanView: View {
-    enum Segment: String, CaseIterable { case budgets = "Budgets", points = "Points" }
+    enum Segment: String, CaseIterable { case budgets = "Budgets", points = "Points", travel = "Travel" }
 
     @Environment(AppState.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -18,7 +18,13 @@ struct PlanView: View {
 
     var body: some View {
         Screen(title: "Plan", refresh: {
-            await segment == .budgets ? model.loadBudgets() : model.loadPoints()
+            // Travel manages its own loading, so pull-to-refresh there is a no-op
+            // here rather than silently reloading a segment that isn't on screen.
+            switch segment {
+            case .budgets: await model.loadBudgets()
+            case .points:  await model.loadPoints()
+            case .travel:  break
+            }
         }) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 forecastLink.hiveEntrance(0)
@@ -32,6 +38,7 @@ struct PlanView: View {
                 switch segment {
                 case .budgets: budgets
                 case .points:  points
+                case .travel:  TravelView()
                 }
             }
             .padding(.top, Theme.Spacing.sm)
