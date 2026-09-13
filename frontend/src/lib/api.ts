@@ -359,6 +359,34 @@ export interface FlightSearch {
   error: string | null;
 }
 
+export interface AwardQuote {
+  source: string;
+  program: string;
+  cabin: string;
+  cabin_label: string;
+  miles: number;
+  taxes: number;
+  taxes_currency: string;
+  date: string | null;
+  origin: string | null;
+  destination: string | null;
+  direct: boolean;
+  seats: number | null;
+  airlines: string | null;
+  label: string;
+  /** covered | short | no_route | unknown. "unknown" means the transfer table has no
+   *  data for this programme — a gap in curated data, not a fact about your points. */
+  coverage: "covered" | "short" | "no_route" | "unknown";
+  best_program: string | null;
+  shortfall: number | null;
+}
+
+export interface AwardSearch {
+  configured: boolean;
+  quotes: AwardQuote[];
+  error: string | null;
+}
+
 export interface PointsRoute {
   program: string;
   available: number;
@@ -1481,6 +1509,10 @@ export const api = {
     spend: (tripId: string) => get<TripSpend>(`/api/travel/trips/${tripId}/spend`),
     searchFlights: (legId: string) =>
       get<FlightSearch>(`/api/travel/legs/${legId}/search-flights`),
+    searchAwards: (legId: string) =>
+      get<AwardSearch>(`/api/travel/legs/${legId}/search-awards`),
+    optionFromAward: (legId: string, quote: AwardQuote) =>
+      post<TravelOption>(`/api/travel/legs/${legId}/options/from-award`, quote),
     optionFromQuote: (legId: string, quote: FlightQuote) =>
       post<TravelOption>(`/api/travel/legs/${legId}/options/from-quote`, quote),
     affordability: (tripId: string) =>

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, Check, AlertTriangle, Plane, Hotel, Car, Ticket } from "lucide-react";
-import { api, TripDetail, TripLeg, TravelOption, PointsRoute, FlightSearch, FlightQuote } from "@/lib/api";
+import { api, TripDetail, TripLeg, TravelOption, PointsRoute, FlightSearch, FlightQuote, AwardSearch, AwardQuote } from "@/lib/api";
 import { fmt, cn } from "@/lib/utils";
 import { toast } from "@/components/Toast";
 import { TripSpendPanel } from "./_components/TripSpendPanel";
@@ -36,6 +36,8 @@ export default function TripBoardPage() {
   const [routesFor, setRoutesFor] = useState<{ option: TravelOption; routes: PointsRoute[] } | null>(null);
   const [searchingLeg, setSearchingLeg] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<{ legId: string; result: FlightSearch } | null>(null);
+  const [awardingLeg, setAwardingLeg] = useState<string | null>(null);
+  const [awardResults, setAwardResults] = useState<{ legId: string; result: AwardSearch } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -86,6 +88,17 @@ export default function TripBoardPage() {
       toast.error("Fare search failed");
     } finally {
       setSearchingLeg(null);
+    }
+  }
+
+  async function runAwardSearch(legId: string) {
+    setAwardingLeg(legId);
+    try {
+      setAwardResults({ legId, result: await api.travel.searchAwards(legId) });
+    } catch {
+      toast.error("Award search failed");
+    } finally {
+      setAwardingLeg(null);
     }
   }
 
@@ -196,13 +209,22 @@ export default function TripBoardPage() {
               </p>
               <div className="ml-auto flex items-center gap-3">
                 {leg.kind === "flight" && (
-                  <button
-                    onClick={() => runSearch(leg.id)}
-                    disabled={searchingLeg === leg.id}
-                    className="text-[11px] text-ink-tertiary hover:text-honey disabled:opacity-50"
-                  >
-                    {searchingLeg === leg.id ? "Searching…" : "Search fares"}
-                  </button>
+                  <>
+                    <button
+                      onClick={() => runSearch(leg.id)}
+                      disabled={searchingLeg === leg.id}
+                      className="text-[11px] text-ink-tertiary hover:text-honey disabled:opacity-50"
+                    >
+                      {searchingLeg === leg.id ? "Searching…" : "Search fares"}
+                    </button>
+                    <button
+                      onClick={() => runAwardSearch(leg.id)}
+                      disabled={awardingLeg === leg.id}
+                      className="text-[11px] text-ink-tertiary hover:text-honey disabled:opacity-50"
+                    >
+                      {awardingLeg === leg.id ? "Searching…" : "Award space"}
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => setOptionFor(optionFor === leg.id ? null : leg.id)}
@@ -215,6 +237,20 @@ export default function TripBoardPage() {
 
             {optionFor === leg.id && (
               <OptionForm legId={leg.id} onSaved={() => { setOptionFor(null); load(); }} />
+            )}
+
+            {awardResults?.legId === leg.id && (
+              <AwardSearchResults
+                result={awardResults.result}
+                onAdd={async (q) => {
+                  try {
+                    await api.travel.optionFromAward(leg.id, q);
+                    setAwardResults(null);
+                    load();
+                  } catch { toast.error("Failed to add award"); }
+                }}
+                onDismiss={() => setAwardResults(null)}
+              />
             )}
 
             {searchResults?.legId === leg.id && (
@@ -433,6 +469,82 @@ function FlightSearchResults({ result, onAdd, onDismiss }: {
           </button>
         </div>
       ))}
+    </div>
+  );
+}
+
+const COVERAGE_STYLE: Record<AwardQuote["coverage"], { label: string; cls: string }> = {
+  covered:  { label: "you can book this", cls: "text-semantic-income" },
+  short:    { label: "short",             cls: "text-semantic-expense" },
+  no_route: { label: "nothing you hold reaches this", cls: "text-ink-tertiary" },
+  unknown:  { label: "no transfer data — check manually", cls: "text-honey" },
+};
+
+/** Award space on a route, with whether your balances actually cover each result.
+ *
+ *  The annotation is the point: an award priced in a programme you can't reach is
+ *  trivia. "unknown" is deliberately distinct from "no route" — it means the transfer
+ *  table has no data for that programme, not that your points are useless there. */
+function AwardSearchResults({ result, onAdd, onDismiss }: {
+  result: AwardSearch;
+  onAdd: (q: AwardQuote) => Promise<void>;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="rounded-lg bg-white/[0.03] p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] font-medium text-ink-secondary">Award space</p>
+        <button onClick={onDismiss} className="text-[11px] text-ink-ghost hover:text-ink-secondary">
+          dismiss
+        </button>
+      </div>
+
+      {!result.configured && (
+        <p className="text-[11px] text-ink-tertiary leading-snug">
+          No seats.aero key set, so award prices have to be typed in. Add
+          {" "}<span className="font-mono">SEATS_AERO_API_KEY</span> to enable award search —
+          everything else works without it.
+        </p>
+      )}
+
+      {result.error && (
+        <p className="text-[11px] text-semantic-expense leading-snug">{result.error}</p>
+      )}
+
+      {result.configured && !result.error && result.quotes.length === 0 && (
+        <p className="text-[11px] text-ink-tertiary">No award space found for this route and date.</p>
+      )}
+
+      {result.quotes.map((q, i) => {
+        const cov = COVERAGE_STYLE[q.coverage];
+        return (
+          <div key={i} className="flex items-start gap-2 px-2 py-1.5 rounded bg-white/[0.03]">
+            <span className="flex-1 min-w-0">
+              <span className="block text-[11px] text-ink-secondary truncate">{q.label}</span>
+              <span className={cn("block text-[10px]", cov.cls)}>
+                {q.coverage === "covered" && q.best_program
+                  ? `${cov.label} with ${q.best_program}`
+                  : q.coverage === "short" && q.shortfall
+                    ? `${Math.round(q.shortfall).toLocaleString()} short`
+                    : cov.label}
+                {q.seats ? ` · ${q.seats} seat${q.seats > 1 ? "s" : ""}` : ""}
+              </span>
+            </span>
+            <span className="text-right shrink-0">
+              <span className="block text-[11px] font-mono text-ink-primary tabular-nums">
+                {Math.round(q.miles).toLocaleString()}
+              </span>
+              {q.taxes > 0 && (
+                <span className="block text-[10px] text-ink-ghost font-mono">+ {fmt(q.taxes)}</span>
+              )}
+            </span>
+            <button onClick={() => onAdd(q)} title="Add as an award option"
+                    className="text-[10px] text-honey hover:opacity-80 px-1.5 pt-0.5">
+              add
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }

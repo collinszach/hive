@@ -122,6 +122,19 @@ def is_transferable(program: str) -> bool:
     return program not in NON_TRANSFERABLE and bool(partners_for(program))
 
 
+def has_transfer_data(partner: str) -> bool:
+    """Whether this table says anything at all about reaching `partner`.
+
+    The distinction matters more than it looks. "No balance reaches Iberia" and "this
+    table has never heard of Iberia" look identical to a coverage check, but only the
+    first is a fact — the second is a gap in curated data. Asserting the first when
+    the truth is the second tells the user their points are useless on a route where
+    they may well work.
+    """
+    needle = partner.strip().lower()
+    return any(needle in p.to_partner.lower() for p in TRANSFER_PARTNERS)
+
+
 def points_needed(target_points: float, ratio: float) -> float:
     """Source points required to end up with `target_points` at `ratio`.
 

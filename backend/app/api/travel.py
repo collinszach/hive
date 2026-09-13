@@ -24,7 +24,9 @@ from app.analytics.spend import net_spend_expr
 from app.travel.affordability import judge_cash, routes_for_award, spend_it_advice
 from app.travel.connector_amadeus import AmadeusError
 from app.travel.connector_amadeus import get_connector as get_amadeus
-from app.travel.transfer_partners import VERIFIED_ON, partners_for
+from app.travel.connector_seats import SeatsAeroError
+from app.travel.connector_seats import get_connector as get_seats
+from app.travel.transfer_partners import VERIFIED_ON, has_transfer_data, partners_for
 from app.travel.valuation import judge, true_cost
 
 logger = logging.getLogger(__name__)
@@ -183,6 +185,38 @@ class FlightSearchOut(BaseModel):
     # Test data is illustrative, not real pricing. Surfaced so the UI can say so
     # rather than letting a cached fare masquerade as a live one.
     is_test_data: bool = False
+    error: Optional[str] = None
+
+
+class AwardQuoteOut(BaseModel):
+    source: str
+    program: str
+    cabin: str
+    cabin_label: str
+    miles: float
+    taxes: float
+    taxes_currency: str
+    date: Optional[str]
+    origin: Optional[str]
+    destination: Optional[str]
+    direct: bool
+    seats: Optional[int]
+    airlines: Optional[str]
+    label: str
+    # ── coverage, against the balances actually held ──────────────────────
+    #   covered  — a balance (direct or via transfer) can pay for this
+    #   short    — a route exists but there aren't enough points
+    #   no_route — nothing held reaches this programme
+    #   unknown  — the transfer table has no data for this programme at all,
+    #              which is a gap in curated data, not a fact about your points
+    coverage: str = "unknown"
+    best_program: Optional[str] = None
+    shortfall: Optional[float] = None
+
+
+class AwardSearchOut(BaseModel):
+    configured: bool
+    quotes: list[AwardQuoteOut] = []
     error: Optional[str] = None
 
 
@@ -784,6 +818,112 @@ async def option_from_quote(
         cash_price=body.price,
         quoted_on=date.today(),
         notes=body.duration,
+    )
+    db.add(o)
+    await db.commit()
+    await db.refresh(o)
+    return _option_out(o)
+
+
+@router.get("/legs/{leg_id}/search-awards", response_model=AwardSearchOut)
+async def search_awards_for_leg(
+    leg_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> AwardSearchOut:
+    """Award space on this leg's route, annotated with whether you can pay for it.
+
+    The annotation is the point. An award priced in a programme you can't reach is
+    just trivia; what matters is which of *your* balances covers it, directly or by
+    transfer. Never raises — a missing key or provider outage degrades to the manual
+    lane rather than breaking the board.
+    """
+    leg = (await db.execute(select(TripLeg).where(TripLeg.id == leg_id))).scalar_one_or_none()
+    if leg is None:
+        raise HTTPException(404, "Leg not found")
+
+    connector = get_seats()
+    if connector is None:
+        return AwardSearchOut(configured=False)
+    if leg.kind != "flight":
+        return AwardSearchOut(configured=True, error="Award search covers flights only.")
+    if not leg.origin or not leg.destination or not leg.leg_date:
+        return AwardSearchOut(
+            configured=True,
+            error="Add an origin, destination and date to this leg to search award space.",
+        )
+
+    try:
+        quotes = await run_in_threadpool(
+            connector.search_awards,
+            origin=leg.origin,
+            destination=leg.destination,
+            start=leg.leg_date,
+        )
+    except SeatsAeroError as exc:
+        logger.warning("seats.aero search failed for leg %s: %s", leg_id, exc)
+        return AwardSearchOut(configured=True, error=str(exc))
+
+    balances = await _current_balances(db)
+    return AwardSearchOut(
+        configured=True,
+        quotes=[_award_out(q, balances) for q in quotes],
+    )
+
+
+def _award_out(q, balances: dict[str, float]) -> AwardQuoteOut:
+    """Attach coverage to an award quote.
+
+    Distinguishes "nothing you hold reaches this programme" from "this table knows
+    nothing about the programme" — the second is a gap in curated data, and reporting
+    it as the first would tell the user their points are useless on a route where they
+    may well work.
+    """
+    routes = routes_for_award(
+        target_program=q.program, points_price=q.miles, balances=balances
+    )
+    if routes:
+        best = routes[0]
+        coverage = "covered" if best.covered else "short"
+        best_program = best.program
+        shortfall = None if best.covered else best.shortfall
+    elif has_transfer_data(q.program):
+        coverage, best_program, shortfall = "no_route", None, None
+    else:
+        coverage, best_program, shortfall = "unknown", None, None
+
+    return AwardQuoteOut(
+        source=q.source, program=q.program, cabin=q.cabin, cabin_label=q.cabin_label,
+        miles=q.miles, taxes=q.taxes, taxes_currency=q.taxes_currency, date=q.date,
+        origin=q.origin, destination=q.destination, direct=q.direct, seats=q.seats,
+        airlines=q.airlines, label=q.label,
+        coverage=coverage, best_program=best_program, shortfall=shortfall,
+    )
+
+
+@router.post("/legs/{leg_id}/options/from-award", response_model=OptionOut, status_code=201)
+async def option_from_award(
+    leg_id: uuid.UUID,
+    body: AwardQuoteOut,
+    db: AsyncSession = Depends(get_db),
+) -> OptionOut:
+    """Save an award result as an option so it ranks against the cash quotes.
+
+    Priced in the *mileage programme* the award is issued by, not the card currency
+    you'd transfer from — that's what the award actually costs, and the transfer path
+    is a separate question the routes view answers.
+    """
+    if (await db.execute(select(TripLeg.id).where(TripLeg.id == leg_id))).scalar_one_or_none() is None:
+        raise HTTPException(404, "Leg not found")
+
+    o = TravelOption(
+        leg_id=leg_id,
+        source="seats_aero",
+        label=body.label,
+        points_price=body.miles,
+        program=body.program,
+        fees=body.taxes,
+        quoted_on=date.today(),
+        notes=body.airlines,
     )
     db.add(o)
     await db.commit()

@@ -221,6 +221,53 @@ struct FlightSearchDTO: Decodable {
     let error: String?
 }
 
+/// One award seat, with whether the balances actually held can pay for it.
+struct AwardQuoteDTO: Codable, Identifiable, Hashable {
+    let source: String
+    let program: String
+    let cabin: String
+    let cabinLabel: String
+    let miles: Double
+    let taxes: Double
+    let taxesCurrency: String
+    let date: String?
+    let origin: String?
+    let destination: String?
+    let direct: Bool
+    let seats: Int?
+    let airlines: String?
+    let label: String
+    /// covered | short | no_route | unknown. `unknown` means the transfer table has
+    /// no data for this programme — a gap in curated data, not a fact about the
+    /// user's points, and it must never be shown as "you can't get there".
+    let coverage: String
+    let bestProgram: String?
+    let shortfall: Double?
+
+    var id: String { "\(program)-\(cabin)-\(miles)-\(date ?? "")" }
+
+    var coverageLabel: String {
+        switch coverage {
+        case "covered":
+            return bestProgram.map { "You can book this with \($0)" } ?? "You can book this"
+        case "short":
+            guard let s = shortfall else { return "Short" }
+            return "\(Int(s.rounded()).formatted(.number.grouping(.automatic))) short"
+        case "no_route":
+            return "Nothing you hold reaches this"
+        default:
+            return "No transfer data — check manually"
+        }
+    }
+}
+
+/// Award space for a leg, or an honest reason there is none.
+struct AwardSearchDTO: Decodable {
+    let configured: Bool
+    let quotes: [AwardQuoteDTO]
+    let error: String?
+}
+
 // MARK: - Request bodies
 
 struct TripCreate: Encodable {

@@ -59,6 +59,13 @@ class Settings(BaseSettings):
     amadeus_client_secret: str = ""
     amadeus_base_url: str = "https://test.api.amadeus.com"
 
+    # seats.aero Partner API — award availability across mileage programs, the one
+    # source that can answer "where can I actually go on the points I hold". Paid.
+    # Empty key = the planner hides award search and stays fully usable on manual
+    # quotes and Amadeus cash fares.
+    seats_aero_api_key: str = ""
+    seats_aero_base_url: str = "https://seats.aero/partnerapi"
+
     # Encryption (Fernet key for access tokens at rest) — REQUIRED (no default)
     # Generate: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     fernet_key: str

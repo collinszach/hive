@@ -106,6 +106,24 @@ final class TripBoardViewModel {
         )
     }
 
+    /// Award space for a leg. Never throws — a missing key or outage degrades to the
+    /// manual lane rather than breaking the board.
+    func searchAwards(legId: String) async -> AwardSearchDTO? {
+        try? await api.send(
+            .get("/api/travel/legs/\(legId)/search-awards"), as: AwardSearchDTO.self
+        )
+    }
+
+    func addOptionFromAward(legId: String, quote: AwardQuoteDTO) async {
+        do {
+            try await api.send(
+                .post("/api/travel/legs/\(legId)/options/from-award"), body: quote
+            )
+            Haptics.success()
+            await load()
+        } catch { Haptics.error() }
+    }
+
     func addOptionFromQuote(legId: String, quote: FlightQuoteDTO) async {
         do {
             try await api.send(

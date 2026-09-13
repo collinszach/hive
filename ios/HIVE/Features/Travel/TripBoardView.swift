@@ -20,6 +20,8 @@ struct TripBoardView: View {
     @State private var legDate = Date()
     @State private var searchTarget: SearchTarget?
     @State private var searchingLegId: String?
+    @State private var awardTarget: AwardTarget?
+    @State private var awardingLegId: String?
     @State private var optionTarget: OptionTarget?
     @State private var routeTarget: RouteTarget?
 
@@ -98,6 +100,13 @@ struct TripBoardView: View {
         .sheet(item: $searchTarget) { target in
             FlightSearchView(legTitle: target.legTitle, result: target.result) { quote in
                 await model.addOptionFromQuote(legId: target.legId, quote: quote)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $awardTarget) { target in
+            AwardSearchView(legTitle: target.legTitle, result: target.result) { quote in
+                await model.addOptionFromAward(legId: target.legId, quote: quote)
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
@@ -216,6 +225,27 @@ struct TripBoardView: View {
                         }
                         .font(.hiveBody(13, weight: .medium))
                         .foregroundStyle(Theme.inkSecondary)
+                    }
+                }
+                if leg.kind == "flight" {
+                    if awardingLegId == leg.id {
+                        ProgressView().controlSize(.mini)
+                    } else {
+                        Button("Awards") {
+                            Haptics.selection()
+                            Task {
+                                awardingLegId = leg.id
+                                let result = await model.searchAwards(legId: leg.id)
+                                awardingLegId = nil
+                                if let result {
+                                    awardTarget = AwardTarget(
+                                        legId: leg.id, legTitle: leg.displayTitle, result: result
+                                    )
+                                }
+                            }
+                        }
+                        .font(.hiveBody(13, weight: .medium))
+                        .foregroundStyle(Theme.honeyBright)
                     }
                 }
                 Button("Add option") {
@@ -358,6 +388,13 @@ struct SearchTarget: Identifiable {
     let legId: String
     let legTitle: String
     let result: FlightSearchDTO
+}
+
+struct AwardTarget: Identifiable {
+    let id = UUID()
+    let legId: String
+    let legTitle: String
+    let result: AwardSearchDTO
 }
 
 struct RouteTarget: Identifiable {
