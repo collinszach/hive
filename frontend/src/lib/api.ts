@@ -280,7 +280,7 @@ export interface TravelOption {
   notes: string | null;
   /** Value extracted per point. Null until a cash price is known. */
   cents_per_point: number | null;
-  rating: "great" | "good" | "fair" | "poor" | "unknown";
+  rating: "great" | "good" | "fair" | "poor" | "cash" | "unknown";
   verdict: string;
   /** Cash out plus the baseline value of points burnt — the ranking key. */
   true_cost: number | null;

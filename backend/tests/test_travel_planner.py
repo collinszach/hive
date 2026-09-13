@@ -77,6 +77,18 @@ class TestJudge:
         assert v.rating == "unknown"
         assert "cash price" in v.summary.lower()
 
+    def test_cash_option_is_not_asked_for_a_cash_price(self):
+        # A cash quote spends no points; asking it for the price it already has
+        # was the wording that shipped on the first live run.
+        v = judge(1402.0, None, None)
+        assert v.rating == "cash"
+        assert "cash price" not in v.summary.lower()
+        assert "spends no points" in v.summary
+
+    def test_cash_option_with_a_program_still_reads_as_cash(self):
+        v = judge(1402.0, None, "Amex MR")
+        assert v.rating == "cash"
+
     def test_every_held_program_has_a_baseline(self):
         # Without one, judge() can only ever say "unknown" for that currency.
         for program in BALANCES:

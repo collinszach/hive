@@ -18,7 +18,7 @@ POOR_MARGIN = 0.15
 class Verdict:
     cpp: Optional[float]
     baseline: Optional[float]
-    rating: str        # "great" | "good" | "fair" | "poor" | "unknown"
+    rating: str        # "great" | "good" | "fair" | "poor" | "cash" | "unknown"
     summary: str
 
 
@@ -53,6 +53,11 @@ def judge(
     """
     cpp = cents_per_point(cash_price, points_price, fees)
     baseline = POINT_VALUES_CPP.get(program) if program else None
+
+    # A cash quote isn't an unrated redemption — it spends no points at all, so
+    # asking for a cash price it already has would be nonsense.
+    if not points_price:
+        return Verdict(None, baseline, "cash", "Cash booking — spends no points.")
 
     if cpp is None:
         return Verdict(None, baseline, "unknown",

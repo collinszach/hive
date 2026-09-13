@@ -15,6 +15,7 @@ const RATING_STYLE: Record<TravelOption["rating"], string> = {
   good: "text-semantic-income/80",
   fair: "text-ink-secondary",
   poor: "text-semantic-expense",
+  cash: "text-ink-tertiary",
   unknown: "text-ink-ghost",
 };
 
