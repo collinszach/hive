@@ -14,6 +14,7 @@ app = Celery(
     include=[
         "app.tasks.ingestion",
         "app.tasks.points",
+        "app.tasks.redemptions",
         "app.tasks.ml_tasks",
         "app.tasks.maintenance",
         "app.tasks.intelligence",
@@ -50,6 +51,13 @@ app.conf.beat_schedule = {
     "daily-points": {
         "task": "app.tasks.points.compute_points_ledger",
         "schedule": crontab(hour=2, minute=30),
+        "options": {"queue": "default"},
+    },
+    # Just after the ledger recompute: award-fee fingerprints become review
+    # candidates, so the balance can be reduced by what was actually spent.
+    "daily-redemption-scan": {
+        "task": "app.tasks.redemptions.detect_award_redemptions",
+        "schedule": crontab(hour=2, minute=40),
         "options": {"queue": "default"},
     },
     "daily-anomaly": {

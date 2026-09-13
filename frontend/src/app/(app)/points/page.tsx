@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Star, Zap } from "lucide-react";
-import { api, PointsSummary, LedgerEntry, LeakageResponse } from "@/lib/api";
+import { api, PointsSummary, LedgerEntry, LeakageResponse, Redemption } from "@/lib/api";
+import { RedemptionReview } from "./_components/RedemptionReview";
 import { fmt, cn } from "@/lib/utils";
 import { POINT_VALUES_CPP } from "@/lib/pointsConstants";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -22,6 +23,7 @@ export default function PointsPage() {
   const [tab, setTab]                       = useState<Tab>("overview");
   const [days, setDays]                     = useState<number>(90);
   const [summary, setSummary]               = useState<PointsSummary | null>(null);
+  const [candidates, setCandidates]         = useState<Redemption[]>([]);
   const [ledger, setLedger]                 = useState<LedgerEntry[]>([]);
   const [leakage, setLeakage]               = useState<LeakageResponse | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -51,13 +53,18 @@ export default function PointsPage() {
     setLedgerError(false);
     setLeakageError(false);
 
-    const [summaryResult, ledgerResult, leakageResult, trendResult, threshResult] = await Promise.allSettled([
+    const [summaryResult, ledgerResult, leakageResult, trendResult, threshResult, candidateResult] =
+      await Promise.allSettled([
       api.points.summary(d),
       api.points.ledger({ days: d }),
       api.points.leakage(d),
       api.points.monthlyTrend(12),
       api.points.thresholds(),
+      api.points.redemptions("candidate"),
     ]);
+
+    // Review queue is additive — a failure here must not blank the page.
+    setCandidates(candidateResult.status === "fulfilled" ? candidateResult.value : []);
 
     if (summaryResult.status === "fulfilled") {
       setSummary(summaryResult.value);
@@ -200,6 +207,15 @@ export default function PointsPage() {
       {/* ── Tab content ───────────────────────────────────────────────── */}
       {tab === "overview" ? (
         <>
+          {/* Award-redemption review — balances are overstated until these are judged */}
+          {!summaryLoading && candidates.length > 0 && (
+            <RedemptionReview
+              candidates={candidates}
+              programs={(summary?.programs ?? []).map((p) => p.program)}
+              onReviewed={() => fetchData(days)}
+            />
+          )}
+
           {/* Program Cards */}
           {summaryLoading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

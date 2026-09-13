@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
 from app.models.points_balance import PointsBalance
 from app.models.points_ledger import PointsLedger
+from app.models.points_redemption import PointsRedemption
+from app.points.redemption_detector import explain as explain_reason
 from app.points.tracker import (
     EARN_RULES,
     POINT_VALUES_CPP,
@@ -52,6 +54,7 @@ class ProgramSummary(BaseModel):
     # carry the snapshot forward by ledger activity after `balance_as_of`.
     balance_as_of: Optional[str] = None       # ISO date of the snapshot
     points_since_balance: float = 0.0         # earned strictly after that date
+    points_redeemed_since: float = 0.0        # confirmed redemptions after that date
     current_balance: Optional[int] = None     # manual_balance + points_since_balance
     # True when current_balance is a roll-forward rather than a fresh snapshot.
     # The ledger only ever adds, so an estimate can overstate if points were
@@ -62,6 +65,9 @@ class ProgramSummary(BaseModel):
 class PointsSummaryResponse(BaseModel):
     programs: list[ProgramSummary]
     total_estimated_value_dollars: float
+    # Award-fee candidates awaiting review. While this is non-zero the balances are
+    # known to be overstated by however much those redemptions cost.
+    unreviewed_redemptions: int = 0
 
 
 class CardOptionOut(BaseModel):
@@ -93,6 +99,57 @@ class LedgerEntryOut(BaseModel):
     merchant: Optional[str]
     amount: float
     date: str   # ISO date string YYYY-MM-DD
+
+
+class RedemptionOut(BaseModel):
+    id: uuid.UUID
+    transaction_id: Optional[uuid.UUID]
+    program: Optional[str]
+    points_spent: Optional[float]
+    cash_value_avoided: Optional[float]
+    fees_paid: float
+    redeemed_on: str
+    merchant: Optional[str]
+    status: str
+    detection_reason: Optional[str]
+    note: Optional[str]
+    # Value actually extracted, in cents per point. None unless both sides are known.
+    cents_per_point: Optional[float] = None
+    # Plain-language reason this was flagged, for the review queue.
+    explanation: str = ""
+
+
+class RedemptionConfirmRequest(BaseModel):
+    program: str
+    points_spent: float
+    cash_value_avoided: Optional[float] = None
+    note: Optional[str] = None
+
+    @field_validator("points_spent")
+    @classmethod
+    def _positive(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("points_spent must be positive")
+        return v
+
+
+class RedemptionCreateRequest(BaseModel):
+    """Record a redemption by hand — including one with no out-of-pocket cost, which
+    leaves no trace in the transaction feed at all."""
+    program: str
+    points_spent: float
+    redeemed_on: date
+    merchant: Optional[str] = None
+    cash_value_avoided: Optional[float] = None
+    fees_paid: float = 0.0
+    note: Optional[str] = None
+
+    @field_validator("points_spent")
+    @classmethod
+    def _positive(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("points_spent must be positive")
+        return v
 
 
 class BalanceUpsertRequest(BaseModel):
@@ -206,6 +263,32 @@ async def points_summary(
         )
         since_by_program = {row[0]: float(row[1] or 0) for row in since_rows.all()}
 
+    # Points spent since each snapshot. Without this the roll-forward only ever adds
+    # and the balance drifts upward forever — the ledger records earning only.
+    redeemed_by_program: dict[str, float] = {}
+    if as_of_by_program:
+        redeemed_rows = await db.execute(
+            select(PointsRedemption.program, func.sum(PointsRedemption.points_spent))
+            .where(
+                PointsRedemption.status == "confirmed",
+                PointsRedemption.points_spent.isnot(None),
+                or_(*[
+                    and_(PointsRedemption.program == prog,
+                         PointsRedemption.redeemed_on > snapshot_date)
+                    for prog, snapshot_date in as_of_by_program.items()
+                ]),
+            )
+            .group_by(PointsRedemption.program)
+        )
+        redeemed_by_program = {row[0]: float(row[1] or 0) for row in redeemed_rows.all()}
+
+    # Candidates awaiting review, so the UI can say how much the estimate might move.
+    pending_review = await db.execute(
+        select(func.count()).select_from(PointsRedemption)
+        .where(PointsRedemption.status == "candidate")
+    )
+    unreviewed_count = int(pending_review.scalar_one() or 0)
+
     all_programs = set(earned_by_program) | set(manual_by_program) | set(POINT_VALUES_CPP)
     programs = []
     total_value = 0.0
@@ -215,14 +298,16 @@ async def points_summary(
         manual = manual_by_program.get(program)
         snapshot_date = as_of_by_program.get(program)
         since = since_by_program.get(program, 0.0)
+        redeemed = redeemed_by_program.get(program, 0.0)
         cpp = POINT_VALUES_CPP.get(program, 1.0)
 
-        # Roll the snapshot forward by everything earned after it was taken. With
-        # no snapshot at all there's nothing to roll forward from, so fall back to
-        # ledger-earned within the window (the previous behaviour).
+        # Roll the snapshot forward: plus what was earned after it was taken, minus
+        # what was confirmed spent. Clamped at 0 — an over-recorded redemption
+        # shouldn't render as a negative balance. With no snapshot there's nothing to
+        # roll forward from, so fall back to ledger-earned (the previous behaviour).
         if manual is not None:
-            current = int(round(manual + since))
-            is_estimated = since > 0
+            current = max(0, int(round(manual + since - redeemed)))
+            is_estimated = since > 0 or redeemed > 0
         else:
             current = None
             is_estimated = False
@@ -244,6 +329,7 @@ async def points_summary(
             above_threshold=threshold is not None and balance_for_value >= threshold,
             balance_as_of=snapshot_date.isoformat() if snapshot_date else None,
             points_since_balance=round(since, 2),
+            points_redeemed_since=round(redeemed, 2),
             current_balance=current,
             is_estimated=is_estimated,
         ))
@@ -251,6 +337,7 @@ async def points_summary(
     return PointsSummaryResponse(
         programs=programs,
         total_estimated_value_dollars=round(total_value, 2),
+        unreviewed_redemptions=unreviewed_count,
     )
 
 
@@ -539,6 +626,142 @@ async def points_monthly_trend(
         {"months": months},
     )
     return [{"month": r.month, "program": r.program, "points": r.points} for r in result.fetchall()]
+
+
+def _redemption_out(r: PointsRedemption) -> RedemptionOut:
+    return RedemptionOut(
+        id=r.id,
+        transaction_id=r.transaction_id,
+        program=r.program,
+        points_spent=float(r.points_spent) if r.points_spent is not None else None,
+        cash_value_avoided=float(r.cash_value_avoided) if r.cash_value_avoided is not None else None,
+        fees_paid=float(r.fees_paid or 0),
+        redeemed_on=r.redeemed_on.isoformat(),
+        merchant=r.merchant,
+        status=r.status,
+        detection_reason=r.detection_reason,
+        note=r.note,
+        cents_per_point=r.cents_per_point,
+        explanation=explain_reason(r.detection_reason, float(r.fees_paid or 0)),
+    )
+
+
+@router.get("/redemptions", response_model=list[RedemptionOut])
+async def list_redemptions(
+    status: str = Query("candidate", pattern="^(candidate|confirmed|dismissed|all)$"),
+    db: AsyncSession = Depends(get_db),
+) -> list[RedemptionOut]:
+    """Award redemptions: pending review by default.
+
+    Candidates are raised by the award-fee detector — an award booking pays the fare
+    in points, so only taxes reach the card, and that small charge is the only trace.
+    """
+    q = select(PointsRedemption).order_by(PointsRedemption.redeemed_on.desc())
+    if status != "all":
+        q = q.where(PointsRedemption.status == status)
+    return [_redemption_out(r) for r in (await db.execute(q)).scalars().all()]
+
+
+@router.post("/redemptions/{redemption_id}/confirm", response_model=RedemptionOut)
+async def confirm_redemption(
+    redemption_id: uuid.UUID,
+    body: RedemptionConfirmRequest,
+    db: AsyncSession = Depends(get_db),
+) -> RedemptionOut:
+    """Confirm a redemption and how much it cost — the one thing detection can't know.
+
+    Once confirmed the points come off the displayed balance, so the roll-forward
+    stops being one-way.
+    """
+    r = (await db.execute(
+        select(PointsRedemption).where(PointsRedemption.id == redemption_id)
+    )).scalar_one_or_none()
+    if r is None:
+        raise HTTPException(status_code=404, detail="Redemption not found")
+
+    r.program = body.program
+    r.points_spent = body.points_spent
+    if body.cash_value_avoided is not None:
+        r.cash_value_avoided = body.cash_value_avoided
+    if body.note is not None:
+        r.note = body.note
+    r.status = "confirmed"
+    r.confirmed_at = datetime.now(timezone.utc)
+    db.add(r)
+    await db.commit()
+    await db.refresh(r)
+    logger.info("Confirmed redemption %s: %s pts of %s", r.id, r.points_spent, r.program)
+    return _redemption_out(r)
+
+
+@router.post("/redemptions/{redemption_id}/dismiss", response_model=RedemptionOut)
+async def dismiss_redemption(
+    redemption_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> RedemptionOut:
+    """Not a redemption. Kept (rather than deleted) so the scan can't resurrect it."""
+    r = (await db.execute(
+        select(PointsRedemption).where(PointsRedemption.id == redemption_id)
+    )).scalar_one_or_none()
+    if r is None:
+        raise HTTPException(status_code=404, detail="Redemption not found")
+    r.status = "dismissed"
+    r.confirmed_at = None
+    db.add(r)
+    await db.commit()
+    await db.refresh(r)
+    return _redemption_out(r)
+
+
+@router.post("/redemptions/{redemption_id}/reopen", response_model=RedemptionOut)
+async def reopen_redemption(
+    redemption_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> RedemptionOut:
+    """Undo a confirm or dismiss, back to candidate.
+
+    A mistaken confirm moves a balance, so this has to be reversible.
+    """
+    r = (await db.execute(
+        select(PointsRedemption).where(PointsRedemption.id == redemption_id)
+    )).scalar_one_or_none()
+    if r is None:
+        raise HTTPException(status_code=404, detail="Redemption not found")
+    r.status = "candidate"
+    r.confirmed_at = None
+    db.add(r)
+    await db.commit()
+    await db.refresh(r)
+    return _redemption_out(r)
+
+
+@router.post("/redemptions", response_model=RedemptionOut, status_code=201)
+async def create_redemption(
+    body: RedemptionCreateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> RedemptionOut:
+    """Record a redemption by hand — confirmed immediately.
+
+    Not every redemption leaves a fee charge (plenty cost nothing out of pocket), so
+    detection alone can never be complete.
+    """
+    r = PointsRedemption(
+        transaction_id=None,
+        program=body.program,
+        points_spent=body.points_spent,
+        cash_value_avoided=body.cash_value_avoided,
+        fees_paid=body.fees_paid,
+        redeemed_on=body.redeemed_on,
+        merchant=body.merchant,
+        status="confirmed",
+        detection_reason=None,
+        note=body.note,
+        confirmed_at=datetime.now(timezone.utc),
+    )
+    db.add(r)
+    await db.commit()
+    await db.refresh(r)
+    return _redemption_out(r)
 
 
 @router.get("/thresholds")

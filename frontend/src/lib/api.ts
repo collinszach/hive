@@ -216,6 +216,8 @@ export interface ProgramSummary {
   balance_as_of?: string | null;
   /** Points earned since that date. */
   points_since_balance?: number;
+  /** Confirmed redemptions since that date, subtracted from current_balance. */
+  points_redeemed_since?: number;
   /** Snapshot rolled forward by points earned since — the figure to display. */
   current_balance?: number | null;
   /** current_balance is carried forward, so it can't see redemptions since. */
@@ -249,6 +251,28 @@ export function matchLabel(match: string): string | null {
 export interface PointsSummary {
   programs: ProgramSummary[];
   total_estimated_value_dollars: number;
+  /** Award-fee candidates awaiting review. While non-zero, balances are overstated. */
+  unreviewed_redemptions?: number;
+}
+
+/** A redemption: points spent. Candidates are raised by the award-fee detector —
+ *  an award booking pays the fare in points, so only taxes reach the card. */
+export interface Redemption {
+  id: string;
+  transaction_id: string | null;
+  program: string | null;
+  points_spent: number | null;
+  cash_value_avoided: number | null;
+  fees_paid: number;
+  redeemed_on: string;
+  merchant: string | null;
+  status: "candidate" | "confirmed" | "dismissed";
+  detection_reason: string | null;
+  note: string | null;
+  /** Value actually extracted, cents per point. Null unless both sides are known. */
+  cents_per_point: number | null;
+  /** Plain-language reason this was flagged. */
+  explanation: string;
 }
 
 export interface CardOption {
@@ -1082,6 +1106,16 @@ export const api = {
       del<{ program: string; deleted: number }>(`/api/points/balance/${encodeURIComponent(program)}`),
     leakage: (days: number) =>
       get<LeakageResponse>("/api/points/leakage", { days }),
+    redemptions: (status?: string) =>
+      get<Redemption[]>("/api/points/redemptions", status ? { status } : undefined),
+    confirmRedemption: (id: string, body: {
+      program: string; points_spent: number;
+      cash_value_avoided?: number | null; note?: string | null;
+    }) => post<Redemption>(`/api/points/redemptions/${id}/confirm`, body),
+    dismissRedemption: (id: string) =>
+      post<Redemption>(`/api/points/redemptions/${id}/dismiss`, {}),
+    reopenRedemption: (id: string) =>
+      post<Redemption>(`/api/points/redemptions/${id}/reopen`, {}),
     monthlyTrend: (months?: number) =>
       get<{ month: string; program: string; points: number }[]>("/api/points/monthly-trend", months ? { months } : undefined),
     thresholds: () =>

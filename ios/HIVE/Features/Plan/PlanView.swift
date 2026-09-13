@@ -13,6 +13,8 @@ struct PlanView: View {
     @State private var budgetEditor: BudgetEditorTarget?
     @State private var ledgerProgram: ProgramSummary?
     @State private var showOptimizer = false
+    /// Award-fee candidates awaiting review — balances are overstated until judged.
+    @State private var reviewQueue: ReviewQueue?
 
     var body: some View {
         Screen(title: "Plan", refresh: {
@@ -73,6 +75,17 @@ struct PlanView: View {
             CardOptimizerView()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $reviewQueue) { queue in
+            RedemptionReviewView(
+                candidates: queue.items,
+                programs: model.pointsState.value?.programs.map(\.program) ?? []
+            ) {
+                await model.loadPoints()
+                await loadCandidates()
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -200,6 +213,11 @@ struct PlanView: View {
         ) { summary in
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 pointsHero(summary).hiveEntrance(1)
+                // Review first: a nudge computed from an overstated balance is worse
+                // than no nudge, so surface unconfirmed redemptions above it.
+                if summary.unreviewedRedemptions > 0 {
+                    reviewBanner(summary.unreviewedRedemptions).hiveEntrance(2)
+                }
                 if !readyToRedeem(summary).isEmpty {
                     redemptionNudge(readyToRedeem(summary)).hiveEntrance(2)
                 }
@@ -221,6 +239,50 @@ struct PlanView: View {
                 SkeletonList(count: 4)
             }
         }
+    }
+
+    /// Tap-through to the award-redemption review queue. An award booking pays the
+    /// fare in points and only taxes hit the card, so these charges are the only
+    /// evidence points were spent — until they're judged, balances read high.
+    private func reviewBanner(_ count: Int) -> some View {
+        Button {
+            Haptics.selection()
+            Task { await loadCandidates() }
+        } label: {
+            Card {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "airplane.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Theme.warning)
+                        .frame(width: 40, height: 40)
+                        .background(Theme.warning.opacity(0.14),
+                                    in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(count) possible redemption\(count == 1 ? "" : "s") to review")
+                            .font(.hiveBody(15, weight: .semibold))
+                            .foregroundStyle(Theme.inkPrimary)
+                        Text("Balances read high until these are confirmed")
+                            .font(.hiveBody(12)).foregroundStyle(Theme.inkSecondary)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Theme.inkGhost)
+                }
+                .frame(minHeight: Theme.minTouchTarget)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func loadCandidates() async {
+        let c = (try? await APIClient.shared.send(
+            .get("/api/points/redemptions", query: [.init(name: "status", value: "candidate")]),
+            as: [RedemptionDTO].self
+        )) ?? []
+        // Nil closes the sheet, so clearing the queue dismisses it once everything
+        // has been judged rather than leaving an empty screen up.
+        reviewQueue = c.isEmpty ? nil : ReviewQueue(items: c)
     }
 
     /// Programs whose balance has crossed the redemption threshold (`REDEMPTION_THRESHOLDS`
@@ -290,6 +352,13 @@ struct PlanView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
+}
+
+/// Wrapper so a list of candidates can drive `.sheet(item:)` — an Array isn't
+/// Identifiable, and the queue is presented as a single unit.
+private struct ReviewQueue: Identifiable {
+    let id = UUID()
+    let items: [RedemptionDTO]
 }
 
 // MARK: - Budget row

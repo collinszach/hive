@@ -46,16 +46,55 @@ struct BudgetUpsert: Encodable {
 struct PointsSummary: Decodable {
     let programs: [ProgramSummary]
     let totalEstimatedValueDollars: Decimal
+    /// Award-fee candidates awaiting review. While non-zero, balances are overstated
+    /// by whatever those redemptions cost.
+    let unreviewedRedemptions: Int
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         programs = try c.decodeIfPresent([ProgramSummary].self, forKey: .programs) ?? []
         totalEstimatedValueDollars = try c.decodeIfPresent(Decimal.self, forKey: .totalEstimatedValueDollars) ?? 0
+        unreviewedRedemptions = try c.decodeIfPresent(Int.self, forKey: .unreviewedRedemptions) ?? 0
     }
 
     private enum CodingKeys: String, CodingKey {
-        case programs, totalEstimatedValueDollars
+        case programs, totalEstimatedValueDollars, unreviewedRedemptions
     }
+}
+
+/// A redemption: points spent. Mirrors `RedemptionOut` from `backend/app/api/points.py`.
+///
+/// Candidates come from the award-fee detector — an award booking pays the fare in
+/// points, so only taxes reach the card and that small charge is the only trace.
+struct RedemptionDTO: Decodable, Identifiable, Hashable {
+    let id: String
+    let transactionId: String?
+    let program: String?
+    let pointsSpent: Double?
+    let cashValueAvoided: Decimal?
+    let feesPaid: Decimal
+    let redeemedOn: String
+    let merchant: String?
+    let status: String
+    let detectionReason: String?
+    let note: String?
+    /// Value actually extracted, cents per point. Nil unless both sides are known.
+    let centsPerPoint: Double?
+    /// Plain-language reason this was flagged, for the review queue.
+    let explanation: String
+
+    var isCandidate: Bool { status == "candidate" }
+
+    static func == (l: RedemptionDTO, r: RedemptionDTO) -> Bool { l.id == r.id }
+    func hash(into h: inout Hasher) { h.combine(id) }
+}
+
+/// Body for `POST /api/points/redemptions/{id}/confirm`.
+struct RedemptionConfirm: Encodable {
+    let program: String
+    let pointsSpent: Double
+    var cashValueAvoided: Double? = nil
+    var note: String? = nil
 }
 
 struct ProgramSummary: Decodable, Identifiable {
@@ -69,6 +108,8 @@ struct ProgramSummary: Decodable, Identifiable {
     let balanceAsOf: String?
     /// Points earned since that snapshot.
     let pointsSinceBalance: Double
+    /// Confirmed redemptions since that snapshot, already subtracted from `currentBalance`.
+    let pointsRedeemedSince: Double
     /// Snapshot rolled forward by points earned since — the figure to display.
     let currentBalance: Int?
     /// `currentBalance` was carried forward, so it can't account for redemptions
@@ -85,13 +126,14 @@ struct ProgramSummary: Decodable, Identifiable {
         aboveThreshold = try c.decodeIfPresent(Bool.self, forKey: .aboveThreshold) ?? false
         balanceAsOf = try c.decodeIfPresent(String.self, forKey: .balanceAsOf)
         pointsSinceBalance = try c.decodeIfPresent(Double.self, forKey: .pointsSinceBalance) ?? 0
+        pointsRedeemedSince = try c.decodeIfPresent(Double.self, forKey: .pointsRedeemedSince) ?? 0
         currentBalance = try c.decodeIfPresent(Int.self, forKey: .currentBalance)
         isEstimated = try c.decodeIfPresent(Bool.self, forKey: .isEstimated) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
         case program, pointsEarned90d, manualBalance, estimatedValueDollars, redemptionThreshold, aboveThreshold
-        case balanceAsOf, pointsSinceBalance, currentBalance, isEstimated
+        case balanceAsOf, pointsSinceBalance, pointsRedeemedSince, currentBalance, isEstimated
     }
 
     var id: String { program }

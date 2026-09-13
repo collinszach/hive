@@ -88,12 +88,13 @@ class TestBalanceRollForward:
         program = kw["program"]
         manual = kw.get("manual")
         since = kw.get("since", 0.0)
+        redeemed = kw.get("redeemed", 0.0)
         earned = kw.get("earned", 0.0)
         snapshot = kw.get("as_of")
 
         if manual is not None:
-            current = int(round(manual + since))
-            is_estimated = since > 0
+            current = max(0, int(round(manual + since - redeemed)))
+            is_estimated = since > 0 or redeemed > 0
         else:
             current = None
             is_estimated = False
@@ -110,6 +111,7 @@ class TestBalanceRollForward:
             above_threshold=threshold is not None and balance_for_value >= threshold,
             balance_as_of=snapshot.isoformat() if snapshot else None,
             points_since_balance=round(since, 2),
+            points_redeemed_since=round(redeemed, 2),
             current_balance=current,
             is_estimated=is_estimated,
         )
@@ -178,3 +180,49 @@ class TestBalanceRollForward:
         assert "redemption_threshold=None" not in src
         assert "above_threshold=False" not in src
         assert "current_balance=current" in src
+
+
+class TestRedemptionsReduceTheBalance:
+    """Confirmed redemptions come off the roll-forward.
+
+    Without this the balance only ever grows, and the ledger proves redemptions
+    happen: $5.60 Qantas, $14.57 Etihad and $11.20 Southwest charges are award taxes
+    on tickets whose fares were paid in points.
+    """
+
+    _summary = TestBalanceRollForward._summary
+
+    def test_confirmed_redemption_is_subtracted(self):
+        s = self._summary(program="Amex MR", manual=208_201, since=11_461.0,
+                          redeemed=60_000.0, as_of=date(2026, 4, 28))
+        assert s.current_balance == 159_662      # 208,201 + 11,461 − 60,000
+        assert s.points_redeemed_since == 60_000.0
+
+    def test_redemption_alone_marks_the_figure_estimated(self):
+        # Even with nothing earned since, a redemption means it's been carried.
+        s = self._summary(program="Chase UR", manual=109_545, since=0.0, redeemed=25_000.0)
+        assert s.current_balance == 84_545
+        assert s.is_estimated is True
+
+    def test_balance_never_goes_negative(self):
+        # An over-recorded redemption must not render as a negative balance.
+        s = self._summary(program="SW RR", manual=10_000, since=0.0, redeemed=50_000.0)
+        assert s.current_balance == 0
+
+    def test_redemption_drops_value_and_the_nudge(self):
+        # Spending past the threshold should stop saying "ready to redeem".
+        before = self._summary(program="Amex MR", manual=208_201, since=0.0)
+        after = self._summary(program="Amex MR", manual=208_201, since=0.0, redeemed=200_000.0)
+        assert before.above_threshold is True
+        assert after.above_threshold is False
+        assert after.estimated_value_dollars < before.estimated_value_dollars
+
+    def test_summary_source_subtracts_redemptions(self):
+        # Guard the endpoint against the one-way regression.
+        import inspect
+
+        from app.api import points
+
+        src = inspect.getsource(points.points_summary)
+        assert "redeemed_by_program" in src
+        assert "- redeemed" in src
