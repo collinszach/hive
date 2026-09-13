@@ -83,11 +83,33 @@ final class TripBoardViewModel {
         }
     }
 
-    func addLeg(kind: String, title: String?) async {
+    func addLeg(
+        kind: String, title: String?,
+        origin: String? = nil, destination: String? = nil, legDate: String? = nil
+    ) async {
         do {
             try await api.send(
                 .post("/api/travel/trips/\(tripId)/legs"),
-                body: LegCreate(kind: kind, title: title)
+                body: LegCreate(kind: kind, title: title, origin: origin,
+                                destination: destination, legDate: legDate)
+            )
+            Haptics.success()
+            await load()
+        } catch { Haptics.error() }
+    }
+
+    /// Live cash fares for a leg. Never throws: a missing key or provider outage
+    /// degrades to the manual lane rather than breaking the board.
+    func searchFlights(legId: String) async -> FlightSearchDTO? {
+        try? await api.send(
+            .get("/api/travel/legs/\(legId)/search-flights"), as: FlightSearchDTO.self
+        )
+    }
+
+    func addOptionFromQuote(legId: String, quote: FlightQuoteDTO) async {
+        do {
+            try await api.send(
+                .post("/api/travel/legs/\(legId)/options/from-quote"), body: quote
             )
             Haptics.success()
             await load()

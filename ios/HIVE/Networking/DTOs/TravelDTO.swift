@@ -187,6 +187,40 @@ struct TripAffordabilityDTO: Decodable {
     let pointsCovered: Bool
 }
 
+/// One live cash fare. Mirrors `FlightQuoteOut`.
+struct FlightQuoteDTO: Codable, Identifiable, Hashable {
+    let price: Double
+    let currency: String
+    let carrier: String?
+    let departure: String?
+    let arrival: String?
+    let stops: Int
+    let duration: String?
+    let label: String
+
+    var id: String { "\(label)-\(price)-\(departure ?? "")" }
+
+    /// "11h 25m" from an ISO-8601 duration like "PT11H25M".
+    var readableDuration: String? {
+        guard let d = duration, d.hasPrefix("PT") else { return duration }
+        return String(d.dropFirst(2)).lowercased()
+            .replacingOccurrences(of: "h", with: "h ")
+            .trimmingCharacters(in: .whitespaces)
+    }
+}
+
+/// Live quotes for a leg, or an honest reason there are none.
+///
+/// `configured == false` means no Amadeus credentials — a missing capability, not a
+/// failure. The manual lane still works, so the UI says so rather than erroring.
+struct FlightSearchDTO: Decodable {
+    let configured: Bool
+    let quotes: [FlightQuoteDTO]
+    /// Test-host data is cached and illustrative, not live pricing.
+    let isTestData: Bool
+    let error: String?
+}
+
 // MARK: - Request bodies
 
 struct TripCreate: Encodable {
@@ -198,6 +232,10 @@ struct TripCreate: Encodable {
 struct LegCreate: Encodable {
     var kind: String = "flight"
     var title: String? = nil
+    // Live fare search needs all three; without them it can only say so.
+    var origin: String? = nil
+    var destination: String? = nil
+    var legDate: String? = nil
 }
 
 struct OptionCreate: Encodable {

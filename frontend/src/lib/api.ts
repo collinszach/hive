@@ -338,6 +338,27 @@ export interface TripAffordability {
   points_covered: boolean;
 }
 
+export interface FlightQuote {
+  price: number;
+  currency: string;
+  carrier: string | null;
+  departure: string | null;
+  arrival: string | null;
+  stops: number;
+  duration: string | null;
+  label: string;
+}
+
+/** Live cash quotes for a leg. `configured: false` means no Amadeus credentials —
+ *  a missing capability, not an error; manual quotes still work. */
+export interface FlightSearch {
+  configured: boolean;
+  quotes: FlightQuote[];
+  /** Test-host data is cached and illustrative, not live pricing. */
+  is_test_data: boolean;
+  error: string | null;
+}
+
 export interface PointsRoute {
   program: string;
   available: number;
@@ -1458,6 +1479,10 @@ export const api = {
       get<PointsRoute[]>("/api/travel/routes", { program, points }),
     balances: () => get<TravelBalances>("/api/travel/balances"),
     spend: (tripId: string) => get<TripSpend>(`/api/travel/trips/${tripId}/spend`),
+    searchFlights: (legId: string) =>
+      get<FlightSearch>(`/api/travel/legs/${legId}/search-flights`),
+    optionFromQuote: (legId: string, quote: FlightQuote) =>
+      post<TravelOption>(`/api/travel/legs/${legId}/options/from-quote`, quote),
     affordability: (tripId: string) =>
       get<TripAffordability>(`/api/travel/trips/${tripId}/affordability`),
     suggestedTransactions: (tripId: string) =>

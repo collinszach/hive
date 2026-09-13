@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, Check, AlertTriangle, Plane, Hotel, Car, Ticket } from "lucide-react";
-import { api, TripDetail, TripLeg, TravelOption, PointsRoute } from "@/lib/api";
+import { api, TripDetail, TripLeg, TravelOption, PointsRoute, FlightSearch, FlightQuote } from "@/lib/api";
 import { fmt, cn } from "@/lib/utils";
 import { toast } from "@/components/Toast";
 import { TripSpendPanel } from "./_components/TripSpendPanel";
@@ -28,8 +28,14 @@ export default function TripBoardPage() {
   const [addingLeg, setAddingLeg] = useState(false);
   const [legKind, setLegKind] = useState<TripLeg["kind"]>("flight");
   const [legTitle, setLegTitle] = useState("");
+  // Live fare search needs a route and a date; without them it can only say so.
+  const [legOrigin, setLegOrigin] = useState("");
+  const [legDest, setLegDest] = useState("");
+  const [legDate, setLegDate] = useState("");
   const [optionFor, setOptionFor] = useState<string | null>(null);
   const [routesFor, setRoutesFor] = useState<{ option: TravelOption; routes: PointsRoute[] } | null>(null);
+  const [searchingLeg, setSearchingLeg] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<{ legId: string; result: FlightSearch } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -45,8 +51,15 @@ export default function TripBoardPage() {
 
   async function addLeg() {
     try {
-      await api.travel.addLeg(id, { kind: legKind, title: legTitle.trim() || null });
-      setLegTitle(""); setAddingLeg(false);
+      await api.travel.addLeg(id, {
+        kind: legKind,
+        title: legTitle.trim() || null,
+        origin: legOrigin.trim().toUpperCase() || null,
+        destination: legDest.trim().toUpperCase() || null,
+        leg_date: legDate || null,
+      });
+      setLegTitle(""); setLegOrigin(""); setLegDest(""); setLegDate("");
+      setAddingLeg(false);
       load();
     } catch { toast.error("Failed to add leg"); }
   }
@@ -63,6 +76,17 @@ export default function TripBoardPage() {
       await api.travel.deleteOption(optionId);
       load();
     } catch { toast.error("Failed to remove"); }
+  }
+
+  async function runSearch(legId: string) {
+    setSearchingLeg(legId);
+    try {
+      setSearchResults({ legId, result: await api.travel.searchFlights(legId) });
+    } catch {
+      toast.error("Fare search failed");
+    } finally {
+      setSearchingLeg(null);
+    }
   }
 
   async function showRoutes(o: TravelOption) {
@@ -119,6 +143,32 @@ export default function TripBoardPage() {
             autoFocus
             className="flex-1 min-w-[200px] text-[13px] bg-white/[0.06] border border-white/[0.12] rounded px-2.5 py-1.5 text-ink-primary focus:outline-none focus:border-honey/40"
           />
+          {legKind === "flight" && (
+            <>
+              <input
+                value={legOrigin}
+                onChange={(e) => setLegOrigin(e.target.value)}
+                placeholder="LAX"
+                maxLength={3}
+                title="Origin airport code — needed for live fare search"
+                className="w-16 text-[13px] uppercase bg-white/[0.06] border border-white/[0.12] rounded px-2 py-1.5 text-ink-primary focus:outline-none focus:border-honey/40"
+              />
+              <input
+                value={legDest}
+                onChange={(e) => setLegDest(e.target.value)}
+                placeholder="LIS"
+                maxLength={3}
+                title="Destination airport code"
+                className="w-16 text-[13px] uppercase bg-white/[0.06] border border-white/[0.12] rounded px-2 py-1.5 text-ink-primary focus:outline-none focus:border-honey/40"
+              />
+              <input
+                type="date"
+                value={legDate}
+                onChange={(e) => setLegDate(e.target.value)}
+                className="text-[13px] bg-white/[0.06] border border-white/[0.12] rounded px-2 py-1.5 text-ink-primary focus:outline-none focus:border-honey/40"
+              />
+            </>
+          )}
           <button onClick={addLeg} className="px-3 py-1.5 text-[12px] font-medium rounded-lg bg-honey text-black hover:opacity-90">
             Add
           </button>
@@ -144,16 +194,41 @@ export default function TripBoardPage() {
               <p className="text-[14px] font-medium text-ink-primary">
                 {leg.title ?? leg.kind[0].toUpperCase() + leg.kind.slice(1)}
               </p>
-              <button
-                onClick={() => setOptionFor(optionFor === leg.id ? null : leg.id)}
-                className="ml-auto text-[11px] text-honey hover:opacity-80"
-              >
-                + Add option
-              </button>
+              <div className="ml-auto flex items-center gap-3">
+                {leg.kind === "flight" && (
+                  <button
+                    onClick={() => runSearch(leg.id)}
+                    disabled={searchingLeg === leg.id}
+                    className="text-[11px] text-ink-tertiary hover:text-honey disabled:opacity-50"
+                  >
+                    {searchingLeg === leg.id ? "Searching…" : "Search fares"}
+                  </button>
+                )}
+                <button
+                  onClick={() => setOptionFor(optionFor === leg.id ? null : leg.id)}
+                  className="text-[11px] text-honey hover:opacity-80"
+                >
+                  + Add option
+                </button>
+              </div>
             </div>
 
             {optionFor === leg.id && (
               <OptionForm legId={leg.id} onSaved={() => { setOptionFor(null); load(); }} />
+            )}
+
+            {searchResults?.legId === leg.id && (
+              <FlightSearchResults
+                result={searchResults.result}
+                onAdd={async (q) => {
+                  try {
+                    await api.travel.optionFromQuote(leg.id, q);
+                    setSearchResults(null);
+                    load();
+                  } catch { toast.error("Failed to add quote"); }
+                }}
+                onDismiss={() => setSearchResults(null)}
+              />
             )}
 
             {leg.options.length === 0 ? (
@@ -296,6 +371,68 @@ function OptionForm({ legId, onSaved }: { legId: string; onSaved: () => void }) 
               className="px-3 py-1.5 text-[12px] font-medium rounded-lg bg-honey text-black hover:opacity-90 disabled:opacity-40">
         {saving ? "…" : "Add"}
       </button>
+    </div>
+  );
+}
+
+/** Live cash fares for a leg, or an honest reason there aren't any.
+ *
+ *  Missing credentials are a missing capability, not a failure — the manual lane
+ *  still works, so this says so plainly rather than showing an error. */
+function FlightSearchResults({ result, onAdd, onDismiss }: {
+  result: FlightSearch;
+  onAdd: (q: FlightQuote) => Promise<void>;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="rounded-lg bg-white/[0.03] p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] font-medium text-ink-secondary">Live cash fares</p>
+        <button onClick={onDismiss} className="text-[11px] text-ink-ghost hover:text-ink-secondary">
+          dismiss
+        </button>
+      </div>
+
+      {!result.configured && (
+        <p className="text-[11px] text-ink-tertiary leading-snug">
+          No Amadeus credentials set, so fares have to be typed in. Add
+          {" "}<span className="font-mono">AMADEUS_CLIENT_ID</span> and
+          {" "}<span className="font-mono">AMADEUS_CLIENT_SECRET</span> to enable live search —
+          everything else works without them.
+        </p>
+      )}
+
+      {result.error && (
+        <p className="text-[11px] text-semantic-expense leading-snug">{result.error}</p>
+      )}
+
+      {result.is_test_data && result.quotes.length > 0 && (
+        <p className="text-[10px] text-honey leading-snug">
+          Amadeus test data — cached and illustrative, not live pricing. Point
+          AMADEUS_BASE_URL at the production host for real fares.
+        </p>
+      )}
+
+      {result.configured && !result.error && result.quotes.length === 0 && (
+        <p className="text-[11px] text-ink-tertiary">No fares returned for this route and date.</p>
+      )}
+
+      {result.quotes.map((q, i) => (
+        <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded bg-white/[0.03]">
+          <span className="flex-1 min-w-0 text-[11px] text-ink-secondary truncate">
+            {q.label}
+            {q.duration && <span className="text-ink-ghost"> · {q.duration.replace("PT", "").toLowerCase()}</span>}
+          </span>
+          <span className="text-[11px] font-mono text-ink-primary tabular-nums">{fmt(q.price)}</span>
+          <button
+            onClick={() => onAdd(q)}
+            title="Add as a cash option"
+            className="text-[10px] text-honey hover:opacity-80 px-1.5"
+          >
+            add
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

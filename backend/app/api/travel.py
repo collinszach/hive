@@ -11,6 +11,7 @@ from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +22,8 @@ from app.models.transaction import Transaction
 from app.models.trip import TravelOption, Trip, TripLeg, TripTransaction
 from app.analytics.spend import net_spend_expr
 from app.travel.affordability import judge_cash, routes_for_award, spend_it_advice
+from app.travel.connector_amadeus import AmadeusError
+from app.travel.connector_amadeus import get_connector as get_amadeus
 from app.travel.transfer_partners import VERIFIED_ON, partners_for
 from app.travel.valuation import judge, true_cost
 
@@ -156,6 +159,31 @@ class AffordabilityOut(BaseModel):
     points_needed: dict[str, float]
     points_shortfalls: dict[str, float]
     points_covered: bool
+
+
+class FlightQuoteOut(BaseModel):
+    price: float
+    currency: str
+    carrier: Optional[str]
+    departure: Optional[str]
+    arrival: Optional[str]
+    stops: int
+    duration: Optional[str]
+    label: str
+
+
+class FlightSearchOut(BaseModel):
+    """Live cash quotes for a leg, plus enough context to judge them.
+
+    ``configured`` false means no Amadeus credentials are set — the planner still
+    works on manual quotes, so this is a missing capability, not an error.
+    """
+    configured: bool
+    quotes: list[FlightQuoteOut] = []
+    # Test data is illustrative, not real pricing. Surfaced so the UI can say so
+    # rather than letting a cached fare masquerade as a live one.
+    is_test_data: bool = False
+    error: Optional[str] = None
 
 
 class PointsRouteOut(BaseModel):
@@ -676,6 +704,91 @@ async def trip_affordability(
         points_shortfalls=shortfalls,
         points_covered=not shortfalls,
     )
+
+
+@router.get("/legs/{leg_id}/search-flights", response_model=FlightSearchOut)
+async def search_flights_for_leg(
+    leg_id: uuid.UUID,
+    adults: int = Query(1, ge=1, le=9),
+    db: AsyncSession = Depends(get_db),
+) -> FlightSearchOut:
+    """Live cash fares for this leg, to price the award against.
+
+    Needs the leg's origin, destination and date — a fare can't be looked up without
+    them. Never raises for a missing key or a provider outage: the planner's manual
+    lane is the fallback, so a failed search degrades rather than breaking the board.
+    """
+    leg = (await db.execute(select(TripLeg).where(TripLeg.id == leg_id))).scalar_one_or_none()
+    if leg is None:
+        raise HTTPException(404, "Leg not found")
+
+    connector = get_amadeus()
+    if connector is None:
+        return FlightSearchOut(configured=False)
+
+    if leg.kind != "flight":
+        return FlightSearchOut(configured=True, error="Live search covers flights only.")
+    if not leg.origin or not leg.destination or not leg.leg_date:
+        return FlightSearchOut(
+            configured=True,
+            is_test_data=connector.is_test_host,
+            error="Add an origin, destination and date to this leg to search fares.",
+        )
+
+    try:
+        quotes = await run_in_threadpool(
+            connector.search_flights,
+            origin=leg.origin,
+            destination=leg.destination,
+            departure=leg.leg_date,
+            adults=adults,
+        )
+    except AmadeusError as exc:
+        logger.warning("Amadeus search failed for leg %s: %s", leg_id, exc)
+        return FlightSearchOut(
+            configured=True, is_test_data=connector.is_test_host, error=str(exc)
+        )
+
+    return FlightSearchOut(
+        configured=True,
+        is_test_data=connector.is_test_host,
+        quotes=[
+            FlightQuoteOut(
+                price=q.price, currency=q.currency, carrier=q.carrier,
+                departure=q.departure, arrival=q.arrival, stops=q.stops,
+                duration=q.duration, label=q.label,
+            )
+            for q in quotes
+        ],
+    )
+
+
+@router.post("/legs/{leg_id}/options/from-quote", response_model=OptionOut, status_code=201)
+async def option_from_quote(
+    leg_id: uuid.UUID,
+    body: FlightQuoteOut,
+    db: AsyncSession = Depends(get_db),
+) -> OptionOut:
+    """Save a live quote as an option so it ranks alongside everything else.
+
+    Stored with ``source="amadeus"`` and today's ``quoted_on`` — a fare is only true
+    on the day it was fetched, and the board shows that date for exactly that reason.
+    """
+    if (await db.execute(select(TripLeg.id).where(TripLeg.id == leg_id))).scalar_one_or_none() is None:
+        raise HTTPException(404, "Leg not found")
+
+    o = TravelOption(
+        leg_id=leg_id,
+        source="amadeus",
+        label=body.label,
+        cash_price=body.price,
+        quoted_on=date.today(),
+        notes=body.duration,
+    )
+    db.add(o)
+    await db.commit()
+    await db.refresh(o)
+    return _option_out(o)
 
 
 @router.get("/routes", response_model=list[PointsRouteOut])

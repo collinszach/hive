@@ -14,6 +14,12 @@ struct TripBoardView: View {
     @State private var addingLeg = false
     @State private var legKind = "flight"
     @State private var legTitle = ""
+    // Live fare search needs all three; without them it can only say so.
+    @State private var legOrigin = ""
+    @State private var legDest = ""
+    @State private var legDate = Date()
+    @State private var searchTarget: SearchTarget?
+    @State private var searchingLegId: String?
     @State private var optionTarget: OptionTarget?
     @State private var routeTarget: RouteTarget?
 
@@ -89,6 +95,13 @@ struct TripBoardView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
+        .sheet(item: $searchTarget) { target in
+            FlightSearchView(legTitle: target.legTitle, result: target.result) { quote in
+                await model.addOptionFromQuote(legId: target.legId, quote: quote)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         .sheet(item: $routeTarget) { target in
             AwardRoutesView(option: target.option, routes: target.routes)
                 .presentationDetents([.medium, .large])
@@ -129,14 +142,38 @@ struct TripBoardView: View {
                     .font(.hiveBody(15)).foregroundStyle(Theme.inkPrimary)
                     .frame(minHeight: Theme.minTouchTarget)
 
+                if legKind == "flight" {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        TextField("LAX", text: $legOrigin)
+                            .font(.hiveMono(15)).foregroundStyle(Theme.inkPrimary)
+                            .textInputAutocapitalization(.characters)
+                            .frame(width: 64)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 11)).foregroundStyle(Theme.inkGhost)
+                        TextField("LIS", text: $legDest)
+                            .font(.hiveMono(15)).foregroundStyle(Theme.inkPrimary)
+                            .textInputAutocapitalization(.characters)
+                            .frame(width: 64)
+                        Spacer()
+                        DatePicker("", selection: $legDate, displayedComponents: .date)
+                            .labelsHidden()
+                    }
+                    .frame(minHeight: Theme.minTouchTarget)
+                }
+
                 HStack {
                     Spacer()
                     Button("Add leg") {
                         Task {
+                            let isFlight = legKind == "flight"
                             await model.addLeg(
                                 kind: legKind,
-                                title: legTitle.trimmingCharacters(in: .whitespaces).nilIfEmpty
+                                title: legTitle.trimmingCharacters(in: .whitespaces).nilIfEmpty,
+                                origin: isFlight ? legOrigin.trimmingCharacters(in: .whitespaces).uppercased().nilIfEmpty : nil,
+                                destination: isFlight ? legDest.trimmingCharacters(in: .whitespaces).uppercased().nilIfEmpty : nil,
+                                legDate: isFlight ? DateOnly.string(from: legDate) : nil
                             )
+                            legOrigin = ""; legDest = ""
                             addingLeg = false
                         }
                     }
@@ -160,6 +197,27 @@ struct TripBoardView: View {
                     .font(.hiveBody(15, weight: .semibold))
                     .foregroundStyle(Theme.inkPrimary)
                 Spacer()
+                if leg.kind == "flight" {
+                    if searchingLegId == leg.id {
+                        ProgressView().controlSize(.mini)
+                    } else {
+                        Button("Fares") {
+                            Haptics.selection()
+                            Task {
+                                searchingLegId = leg.id
+                                let result = await model.searchFlights(legId: leg.id)
+                                searchingLegId = nil
+                                if let result {
+                                    searchTarget = SearchTarget(
+                                        legId: leg.id, legTitle: leg.displayTitle, result: result
+                                    )
+                                }
+                            }
+                        }
+                        .font(.hiveBody(13, weight: .medium))
+                        .foregroundStyle(Theme.inkSecondary)
+                    }
+                }
                 Button("Add option") {
                     Haptics.selection()
                     optionTarget = OptionTarget(legId: leg.id, legTitle: leg.displayTitle)
@@ -293,6 +351,13 @@ struct OptionTarget: Identifiable {
     let id = UUID()
     let legId: String
     let legTitle: String
+}
+
+struct SearchTarget: Identifiable {
+    let id = UUID()
+    let legId: String
+    let legTitle: String
+    let result: FlightSearchDTO
 }
 
 struct RouteTarget: Identifiable {

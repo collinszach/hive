@@ -50,6 +50,15 @@ class Settings(BaseSettings):
     # paper-trading data layer skips gracefully, like SnapTrade/Plaid.
     tiingo_api_key: str = ""
 
+    # Amadeus Self-Service (travel planner cash benchmark). Free tier; the test host
+    # serves a limited, partly cached dataset, so point AMADEUS_BASE_URL at
+    # https://api.amadeus.com for real pricing. Empty credentials = the planner drops
+    # the live-search button and stays fully usable on manual quotes, like
+    # SnapTrade/Plaid/Tiingo.
+    amadeus_client_id: str = ""
+    amadeus_client_secret: str = ""
+    amadeus_base_url: str = "https://test.api.amadeus.com"
+
     # Encryption (Fernet key for access tokens at rest) — REQUIRED (no default)
     # Generate: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     fernet_key: str
