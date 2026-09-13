@@ -123,3 +123,61 @@ class TestExplain:
 
     def test_unknown_reason_is_blank_not_an_error(self):
         assert explain(None, 10.0) == ""
+
+
+class TestSubstringFalsePositives:
+    """Short airline tokens collide with ordinary merchant names.
+
+    The first live run flagged "Tachibana Japanese" — a restaurant — because an
+    unanchored `ana ` pattern for All Nippon matched inside "Tachib*ana *Japanese".
+    Every token is word-anchored now, and merchant matching is only trusted when the
+    categoriser hasn't already placed the charge outside travel.
+    """
+
+    def test_tachibana_is_not_all_nippon(self):
+        assert classify_award_fee(
+            merchant="Tachibana Japanese", raw_description="TACHIBANA JAPANESE",
+            amount=63.90, category="Food & Drink", subcategory="Restaurant",
+        ) is None
+
+    def test_tachibana_not_flagged_even_uncategorised(self):
+        # Word anchoring, not just the category guard, has to carry this.
+        assert classify_award_fee(
+            merchant="Tachibana Japanese", raw_description="TACHIBANA JAPANESE",
+            amount=63.90, category=None, subcategory=None,
+        ) is None
+
+    def test_real_ana_still_matches(self):
+        assert classify_award_fee(
+            merchant="ANA", raw_description="ANA ALL NIPPON AIRWAYS",
+            amount=25.00, category="Travel", subcategory="Flights",
+        ) == "small_airline_charge"
+
+    @pytest.mark.parametrize("merchant", [
+        "Casa Bonita",          # contains "copa"? no — but "bonita"/"ana" family
+        "Banana Republic",      # contains "ana"
+        "Havana Grill",         # contains "ana"
+        "Solaris Salon",        # contains "sas"? no — guard anyway
+        "Golden Corral",        # contains "gol"
+        "Sasquatch Books",      # starts with "sas"
+    ])
+    def test_ordinary_merchants_are_not_airlines(self, merchant):
+        assert classify_award_fee(
+            merchant=merchant, raw_description=merchant.upper(),
+            amount=42.00, category="Shopping", subcategory="General",
+        ) is None
+
+    def test_non_travel_category_blocks_merchant_matching(self):
+        # Even a genuine airline token shouldn't fire on a charge the categoriser
+        # has already filed under food.
+        assert classify_award_fee(
+            merchant="Delta Air Grill", raw_description="DELTA AIR GRILL",
+            amount=20.00, category="Food & Drink", subcategory="Restaurant",
+        ) is None
+
+    def test_travel_subcategory_still_wins_over_the_guard(self):
+        # An unrecognised airline with a Flights subcategory must still be caught.
+        assert classify_award_fee(
+            merchant="Obscure Air", raw_description="OBSCURE AIR",
+            amount=11.20, category="Travel", subcategory="Flights",
+        ) == "tsa_segment_fee"

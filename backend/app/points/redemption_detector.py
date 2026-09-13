@@ -32,22 +32,24 @@ AWARD_FEE_MAX = 100.00
 TSA_SEGMENT_FEE = 5.60
 MAX_SEGMENTS = 8
 
+# Word-anchored throughout. Short tokens are the hazard: an unanchored "ana " for
+# All Nippon matched "Tachib*ana *Japanese" — a restaurant — on the first live run.
 _AIRLINE = re.compile(
-    r"southwest|southwes|delta air|united airlines?|american airlines?|jetblue|"
+    r"\b(?:southwest|southwes|delta air|united airlines?|american airlines?|jetblue|"
     r"spirit airlines?|frontier airlines?|alaska air|hawaiian air|allegiant|"
     r"air canada|aeroplan|british airways|virgin atlantic|iberia|aer lingus|"
-    r"lufthansa|swiss air|austrian|brussels airlines|air france|klm|"
+    r"lufthansa|swiss air|austrian air|brussels airlines|air france|klm|"
     r"emirates|etihad|qatar airways|turkish airlines|singapore air|cathay|"
-    r"ana |all nippon|japan airlines|korean air|qantas|avianca|copa|latam|"
-    r"aeromexico|tap portugal|sas |finnair|icelandair|azul|gol ",
+    r"ana|all nippon|japan airlines|korean air|qantas|avianca|copa air|latam|"
+    r"aeromexico|tap portugal|sas|finnair|icelandair|azul|gol)\b",
     re.I,
 )
 
 _HOTEL = re.compile(
-    r"marriott|hilton|hyatt|ihg |intercontinental|wyndham|best western|"
+    r"\b(?:marriott|hilton|hyatt|ihg|intercontinental|wyndham|best western|"
     r"hampton inn|holiday inn|sheraton|westin|fairfield|courtyard|residence inn|"
     r"doubletree|embassy suites|waldorf|conrad|ritz|st regis|le meridien|"
-    r"aloft|moxy|kimpton|crowne plaza|radisson|choice hotels|comfort inn",
+    r"aloft|moxy|kimpton|crowne plaza|radisson|choice hotels|comfort inn)\\b",
     re.I,
 )
 
@@ -98,17 +100,21 @@ def classify_award_fee(
     if _NOT_AWARD.search(text):
         return None
 
-    is_airline = bool(_AIRLINE.search(text))
-    is_hotel = bool(_HOTEL.search(text))
-
-    # A travel-categorised charge from an unrecognised merchant still counts — the
-    # airline list can't be exhaustive, and the categoriser has already done the work.
-    if not is_airline and not is_hotel:
-        if subcategory in ("Flights", "SW Flights"):
-            is_airline = True
-        elif subcategory == "Hotel":
-            is_hotel = True
-        else:
+    # A travel subcategory is authoritative — the categoriser has already done the
+    # work, and the merchant lists can never be exhaustive.
+    if subcategory in ("Flights", "SW Flights"):
+        is_airline, is_hotel = True, False
+    elif subcategory == "Hotel":
+        is_airline, is_hotel = False, True
+    else:
+        # Falling back to merchant matching. Only trust it when the categoriser
+        # hasn't already placed the charge somewhere that isn't travel: a brand name
+        # colliding with an airline token shouldn't turn dinner into a redemption.
+        if category not in (None, "", "Travel", "Uncategorized"):
+            return None
+        is_airline = bool(_AIRLINE.search(text))
+        is_hotel = bool(_HOTEL.search(text))
+        if not is_airline and not is_hotel:
             return None
 
     if is_airline and _is_tsa_multiple(amount):
