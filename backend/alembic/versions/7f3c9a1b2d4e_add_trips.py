@@ -2,7 +2,7 @@
 
 Phase 1 of the award travel planner: the comparison board. See docs/TRAVEL-SPEC.md.
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: 7f3c9a1b2d4e
 Revises: f0a1b2c3d4e5
 Create Date: 2026-09-12
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "a1b2c3d4e5f6"
+revision = "7f3c9a1b2d4e"
 down_revision = "f0a1b2c3d4e5"
 branch_labels = None
 depends_on = None
