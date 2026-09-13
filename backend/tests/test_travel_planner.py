@@ -290,3 +290,66 @@ class TestOptionRanking:
         sw = self._opt(points_price=60_000, program="SW RR")
         cash = self._opt(cash_price=900.0)
         assert _rank([cash, sw])[0] is sw
+
+
+class TestCashOut:
+    """What actually leaves the account — the number a bank balance is judged against."""
+
+    class _Opt:
+        def __init__(self, cash=None, points=None, program=None, fees=0):
+            self.cash_price = cash
+            self.points_price = points
+            self.program = program
+            self.fees = fees
+
+    def test_cash_option_costs_its_price(self):
+        from app.api.travel import _cash_out
+        assert _cash_out(self._Opt(cash=1402.0)) == 1402.0
+
+    def test_award_costs_only_its_fees(self):
+        # 60k points + $89: the bank sees $89. Charging the points' baseline value
+        # against a cash balance would overstate what the trip actually costs to fund.
+        from app.api.travel import _cash_out
+        assert _cash_out(self._Opt(points=60_000, program="Amex MR", fees=89.0)) == 89.0
+
+    def test_award_with_no_fees_costs_nothing_in_cash(self):
+        from app.api.travel import _cash_out
+        assert _cash_out(self._Opt(points=60_000, program="Amex MR", fees=0)) == 0.0
+
+    def test_points_totals_group_by_program(self):
+        from app.api.travel import _points_out
+        opts = [
+            self._Opt(points=60_000, program="Amex MR"),
+            self._Opt(points=15_000, program="Amex MR"),
+            self._Opt(points=30_000, program="Chase UR"),
+            self._Opt(cash=500.0),
+        ]
+        assert _points_out(opts) == {"Amex MR": 75_000.0, "Chase UR": 30_000.0}
+
+    def test_cash_only_plan_needs_no_points(self):
+        from app.api.travel import _points_out
+        assert _points_out([self._Opt(cash=500.0)]) == {}
+
+
+class TestPlannedVsActualSemantics:
+    """Planned vs actual is a cash comparison; points are reported separately.
+
+    Folding a points valuation into "actual spend" would make a trip look more
+    expensive than the money that left the account.
+    """
+
+    def test_variance_is_actual_minus_planned(self):
+        planned, actual = 1289.0, 1402.0
+        assert round(actual - planned, 2) == 113.0
+
+    def test_award_heavy_plan_has_low_planned_cash(self):
+        from app.api.travel import _cash_out
+
+        class O:
+            def __init__(self, cash=None, points=None, program=None, fees=0):
+                self.cash_price, self.points_price = cash, points
+                self.program, self.fees = program, fees
+
+        plan = [O(points=60_000, program="Amex MR", fees=89.0), O(cash=240.0)]
+        # $89 of fees plus a $240 cash leg — not $1,529.
+        assert sum(_cash_out(o) for o in plan) == 329.0

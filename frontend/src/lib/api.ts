@@ -304,6 +304,40 @@ export interface TripDetail extends Trip {
   legs: TripLeg[];
 }
 
+export interface LinkedTransaction {
+  transaction_id: string;
+  date: string;
+  merchant: string | null;
+  /** The user's own portion, net of expense shares. */
+  amount: number;
+  category: string | null;
+  subcategory: string | null;
+  card_slug: string | null;
+}
+
+/** Planned against actual, in cash terms. Points are reported separately — an
+ *  award's cash cost is its fees, not the value of the points it burns. */
+export interface TripSpend {
+  planned_cash: number;
+  actual_cash: number;
+  variance: number;
+  planned_points: Record<string, number>;
+  transactions: LinkedTransaction[];
+  has_plan: boolean;
+}
+
+export interface TripAffordability {
+  cash_needed: number;
+  cash_available: number;
+  affordable: boolean;
+  summary: string;
+  days_until: number | null;
+  monthly_to_save: number | null;
+  points_needed: Record<string, number>;
+  points_shortfalls: Record<string, number>;
+  points_covered: boolean;
+}
+
 export interface PointsRoute {
   program: string;
   available: number;
@@ -1423,6 +1457,15 @@ export const api = {
     routes: (program: string, points: number) =>
       get<PointsRoute[]>("/api/travel/routes", { program, points }),
     balances: () => get<TravelBalances>("/api/travel/balances"),
+    spend: (tripId: string) => get<TripSpend>(`/api/travel/trips/${tripId}/spend`),
+    affordability: (tripId: string) =>
+      get<TripAffordability>(`/api/travel/trips/${tripId}/affordability`),
+    suggestedTransactions: (tripId: string) =>
+      get<LinkedTransaction[]>(`/api/travel/trips/${tripId}/suggested-transactions`),
+    linkTransaction: (tripId: string, txId: string) =>
+      post<void>(`/api/travel/trips/${tripId}/transactions/${txId}`, {}),
+    unlinkTransaction: (tripId: string, txId: string) =>
+      del<void>(`/api/travel/trips/${tripId}/transactions/${txId}`),
   },
   shares: {
     list: (txId: string) => get<ExpenseShare[]>(`/api/transactions/${txId}/shares`),

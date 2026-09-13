@@ -147,6 +147,46 @@ struct TravelBalancesDTO: Decodable {
     let partnersVerifiedOn: String
 }
 
+/// One real transaction attached to (or suggested for) a trip.
+struct LinkedTransactionDTO: Decodable, Identifiable, Hashable {
+    let transactionId: String
+    let date: String
+    let merchant: String?
+    /// The user's own portion, net of expense shares.
+    let amount: Decimal
+    let category: String?
+    let subcategory: String?
+    let cardSlug: String?
+
+    var id: String { transactionId }
+}
+
+/// Planned against actual, in cash terms. Points are reported separately: an award's
+/// cash cost is its fees, not the value of the points it burns.
+struct TripSpendDTO: Decodable {
+    let plannedCash: Decimal
+    let actualCash: Decimal
+    /// actual − planned. Positive means over.
+    let variance: Decimal
+    let plannedPoints: [String: Double]
+    let transactions: [LinkedTransactionDTO]
+    let hasPlan: Bool
+}
+
+/// Whether the trip can be paid for — in cash, and in points.
+struct TripAffordabilityDTO: Decodable {
+    let cashNeeded: Decimal
+    let cashAvailable: Decimal
+    let affordable: Bool
+    let summary: String
+    let daysUntil: Int?
+    /// What to put aside each month to close the gap. Nil when already affordable.
+    let monthlyToSave: Decimal?
+    let pointsNeeded: [String: Double]
+    let pointsShortfalls: [String: Double]
+    let pointsCovered: Bool
+}
+
 // MARK: - Request bodies
 
 struct TripCreate: Encodable {

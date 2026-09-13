@@ -3,7 +3,8 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, Text, func
+from sqlalchemy import (Boolean, Date, DateTime, ForeignKey, Integer, Numeric, Text,
+                        UniqueConstraint, func)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -92,3 +93,29 @@ class TravelOption(Base):
     is_selected: Mapped[bool] = mapped_column(Boolean, server_default="false")
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TripTransaction(Base):
+    """Links a real transaction to a trip, so planned can be checked against actual.
+
+    An explicit link rather than a date-window query: travel charges post weeks before
+    and after a trip, and a window would quietly claim a neighbouring holiday's flights.
+    The API suggests candidates; the user decides which are really this trip's.
+    """
+
+    __tablename__ = "trip_transactions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("trips.id", ondelete="CASCADE"), nullable=False
+    )
+    transaction_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # A transaction belongs to at most one trip — splitting one charge across two trips
+    # would double-count it in every actual-spend total.
+    __table_args__ = (
+        UniqueConstraint("transaction_id", name="uq_trip_transaction_transaction"),
+    )

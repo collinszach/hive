@@ -36,6 +36,15 @@ struct TripBoardView: View {
                     if let cost = trip.estimatedTrueCost {
                         totalCard(cost, legs: trip.legCount).hiveEntrance(0)
                     }
+                    TripSpendSection(
+                        spend: model.spend,
+                        affordability: model.affordability,
+                        suggested: model.suggested,
+                        onLink: { await model.linkTransaction($0) },
+                        onUnlink: { await model.unlinkTransaction($0) }
+                    )
+                    .hiveEntrance(1)
+
                     if addingLeg { newLegCard.hiveEntrance(1) }
 
                     if trip.legs.isEmpty && !addingLeg {

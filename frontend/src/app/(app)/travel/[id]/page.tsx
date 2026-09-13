@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, Trash2, Check, AlertTriangle, Plane, Hotel, Car, Ticke
 import { api, TripDetail, TripLeg, TravelOption, PointsRoute } from "@/lib/api";
 import { fmt, cn } from "@/lib/utils";
 import { toast } from "@/components/Toast";
+import { TripSpendPanel } from "./_components/TripSpendPanel";
 
 const KIND_ICON = { flight: Plane, hotel: Hotel, car: Car, activity: Ticket } as const;
 
@@ -123,6 +124,8 @@ export default function TripBoardPage() {
           </button>
         </div>
       )}
+
+      <TripSpendPanel tripId={id} />
 
       {trip.legs.length === 0 && !addingLeg && (
         <div className="hive-card p-10 text-center">

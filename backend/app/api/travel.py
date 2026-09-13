@@ -7,7 +7,7 @@ from.
 """
 import logging
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -16,8 +16,11 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
-from app.models.trip import TravelOption, Trip, TripLeg
-from app.travel.affordability import routes_for_award, spend_it_advice
+from app.models.account import Account
+from app.models.transaction import Transaction
+from app.models.trip import TravelOption, Trip, TripLeg, TripTransaction
+from app.analytics.spend import net_spend_expr
+from app.travel.affordability import judge_cash, routes_for_award, spend_it_advice
 from app.travel.transfer_partners import VERIFIED_ON, partners_for
 from app.travel.valuation import judge, true_cost
 
@@ -115,6 +118,44 @@ class LegOut(BaseModel):
 
 class TripDetail(TripOut):
     legs: list[LegOut] = []
+
+
+class LinkedTransactionOut(BaseModel):
+    transaction_id: uuid.UUID
+    date: date
+    merchant: Optional[str]
+    amount: float          # the user's own portion, net of expense shares
+    category: Optional[str]
+    subcategory: Optional[str]
+    card_slug: Optional[str]
+
+
+class TripSpendOut(BaseModel):
+    """Planned against actual, in cash terms only.
+
+    Points aren't dollars: an award's *cash* cost is its fees, and the points it burns
+    are reported separately. Folding a baseline valuation into "actual spend" would
+    make a trip look more expensive than the money that actually left the account.
+    """
+    planned_cash: float
+    actual_cash: float
+    variance: float                # actual − planned; positive means over
+    planned_points: dict[str, float]
+    transactions: list[LinkedTransactionOut]
+    has_plan: bool                 # false when no option has been chosen or priced
+
+
+class AffordabilityOut(BaseModel):
+    cash_needed: float
+    cash_available: float
+    affordable: bool
+    summary: str
+    days_until: Optional[int]
+    # Only meaningful with a start date: what you'd need to put aside each month.
+    monthly_to_save: Optional[float]
+    points_needed: dict[str, float]
+    points_shortfalls: dict[str, float]
+    points_covered: bool
 
 
 class PointsRouteOut(BaseModel):
@@ -390,6 +431,252 @@ async def delete_option(option_id: uuid.UUID, db: AsyncSession = Depends(get_db)
 # ---------------------------------------------------------------------------
 # The points question
 # ---------------------------------------------------------------------------
+
+async def _chosen_options(db: AsyncSession, trip_id: uuid.UUID) -> list[TravelOption]:
+    """The option picked for each leg, falling back to the cheapest priced one.
+
+    Mirrors what the board shows, so the plan you read is the plan that's costed.
+    """
+    legs = (await db.execute(
+        select(TripLeg).where(TripLeg.trip_id == trip_id)
+    )).scalars().all()
+    if not legs:
+        return []
+    opts = (await db.execute(
+        select(TravelOption).where(TravelOption.leg_id.in_([l.id for l in legs]))
+    )).scalars().all()
+
+    by_leg: dict[uuid.UUID, list[TravelOption]] = {}
+    for o in opts:
+        by_leg.setdefault(o.leg_id, []).append(o)
+
+    chosen: list[TravelOption] = []
+    for leg in legs:
+        candidates = by_leg.get(leg.id, [])
+        if not candidates:
+            continue
+        selected = next((o for o in candidates if o.is_selected), None)
+        if selected:
+            chosen.append(selected)
+            continue
+        priced = [
+            o for o in candidates
+            if true_cost(
+                float(o.cash_price) if o.cash_price is not None else None,
+                float(o.points_price) if o.points_price is not None else None,
+                o.program, float(o.fees or 0),
+            ) is not None
+        ]
+        if priced:
+            chosen.append(min(priced, key=lambda o: true_cost(
+                float(o.cash_price) if o.cash_price is not None else None,
+                float(o.points_price) if o.points_price is not None else None,
+                o.program, float(o.fees or 0),
+            )))
+    return chosen
+
+
+def _cash_out(o: TravelOption) -> float:
+    """Money that actually leaves the account for this option.
+
+    An award costs its fees, not the value of the points — that's the number to
+    compare against a bank balance.
+    """
+    if o.points_price:
+        return float(o.fees or 0)
+    return float(o.cash_price or 0)
+
+
+def _points_out(options: list[TravelOption]) -> dict[str, float]:
+    totals: dict[str, float] = {}
+    for o in options:
+        if o.points_price and o.program:
+            totals[o.program] = totals.get(o.program, 0.0) + float(o.points_price)
+    return totals
+
+
+@router.get("/trips/{trip_id}/spend", response_model=TripSpendOut)
+async def trip_spend(trip_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> TripSpendOut:
+    """What you planned to spend against what actually left the account."""
+    exists = (await db.execute(select(Trip.id).where(Trip.id == trip_id))).scalar_one_or_none()
+    if exists is None:
+        raise HTTPException(404, "Trip not found")
+
+    chosen = await _chosen_options(db, trip_id)
+    planned_cash = sum(_cash_out(o) for o in chosen)
+
+    rows = (await db.execute(
+        select(Transaction, net_spend_expr().label("own"), Account.card_slug)
+        .join(TripTransaction, TripTransaction.transaction_id == Transaction.id)
+        .join(Account, Account.id == Transaction.account_id, isouter=True)
+        .where(TripTransaction.trip_id == trip_id)
+        .order_by(Transaction.date)
+    )).all()
+
+    linked = [
+        LinkedTransactionOut(
+            transaction_id=tx.id, date=tx.date, merchant=tx.merchant or tx.raw_description,
+            amount=round(float(own), 2), category=tx.category, subcategory=tx.subcategory,
+            card_slug=slug,
+        )
+        for tx, own, slug in rows
+    ]
+    actual_cash = round(sum(t.amount for t in linked), 2)
+
+    return TripSpendOut(
+        planned_cash=round(planned_cash, 2),
+        actual_cash=actual_cash,
+        variance=round(actual_cash - planned_cash, 2),
+        planned_points=_points_out(chosen),
+        transactions=linked,
+        has_plan=bool(chosen),
+    )
+
+
+@router.get("/trips/{trip_id}/suggested-transactions", response_model=list[LinkedTransactionOut])
+async def suggested_transactions(
+    trip_id: uuid.UUID,
+    window_days: int = Query(45, ge=0, le=365),
+    db: AsyncSession = Depends(get_db),
+) -> list[LinkedTransactionOut]:
+    """Travel charges near the trip's dates that might belong to it.
+
+    Suggestions only. Travel posts weeks either side of a trip, so a date window would
+    quietly claim a neighbouring holiday's flights if it linked them automatically.
+    Anything already attached to a trip is excluded.
+    """
+    trip = (await db.execute(select(Trip).where(Trip.id == trip_id))).scalar_one_or_none()
+    if trip is None:
+        raise HTTPException(404, "Trip not found")
+
+    anchor = trip.start_date or trip.end_date
+    if anchor is None:
+        return []
+    end_anchor = trip.end_date or trip.start_date
+
+    filters = [
+        Transaction.amount > 0,
+        Transaction.is_excluded == False,  # noqa: E712
+        Transaction.is_transfer == False,  # noqa: E712
+        Transaction.category == "Travel",
+        Transaction.date >= anchor - timedelta(days=window_days),
+        Transaction.date <= end_anchor + timedelta(days=window_days),
+        ~Transaction.id.in_(select(TripTransaction.transaction_id)),
+    ]
+
+    rows = (await db.execute(
+        select(Transaction, net_spend_expr().label("own"), Account.card_slug)
+        .join(Account, Account.id == Transaction.account_id, isouter=True)
+        .where(*filters)
+        .order_by(Transaction.date.desc())
+        .limit(50)
+    )).all()
+
+    return [
+        LinkedTransactionOut(
+            transaction_id=tx.id, date=tx.date, merchant=tx.merchant or tx.raw_description,
+            amount=round(float(own), 2), category=tx.category, subcategory=tx.subcategory,
+            card_slug=slug,
+        )
+        for tx, own, slug in rows
+    ]
+
+
+@router.post("/trips/{trip_id}/transactions/{transaction_id}", status_code=204)
+async def link_transaction(
+    trip_id: uuid.UUID, transaction_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+) -> None:
+    """Attach a transaction to a trip. Idempotent."""
+    if (await db.execute(select(Trip.id).where(Trip.id == trip_id))).scalar_one_or_none() is None:
+        raise HTTPException(404, "Trip not found")
+
+    existing = (await db.execute(
+        select(TripTransaction).where(TripTransaction.transaction_id == transaction_id)
+    )).scalar_one_or_none()
+    if existing is not None:
+        if existing.trip_id == trip_id:
+            return
+        raise HTTPException(409, "That transaction is already attached to another trip")
+
+    db.add(TripTransaction(trip_id=trip_id, transaction_id=transaction_id))
+    await db.commit()
+
+
+@router.delete("/trips/{trip_id}/transactions/{transaction_id}", status_code=204)
+async def unlink_transaction(
+    trip_id: uuid.UUID, transaction_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+) -> None:
+    link = (await db.execute(
+        select(TripTransaction).where(
+            TripTransaction.trip_id == trip_id,
+            TripTransaction.transaction_id == transaction_id,
+        )
+    )).scalar_one_or_none()
+    if link is None:
+        raise HTTPException(404, "Not attached to this trip")
+    await db.delete(link)
+    await db.commit()
+
+
+@router.get("/trips/{trip_id}/affordability", response_model=AffordabilityOut)
+async def trip_affordability(
+    trip_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+) -> AffordabilityOut:
+    """Can this be paid for — in cash, and in points.
+
+    Cash is measured against liquid position (depository balances less credit and loan
+    balances), not this month's safe-to-spend: a trip six months out is a saving
+    question, not a discretionary-spend one.
+    """
+    trip = (await db.execute(select(Trip).where(Trip.id == trip_id))).scalar_one_or_none()
+    if trip is None:
+        raise HTTPException(404, "Trip not found")
+
+    chosen = await _chosen_options(db, trip_id)
+    cash_needed = sum(_cash_out(o) for o in chosen)
+
+    cash_row = (await db.execute(text(
+        """
+        SELECT
+          COALESCE(SUM(CASE WHEN type = 'depository' THEN current_balance ELSE 0 END), 0)
+          - COALESCE(SUM(CASE WHEN type IN ('credit', 'loan') THEN current_balance ELSE 0 END), 0)
+          AS cash
+        FROM accounts
+        WHERE is_active AND NOT is_excluded
+        """
+    ))).fetchone()
+    cash_available = float(cash_row.cash or 0)
+
+    verdict = judge_cash(cash_needed, cash_available)
+
+    days_until: Optional[int] = None
+    monthly_to_save: Optional[float] = None
+    if trip.start_date:
+        days_until = (trip.start_date - date.today()).days
+        if days_until > 0 and not verdict.affordable:
+            months = max(1.0, days_until / 30.0)
+            monthly_to_save = round((cash_needed - cash_available) / months, 2)
+
+    points_needed = _points_out(chosen)
+    balances = await _current_balances(db)
+    shortfalls = {
+        program: round(needed - balances.get(program, 0.0), 2)
+        for program, needed in points_needed.items()
+        if needed > balances.get(program, 0.0)
+    }
+
+    return AffordabilityOut(
+        cash_needed=round(cash_needed, 2),
+        cash_available=round(cash_available, 2),
+        affordable=verdict.affordable,
+        summary=verdict.summary,
+        days_until=days_until,
+        monthly_to_save=monthly_to_save,
+        points_needed=points_needed,
+        points_shortfalls=shortfalls,
+        points_covered=not shortfalls,
+    )
+
 
 @router.get("/routes", response_model=list[PointsRouteOut])
 async def award_routes(

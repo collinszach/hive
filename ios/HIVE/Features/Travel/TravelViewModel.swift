@@ -75,6 +75,7 @@ final class TripBoardViewModel {
                 .get("/api/travel/trips/\(tripId)"), as: TripDetailDTO.self
             )
             state = .loaded(detail)
+            await loadSpend()
         } catch let error as APIError {
             state = .failed(error)
         } catch {
@@ -126,6 +127,42 @@ final class TripBoardViewModel {
         do {
             try await api.sendVoid(Endpoint(method: .delete, path: "/api/travel/options/\(optionId)"))
             await load()
+        } catch { Haptics.error() }
+    }
+
+    // MARK: Planned vs actual
+
+    private(set) var spend: TripSpendDTO?
+    private(set) var affordability: TripAffordabilityDTO?
+    private(set) var suggested: [LinkedTransactionDTO] = []
+
+    /// Loaded alongside the board but tolerated separately — these are context, and a
+    /// failure here must not blank the comparison the screen exists for.
+    func loadSpend() async {
+        async let s = api.send(.get("/api/travel/trips/\(tripId)/spend"), as: TripSpendDTO.self)
+        async let a = api.send(.get("/api/travel/trips/\(tripId)/affordability"), as: TripAffordabilityDTO.self)
+        async let g = api.send(.get("/api/travel/trips/\(tripId)/suggested-transactions"), as: [LinkedTransactionDTO].self)
+        spend = try? await s
+        affordability = try? await a
+        suggested = (try? await g) ?? []
+    }
+
+    func linkTransaction(_ txId: String) async {
+        do {
+            try await api.send(
+                .post("/api/travel/trips/\(tripId)/transactions/\(txId)"), body: EmptyTravelBody()
+            )
+            Haptics.success()
+            await loadSpend()
+        } catch { Haptics.error() }
+    }
+
+    func unlinkTransaction(_ txId: String) async {
+        do {
+            try await api.sendVoid(Endpoint(
+                method: .delete, path: "/api/travel/trips/\(tripId)/transactions/\(txId)"
+            ))
+            await loadSpend()
         } catch { Haptics.error() }
     }
 
