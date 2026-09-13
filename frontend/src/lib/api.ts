@@ -248,6 +248,90 @@ export function matchLabel(match: string): string | null {
   return null;
 }
 
+// ── Travel planner ──────────────────────────────────────────────────────────
+
+export interface Trip {
+  id: string;
+  name: string;
+  destination: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  travelers: number;
+  status: "dreaming" | "planning" | "booked" | "taken";
+  cash_budget: number | null;
+  notes: string | null;
+  leg_count: number;
+  /** Sum of the chosen option per leg, in comparable true-cost terms. */
+  estimated_true_cost: number | null;
+}
+
+export interface TravelOption {
+  id: string;
+  leg_id: string;
+  source: string;
+  label: string | null;
+  cash_price: number | null;
+  points_price: number | null;
+  program: string | null;
+  fees: number;
+  url: string | null;
+  quoted_on: string | null;
+  is_selected: boolean;
+  notes: string | null;
+  /** Value extracted per point. Null until a cash price is known. */
+  cents_per_point: number | null;
+  rating: "great" | "good" | "fair" | "poor" | "unknown";
+  verdict: string;
+  /** Cash out plus the baseline value of points burnt — the ranking key. */
+  true_cost: number | null;
+  is_best: boolean;
+}
+
+export interface TripLeg {
+  id: string;
+  trip_id: string;
+  kind: "flight" | "hotel" | "car" | "activity";
+  title: string | null;
+  origin: string | null;
+  destination: string | null;
+  leg_date: string | null;
+  sort_order: number;
+  notes: string | null;
+  options: TravelOption[];
+}
+
+export interface TripDetail extends Trip {
+  legs: TripLeg[];
+}
+
+export interface PointsRoute {
+  program: string;
+  available: number;
+  needed: number;
+  direct: boolean;
+  partner: string | null;
+  ratio: number;
+  shortfall: number;
+  covered: boolean;
+  typical_days: number;
+  warning: string | null;
+}
+
+export interface TravelBalance {
+  program: string;
+  balance: number;
+  transferable: boolean;
+  partner_count: number;
+  partners: { name: string; kind: string; ratio: number; typical_days: number }[];
+  advice: string | null;
+}
+
+export interface TravelBalances {
+  programs: TravelBalance[];
+  /** Transfer data is curated and goes stale — show this date, never imply it's live. */
+  partners_verified_on: string;
+}
+
 export interface PointsSummary {
   programs: ProgramSummary[];
   total_estimated_value_dollars: number;
@@ -1320,6 +1404,25 @@ export const api = {
     create: (name: string) => post<Contact>("/api/contacts", { name }),
     rename: (id: string, name: string) => patch<Contact>(`/api/contacts/${id}`, { name }),
     delete: (id: string) => del<void>(`/api/contacts/${id}`),
+  },
+  travel: {
+    trips: (status?: string) =>
+      get<Trip[]>("/api/travel/trips", status ? { status } : undefined),
+    createTrip: (body: Partial<Trip> & { name: string }) =>
+      post<Trip>("/api/travel/trips", body),
+    trip: (id: string) => get<TripDetail>(`/api/travel/trips/${id}`),
+    deleteTrip: (id: string) => del<void>(`/api/travel/trips/${id}`),
+    addLeg: (tripId: string, body: Partial<TripLeg>) =>
+      post<TripLeg>(`/api/travel/trips/${tripId}/legs`, body),
+    deleteLeg: (legId: string) => del<void>(`/api/travel/legs/${legId}`),
+    addOption: (legId: string, body: Partial<TravelOption>) =>
+      post<TravelOption>(`/api/travel/legs/${legId}/options`, body),
+    selectOption: (optionId: string) =>
+      post<TravelOption>(`/api/travel/options/${optionId}/select`, {}),
+    deleteOption: (optionId: string) => del<void>(`/api/travel/options/${optionId}`),
+    routes: (program: string, points: number) =>
+      get<PointsRoute[]>("/api/travel/routes", { program, points }),
+    balances: () => get<TravelBalances>("/api/travel/balances"),
   },
   shares: {
     list: (txId: string) => get<ExpenseShare[]>(`/api/transactions/${txId}/shares`),

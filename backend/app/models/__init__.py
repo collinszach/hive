@@ -21,6 +21,7 @@ from app.models.paper_watchlist_symbol import PaperWatchlistSymbol  # noqa: F401
 from app.models.plaid_link import PlaidLink  # noqa: F401
 from app.models.points_balance import PointsBalance  # noqa: F401
 from app.models.points_redemption import PointsRedemption  # noqa: F401
+from app.models.trip import TravelOption, Trip, TripLeg  # noqa: F401
 from app.models.points_ledger import PointsLedger  # noqa: F401
 from app.models.subscription import Subscription  # noqa: F401
 from app.models.transaction import Transaction  # noqa: F401
@@ -61,6 +62,9 @@ __all__ = [
     "PlanScenario",
     "PointsBalance",
     "PointsRedemption",
+    "Trip",
+    "TripLeg",
+    "TravelOption",
     "PointsLedger",
     "Subscription",
     "Transaction",

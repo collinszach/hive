@@ -28,8 +28,7 @@ import {
   Filter,
   Link as LinkIcon,
   CreditCard,
-  GraduationCap,
-} from "lucide-react";
+  GraduationCap, Plane } from "lucide-react";
 import { clearToken } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { toast } from "@/components/Toast";
@@ -61,6 +60,7 @@ const NAV_SECTIONS = [
     items: [
       { href: "/points",   label: "Points",   icon: Star },
       { href: "/optimize", label: "Optimize", icon: Zap },
+      { href: "/travel",   label: "Travel",   icon: Plane },
     ],
   },
 ] as const;

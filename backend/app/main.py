@@ -48,6 +48,7 @@ from app.api.snaptrade import router as snaptrade_router
 from app.api.splits import router as splits_router
 from app.api.tags import router as tags_router
 from app.api.transactions import router as transactions_router
+from app.api.travel import router as travel_router
 from app.api.chat import limiter
 from app.config import settings
 from app.db import AsyncSessionLocal
@@ -190,6 +191,7 @@ app.include_router(subscriptions_router)
 app.include_router(splits_router)
 app.include_router(tags_router)
 app.include_router(transactions_router)
+app.include_router(travel_router)
 
 
 @app.get("/api/health")
